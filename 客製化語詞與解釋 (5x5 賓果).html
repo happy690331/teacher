@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="zh-TW">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>自訂語詞賓果 Canvas 版</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap');
+        
+        /* 基本字體設定 */
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            box-sizing: border-box;
+        }
+        
+        /* 讓 Canvas 充滿容器並保持響應式 */
+        #bingoCanvas {
+            display: block;
+            background-color: #ffffff;
+            border-radius: 1rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            touch-action: manipulation; /* 提高觸控反應速度 */
+            cursor: pointer;
+        }
+
+        /* 輸入介面 Grid 佈局 */
+        .input-grid {
+            /* 調整為單欄佈局以容納 Textarea */
+            grid-template-columns: 1fr; 
+        }
+        
+        /* 訊息框樣式 */
+        #messageBox {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        #messageBox.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        /* 彩帶效果容器 */
+        #confettiContainer {
+            position: fixed; 
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 50; 
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        
+        /* 注入 Canvas Confetti Keyframes */
+        @keyframes confetti-fall {
+            0% { transform: translate(var(--startX), -10vh) rotate(0deg); opacity: 1; }
+            100% { transform: translate(var(--endX), 110vh) rotate(720deg); opacity: 0; }
+        }
+    </style>
+ </head>
+ <body class="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 min-h-screen p-4 md:p-8">
+    
+    <!-- 3秒彩帶動畫容器 (用於賓果勝利) -->
+    <div id="confettiContainer"></div>
+    
+    <!-- 訊息框 -->
+    <div id="messageBox" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50"></div>
+    
+    <!-- Main container -->
+    <div class="max-w-6xl mx-auto flex flex-col gap-6"> 
+        
+        <!-- 階段一：語詞輸入介面 (DOM) -->
+        <div id="inputArea" class="flex-grow max-w-xl mx-auto w-full">
+            <div class="text-center mb-6 p-4 bg-white/80 rounded-xl shadow-lg">
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">📝 自訂語詞與解釋 (5x5 賓果)</h1>
+                <p class="text-gray-600 mt-2 font-semibold">請輸入您的課本/字典內容，每組資料佔一行。</p>
+                <p class="text-gray-600 mt-1">格式範例：<code class="bg-yellow-200 p-1 rounded font-mono">編號 語詞：解釋內容 例句...</code>（程式會自動抓取**語詞**和**解釋**，並忽略編號及「例句」之後的內容）</p>
+                <div class="mt-4 text-sm text-red-500 font-medium" id="inputError"></div>
+            </div>
+            
+            <div class="input-grid">
+                <!-- 調整為單一 Textarea -->
+                <textarea id="vocabInput" rows="15" class="w-full border border-gray-300 rounded-lg shadow-md p-4 text-base focus:ring-indigo-500 focus:border-indigo-500" placeholder="請在此輸入您的語詞與解釋，每行一組：&#10;例：\n⒈ 耶誕節：紀念耶穌誕生的節日。例句..."></textarea>
+            </div>
+            
+            <div class="flex justify-center mt-6 gap-4">
+                <button id="clearInputButton" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-8 rounded-lg shadow-xl transition duration-150 transform hover:scale-105">
+                    一鍵清空
+                </button>
+                <button id="startGameButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-xl transition duration-150 transform hover:scale-105">
+                    啟動賓果遊戲！
+                </button>
+            </div>
+        </div>
+
+        <!-- 階段二：賓果遊戲介面 (Canvas) -->
+        <div id="gameArea" class="flex-grow hidden">
+            <!-- 標題 -->
+            <div class="text-center mb-6">
+                <h1 id="gameTitle" class="text-4xl font-bold text-gray-800 mb-2">✨ 語詞賓果挑戰 ✨</h1>
+            </div>
+            
+            <div class="flex justify-center mb-6 gap-4">
+                <button id="resetButton" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg shadow-xl transition duration-150 transform hover:scale-105">
+                    重新開始 (不變更語詞)
+                </button>
+                 <button id="backToInputButton" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg shadow-xl transition duration-150 transform hover:scale-105">
+                    回上一步 (變更語詞)
+                </button>
+            </div>
+            
+            <!-- Canvas 容器 -->
+            <div class="max-w-4xl w-full mx-auto aspect-square">
+                 <canvas id="bingoCanvas"></canvas>
+            </div>
+            
+            <!-- 說明 -->
+            <div class="text-center mt-8 p-4 bg-white/70 rounded-lg backdrop-blur-sm max-w-4xl mx-auto shadow-md">
+                <p class="text-gray-700 font-medium">💡 玩法：點擊卡片循環切換 **圖案** → **解釋** → **語詞 (標記)** 三種狀態，五個連成一線即賓果！</p>
+                <p class="text-sm text-gray-500 mt-1">萬用格 (PASS) 在標記時有特殊顏色提示。</p>
+            </div>
+        </div>
+    </div>
+
+  <script>
+        // 常數設定
+        const CARD_COUNT = 25; // 5x5
+        const GRID_SIZE = 5; 
+        const PADDING = 20; // Canvas 邊界填充
+        const SPACING = 12; // 卡片間距
+        
+        // 用於填充非語詞卡片的表情符號
+        const EMOJI_POOL = [
+            "🍎", "🍊", "🍋", "🥝", "🍉", "🍇", "🍓", "🍒", 
+            "🍍", "🍑", "🥭", "🥥", "🥑", "🥕", "🥦", "🍄",
+            "🎈", "🎁", "🎉", "🌟", "🌈", "🦋", "🌞", "🌙", "✏️", "📚"
+        ];
+        
+        // 遊戲狀態變數
+        let canvas, ctx;
+        let customVocabData = []; // 儲存使用者輸入的 25 組資料
+        let vocabulary = []; // 當前被打亂的語詞順序 (包含 PASS)
+        let cardStates = []; // 卡片狀態：0=圖案, 1=解釋, 2=語詞(標記)
+        let markedLines = []; // 已經連線的索引陣列
+        let cardSize = 0;
+
+        // -----------------------
+        // 輔助函式
+        // -----------------------
+
+        // 隨機打亂陣列 (Fisher-Yates)
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+        
+        // 播放點擊音效
+        function playClickSound() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.05);
+                
+                gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.1);
+            } catch (e) {
+                console.error("無法播放音效:", e);
+            }
+        }
+        
+        // 顯示訊息框（取代 alert()）
+        function showMessage(title, message) {
+            let messageBox = document.getElementById('messageBox');
+            messageBox.innerHTML = `
+                <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm text-center transform scale-100 transition-transform duration-300">
+                    <div class="text-4xl mb-4">${title.includes("賓果") ? "🎉" : "💡"}</div>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">${title}</h2>
+                    <p class="text-gray-600 mb-6">${message}</p>
+                    <button onclick="document.getElementById('messageBox').classList.remove('active')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition duration-150">
+                        確定
+                    </button>
+                </div>
+            `;
+             messageBox.classList.add('active');
+        }
+
+        // 顯示彩帶畫面 (Confetti) 3秒
+        function showConfetti() {
+            const container = document.getElementById('confettiContainer');
+            if (!container) return;
+            
+            container.innerHTML = ''; 
+            container.style.opacity = '1';
+            
+            const colors = ['#f43f5e', '#6366f1', '#10b981', '#f59e0b', '#3b82f6']; 
+            const count = 50; 
+
+            for (let i = 0; i < count; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                
+                const size = Math.random() * 8 + 4; 
+                confetti.style.width = `${size}px`;
+                confetti.style.height = `${size}px`;
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                const startX = Math.random() * 100 + 'vw';
+                const endX = Math.random() * 100 + 'vw';
+
+                confetti.style.setProperty('--startX', startX);
+                confetti.style.setProperty('--endX', endX);
+
+                confetti.style.animation = `confetti-fall 3s ease-in-out forwards`;
+                confetti.style.animationDelay = `${Math.random() * 0.5}s`;
+                
+                container.appendChild(confetti);
+            }
+
+            setTimeout(() => {
+                container.style.opacity = '0';
+                setTimeout(() => {
+                    container.innerHTML = '';
+                }, 500); 
+            }, 3000);
+        }
+        
+        // -----------------------
+        // 階段一：輸入介面邏輯 (DOM)
+        // -----------------------
+
+        // 生成輸入欄位 - 僅生成 Textarea
+        function generateInputFields() {
+            // Textarea 已寫死在 HTML 中，這裡不需要動態生成，但保留函數結構。
+        }
+        
+        /**
+         * 收集並解析 Textarea 中的資料。
+         * 格式：語詞:解釋 例句...，每行一組。
+         */
+        function collectAndValidateInput() {
+            const inputElement = document.getElementById('vocabInput');
+            const rawText = inputElement.value.trim();
+            const collectedData = [];
+            const inputError = document.getElementById('inputError');
+            inputError.textContent = '';
+            
+            if (rawText === '') {
+                 inputError.textContent = '錯誤：請在文字區域內輸入語詞與解釋。';
+                 return null;
+            }
+
+            // 1. 按行分割
+            const lines = rawText.split('\n');
+            
+            // 2. 處理每一行
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line === '') continue; // 跳過空行
+
+                // 尋找全形冒號作為語詞和內容的分隔符
+                const separatorIndex = line.indexOf('：');
+                
+                if (separatorIndex === -1) {
+                    inputError.textContent = `錯誤：第 ${i + 1} 行格式不正確，請檢查是否有使用全形冒號「：」。`;
+                    return null;
+                }
+                
+                // --- 步驟 1: 提取原始語詞和內容 ---
+                let term = line.substring(0, separatorIndex).trim();
+                let definitionContent = line.substring(separatorIndex + 1).trim();
+
+                // --- 步驟 2: 清理語詞 (移除常見的開頭編號/符號) ---
+                // 移除開頭的數字、點號、圓圈數字、全形符號、空格等常見編號
+                // \s*[\u2460-\u2473\u3220-\u3229\uFF10-\uFF19\u2488-\u249b\u2160-\u217f\uFF08\uFF09\uFF1A\u3007\u3001\u3002] 包含了各種常見編號字符
+                // 使用一個更通用的正則表達式來處理開頭的編號、點號和空格
+                term = term.replace(/^[\s\d\.()（）]+|^[\s]*[\u2460-\u2473\u3220-\u3229\uFF10-\uFF19\u2488-\u249b\u2160-\u217f\uFF08\uFF09\uFF1A\u3007\u3001\u3002\uFF0E\uFF61\u3003\u300A\u300B]\s*/, '').trim();
+
+
+                // --- 步驟 3: 從內容中抓取解釋 (忽略例句) ---
+                const exampleIndex = definitionContent.indexOf('例句');
+
+                let definition = definitionContent;
+                if (exampleIndex !== -1) {
+                    // 如果找到「例句」，只取其前面的部分
+                    definition = definitionContent.substring(0, exampleIndex).trim();
+                }
+                
+                // 檢查語詞或解釋是否為空
+                if (term === '' || definition === '') {
+                    inputError.textContent = `錯誤：第 ${i + 1} 行語詞或解釋提取失敗，請檢查格式。`;
+                    return null;
+                }
+                
+                // 只收集前 25 組
+                if (collectedData.length < CARD_COUNT) {
+                    collectedData.push({ term, definition });
+                }
+            }
+            
+            if (collectedData.length === 0) {
+                 inputError.textContent = '錯誤：請至少輸入一組有效的語詞與解釋。';
+                 return null;
+            }
+
+            return collectedData;
+        }
+
+        // 啟動遊戲的處理程序
+        function handleStartGame() {
+            const collectedData = collectAndValidateInput();
+            if (collectedData) {
+                customVocabData = collectedData;
+                
+                // 切換介面
+                document.getElementById('inputArea').classList.add('hidden');
+                document.getElementById('gameArea').classList.remove('hidden');
+                
+                // 初始化 Canvas 遊戲
+                setupGame();
+            }
+        }
+
+        // 新增：清空輸入欄位內容
+        function clearInput() {
+            document.getElementById('vocabInput').value = '';
+            document.getElementById('inputError').textContent = '';
+        }
+        
+        // -----------------------
+        // 階段二：賓果遊戲邏輯 (Canvas)
+        // -----------------------
+
+        // 確保 Canvas 尺寸符合容器
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            const size = Math.min(container.clientWidth, container.clientHeight);
+            
+            canvas.width = size;
+            canvas.height = size;
+
+            // 計算卡片大小
+            cardSize = (size - 2 * PADDING - (GRID_SIZE - 1) * SPACING) / GRID_SIZE;
+            
+            // FIX: 確保卡片大小不為負，防止 Canvas 繪圖錯誤 (IndexSizeError: radius is negative)
+            if (cardSize <= 0) {
+                cardSize = 0; 
+                if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+                return; // 尺寸太小，停止繪圖
+            }
+
+            // 重新繪製整個遊戲
+            if (vocabulary.length === CARD_COUNT) {
+                 drawGame();
+            }
+        }
+
+        // 繪製單一卡片
+        function drawCard(index, x, y) {
+            const item = vocabulary[index];
+            const state = cardStates[index];
+            const radius = 10;
+            const w = cardSize;
+            const h = cardSize;
+
+            ctx.save();
+            ctx.translate(x, y);
+
+            // 1. 繪製圓角矩形背景
+            ctx.beginPath();
+            ctx.moveTo(radius, 0);
+            ctx.lineTo(w - radius, 0);
+            ctx.quadraticCurveTo(w, 0, w, radius);
+            ctx.lineTo(w, h - radius);
+            ctx.quadraticCurveTo(w, h, w - radius, h);
+            ctx.lineTo(radius, h);
+            ctx.quadraticCurveTo(0, h, 0, h - radius);
+            ctx.lineTo(0, radius);
+            ctx.quadraticCurveTo(0, 0, radius, 0);
+            ctx.closePath();
+            
+            // 設置漸變顏色
+            let gradient;
+            let borderColor = '#ccc';
+            
+            if (state === 0) {
+                // 圖案狀態 (黃-橙) - 適用於所有卡片 (包括 PASS，以保持一致性)
+                gradient = ctx.createLinearGradient(0, 0, w, h);
+                gradient.addColorStop(0, '#FFFBEB'); // yellow-50
+                gradient.addColorStop(1, '#FFEDD5'); // orange-100
+                borderColor = '#FCD34D'; // yellow-400
+            } else if (state === 1) {
+                // 解釋狀態 (藍-紫) - 僅適用於非 PASS
+                gradient = ctx.createLinearGradient(0, 0, w, h);
+                gradient.addColorStop(0, '#EEF2FF'); // indigo-50
+                gradient.addColorStop(1, '#E0E7FF'); // indigo-100
+                borderColor = '#6366F1'; // indigo-500
+            } else { // state === 2 (語詞/標記狀態)
+                // 語詞/標記狀態 (綠-青) - 預設用於普通卡片
+                gradient = ctx.createLinearGradient(0, 0, w, h);
+                gradient.addColorStop(0, '#F0FFF4'); // green-50
+                gradient.addColorStop(1, '#E0F2F1'); // teal-100
+                borderColor = '#10B981'; // emerald-500
+                
+                // 萬用格特殊處理：PASS 卡在標記時使用金色，以凸顯其特殊性
+                if (item.isPass) {
+                    gradient = ctx.createLinearGradient(0, 0, w, h);
+                    gradient.addColorStop(0, '#FFFDD0'); // 奶油黃
+                    gradient.addColorStop(1, '#FFDB8B'); // 金色
+                    borderColor = '#FFD700'; // 金色邊框
+                }
+            }
+
+
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            
+            // 繪製邊框
+            // 只有在 PASS 卡片處於標記狀態 (State 2) 時，邊框才變粗，其餘都為 2px
+            ctx.lineWidth = (item.isPass && state === 2) ? 4 : 2;
+            ctx.strokeStyle = borderColor;
+            ctx.stroke();
+
+            // 2. 繪製內容
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const centerX = w / 2;
+            const centerY = h / 2;
+
+            if (state === 0) {
+                // 繪製 Emoji 圖案 (所有卡片，包括 PASS，都顯示分配到的 emoji)
+                ctx.font = `${w * 0.4}px Noto Sans TC`;
+                ctx.fillText(item.emoji, centerX, centerY);
+                
+            } else if (state === 1) {
+                // 繪製解釋文字
+                const text = item.definition;
+                ctx.fillStyle = '#4B5563'; // gray-700
+                
+                // 複雜的 Canvas 自動換行處理
+                const max_width = w * 0.9;
+                let line_height = w * 0.12;
+                ctx.font = `${line_height}px Noto Sans TC`;
+                let lines = [];
+                let current_line = '';
+                
+                const words = Array.from(text);
+                
+                for (let i = 0; i < words.length; i++) {
+                    const word = words[i];
+                    const test_line = current_line + word;
+                    
+                    if (ctx.measureText(test_line).width > max_width && i > 0) {
+                        lines.push(current_line);
+                        current_line = word;
+                    } else {
+                        current_line = test_line;
+                    }
+                }
+                lines.push(current_line);
+
+                let startY = centerY - (lines.length - 1) * line_height / 2;
+                
+                lines.forEach((line, i) => {
+                    ctx.fillText(line, centerX, startY + i * line_height);
+                });
+
+            } else {
+                // 繪製語詞 (標記狀態)
+                let termText = item.isPass ? "PASS" : item.term;
+                ctx.fillStyle = '#1F2937'; // gray-900
+                
+                // 根據字數調整字體大小
+                let termFontSize = w * 0.35;
+                if (termText.length >= 5) termFontSize = w * 0.28;
+                if (termText.length >= 7) termFontSize = w * 0.22;
+                
+                ctx.font = `bold ${termFontSize}px Noto Sans TC`;
+                ctx.fillText(termText, centerX, centerY);
+
+                // 繪製標記圓圈 (輕微視覺提示)
+                ctx.beginPath();
+                // 由於 cardSize 已經檢查過 >= 0，這裡的半徑確保 >= 0
+                ctx.arc(centerX, centerY, w * 0.45, 0, Math.PI * 2); 
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)'; // red-400 semi-transparent
+                ctx.lineWidth = 6;
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        // 繪製賓果連線
+        function drawBingoLines() {
+            ctx.save();
+            ctx.lineWidth = 10;
+            ctx.strokeStyle = 'rgba(239, 68, 68, 0.9)'; // red-500
+            ctx.lineCap = 'round';
+            ctx.shadowColor = 'rgba(239, 68, 68, 0.8)';
+            ctx.shadowBlur = 15;
+
+            const halfCard = cardSize / 2;
+            
+            markedLines.forEach(indices => {
+                const startIdx = indices[0];
+                const endIdx = indices[indices.length - 1];
+
+                const startRow = Math.floor(startIdx / GRID_SIZE);
+                const startCol = startIdx % GRID_SIZE;
+                const endRow = Math.floor(endIdx / GRID_SIZE);
+                const endCol = endIdx % GRID_SIZE;
+                
+                // 計算卡片中心點 (相對於 Canvas 原點)
+                const getCenter = (row, col) => ({
+                    x: PADDING + col * (cardSize + SPACING) + halfCard,
+                    y: PADDING + row * (cardSize + SPACING) + halfCard
+                });
+                
+                const startCenter = getCenter(startRow, startCol);
+                const endCenter = getCenter(endRow, endCol);
+
+                ctx.beginPath();
+                ctx.moveTo(startCenter.x, startCenter.y);
+                ctx.lineTo(endCenter.x, endCenter.y);
+                ctx.stroke();
+            });
+
+            ctx.restore();
+        }
+
+        // 繪製整個遊戲盤面
+        function drawGame() {
+            // FIX: 確保有上下文且卡片大小有效 (修正：防止負半徑錯誤)
+            if (!ctx || cardSize <= 0) return; 
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 繪製 5x5 卡片
+            for (let i = 0; i < CARD_COUNT; i++) {
+                const row = Math.floor(i / GRID_SIZE);
+                const col = i % GRID_SIZE;
+                
+                const x = PADDING + col * (cardSize + SPACING);
+                const y = PADDING + row * (cardSize + SPACING);
+                
+                drawCard(i, x, y);
+            }
+            
+            // 繪製連線
+            drawBingoLines();
+        }
+
+        // 處理點擊事件
+        function handleCanvasClick(event) {
+            if (!cardSize) return;
+
+            // 獲取點擊在 Canvas 上的相對座標
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            // 支援滑鼠點擊和觸摸點擊
+            const clientX = event.clientX || event.touches[0].clientX;
+            const clientY = event.clientY || event.touches[0].clientY;
+            
+            const clickX = (clientX - rect.left) * scaleX;
+            const clickY = (clientY - rect.top) * scaleY;
+            
+            // 計算點擊落在哪個卡片索引上
+            for (let i = 0; i < CARD_COUNT; i++) {
+                const row = Math.floor(i / GRID_SIZE);
+                const col = i % GRID_SIZE;
+                
+                const cardX = PADDING + col * (cardSize + SPACING);
+                const cardY = PADDING + row * (cardSize + SPACING);
+
+                // 檢查點擊是否在卡片的有效範圍內 (包含間距 SPACING 以外的卡片區域)
+                if (clickX >= cardX && clickX < cardX + cardSize &&
+                    clickY >= cardY && clickY < cardY + cardSize) {
+                    
+                    toggleCard(i); // 切換卡片狀態
+                    return;
+                }
+            }
+        }
+        
+        // 切換卡片狀態
+        function toggleCard(index) {
+            playClickSound();
+            const item = vocabulary[index];
+            
+            if (item.isPass) {
+                // PASS卡片：0 (圖案) <-> 2 (PASS 標記)，跳過解釋狀態
+                if (cardStates[index] === 0) {
+                    cardStates[index] = 2; // 標記
+                } else {
+                    cardStates[index] = 0; // 取消標記
+                }
+            } else {
+                // 一般卡片：循環 0 (圖案) -> 1 (解釋) -> 2 (語詞標記) -> 0 (圖案)
+                cardStates[index] = (cardStates[index] + 1) % 3;
+            }
+
+            // 重新繪製
+            drawGame();
+            
+            checkForBingo(); // 檢查賓果
+        }
+        
+        // 檢查是否達成賓果
+        function checkForBingo() {
+            const size = GRID_SIZE; 
+            const currentMarkedLines = []; 
+            
+            // 判斷哪些卡片被標記 (狀態 2)
+            const isMarked = (i) => cardStates[i] === 2;
+            
+            function addLine(indices) {
+                if (indices.every(isMarked)) {
+                    currentMarkedLines.push(indices);
+                }
+            }
+
+            // 檢查橫排 (Rows)
+            for (let i = 0; i < size; i++) {
+                const rowIndices = [];
+                for (let j = 0; j < size; j++) {
+                    rowIndices.push(i * size + j);
+                }
+                addLine(rowIndices);
+            }
+
+            // 檢查直行 (Columns)
+            for (let j = 0; j < size; j++) {
+                const colIndices = [];
+                for (let i = 0; i < size; i++) {
+                    colIndices.push(i * size + j);
+                }
+                addLine(colIndices);
+            }
+
+            // 檢查對角線 (Diagonals)
+            const diag1Indices = []; 
+            for (let i = 0; i < size; i++) {
+                diag1Indices.push(i * size + i);
+            }
+            addLine(diag1Indices);
+
+            const diag2Indices = []; 
+            for (let i = 0; i < size; i++) {
+                diag2Indices.push(i * size + (size - 1 - i));
+            }
+            addLine(diag2Indices);
+            
+            const previousLineCount = markedLines.length;
+            markedLines = currentMarkedLines; // 更新連線狀態
+            
+            if (markedLines.length > previousLineCount) {
+                // 只有當連線數增加時才彈出恭喜訊息和彩帶
+                showMessage("賓果！", `恭喜您達成 ${markedLines.length} 條連線！`);
+                showConfetti();
+            }
+            
+            drawGame(); // 重新繪製以顯示/更新連線
+        }
+
+        // 初始化遊戲數據和 Canvas
+        function setupGame() {
+            // 1. 準備語詞列表
+            let currentVocab = [...customVocabData];
+            
+            // 2. 填充 PASS 卡片，直到滿 25 個
+            const passNeeded = CARD_COUNT - currentVocab.length;
+            // 確保語詞數量不能超過 25，但因為 collectAndValidateInput 已經限制了，所以這裡主要是處理不足的情況。
+            if (passNeeded > 0) {
+                for (let i = 0; i < passNeeded; i++) {
+                    currentVocab.push({ 
+                        term: "PASS", 
+                        definition: "萬用格，可自由選擇是否翻開。", 
+                        isPass: true 
+                    });
+                }
+            }
+            
+            // 3. 打亂順序
+            vocabulary = shuffleArray(currentVocab);
+            
+            // 4. 分配並打亂表情符號
+            const shuffledEmojis = shuffleArray(EMOJI_POOL);
+            vocabulary.forEach((item, index) => {
+                // 統一為所有卡片（包括 PASS 卡）隨機分配表情符號
+                item.emoji = shuffledEmojis[index % shuffledEmojis.length]; 
+            });
+            
+            // 5. 重設狀態
+            cardStates = new Array(vocabulary.length).fill(0); // 初始狀態：圖案
+            markedLines = [];
+            
+            // 6. 確保 Canvas 已經初始化並重繪
+            if (!canvas) {
+                 canvas = document.getElementById('bingoCanvas');
+                 ctx = canvas.getContext('2d');
+            }
+            resizeCanvas(); // 重新計算大小並繪製
+        }
+
+
+        // -----------------------
+        // 程式初始化
+        // -----------------------
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. 初始生成輸入欄位 (DOM) - 只需要確保 Textarea 存在
+            generateInputFields();
+            
+            // 2. 設置 Canvas 響應式調整
+            window.addEventListener('resize', resizeCanvas);
+
+            // 3. 獲取 Canvas 元素並綁定點擊事件 (支援觸摸事件)
+            canvas = document.getElementById('bingoCanvas');
+            ctx = canvas.getContext('2d');
+            canvas.addEventListener('click', handleCanvasClick);
+            // 支援觸摸事件
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault(); // 避免觸摸時滾動
+                handleCanvasClick(e);
+            });
+            
+            // 4. 綁定按鈕事件：啟動遊戲
+            const startGameButton = document.getElementById('startGameButton');
+            startGameButton.addEventListener('click', handleStartGame);
+            
+            // 4.5 綁定按鈕事件：一鍵清空
+            const clearInputButton = document.getElementById('clearInputButton');
+            clearInputButton.addEventListener('click', clearInput);
+
+            // 5. 綁定按鈕事件：重新開始 (遊戲中)
+            const resetButton = document.getElementById('resetButton');
+            resetButton.addEventListener('click', () => {
+                 setupGame(); // 重新打亂並重設狀態，但不變更語詞
+            });
+
+            // 6. 綁定按鈕事件：回上一步 (遊戲中)
+            const backToInputButton = document.getElementById('backToInputButton');
+            backToInputButton.addEventListener('click', () => {
+                document.getElementById('gameArea').classList.add('hidden');
+                document.getElementById('inputArea').classList.remove('hidden');
+                markedLines = []; // 清除 Canvas 上的連線狀態
+            });
+            
+            // 7. 確保一開始就清空輸入框，只留下 placeholder
+            clearInput();
+        });
+    </script>
+ </body>
+</html>
