@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>規律偵探：列表與規律 (完整版)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body { touch-action: manipulation; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        @keyframes bounce-small {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        .animate-bounce-small { animation: bounce-small 2s infinite; }
+        /* Custom scrollbar for tables */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-indigo-50 text-slate-800 select-none">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Icons ---
+        const IconWrapper = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        const Search = (props) => <IconWrapper {...props}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></IconWrapper>;
+        const Trees = (props) => <IconWrapper {...props}><path d="M10 10v.2A3 3 0 0 1 8.9 16v0H5v0h0a3 3 0 0 1-1.1-5.8V10a3 3 0 0 1 6.1 0z"/><path d="M7 16v6"/><path d="M13 19v3"/><path d="M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .9-1.7l-3.5-5a.5.5 0 0 0-.8 0l-3.5 5a1 1 0 0 0 .9 1.7h.2l-2.9 3.3a1 1 0 0 0 .7 1.7h.3l-2.1 3.3a1 1 0 0 0 .7 1.7H12z"/></IconWrapper>;
+        const Play = (props) => <IconWrapper {...props}><polygon points="5 3 19 12 5 21 5 3"/></IconWrapper>;
+        const BookOpen = (props) => <IconWrapper {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconWrapper>;
+        const CheckCircle = (props) => <IconWrapper {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconWrapper>;
+        const Trophy = (props) => <IconWrapper {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></IconWrapper>;
+        const ArrowRight = (props) => <IconWrapper {...props}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></IconWrapper>;
+        const RotateCcw = (props) => <IconWrapper {...props}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></IconWrapper>;
+        const Shapes = (props) => <IconWrapper {...props}><path d="M3 3h18v18H3zM12 8l-5 9h10z"/><circle cx="12" cy="12" r="5"/></IconWrapper>;
+        const ClipboardList = (props) => <IconWrapper {...props}><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></IconWrapper>;
+        const Coins = (props) => <IconWrapper {...props}><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="M16.71 13.88c.07-.38.12-.77.12-1.17a6 6 0 1 0-8.49 5.46"/></IconWrapper>;
+        const Coffee = (props) => <IconWrapper {...props}><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" x2="6" y1="1" y2="4"/><line x1="10" x2="10" y1="1" y2="4"/><line x1="14" x2="14" y1="1" y2="4"/></IconWrapper>;
+        const Train = (props) => <IconWrapper {...props}><rect x="4" y="3" width="16" height="16" rx="2"/><path d="M4 11h16"/><path d="M12 3v8"/><path d="m8 19-2 3"/><path d="m18 22-2-3"/><circle cx="8" cy="15" r="2"/><circle cx="16" cy="15" r="2"/></IconWrapper>;
+
+        // --- Helper Components ---
+        const ShapeIcon = ({ type, color, size = 12 }) => {
+            const sizeClass = `w-${size} h-${size}`;
+            if (type === 'circle') return <div className={`${sizeClass} rounded-full ${color} border-2 border-white shadow-sm`}></div>;
+            if (type === 'square') return <div className={`${sizeClass} rounded-md ${color} border-2 border-white shadow-sm`}></div>;
+            if (type === 'triangle') return <div className={`${sizeClass} clip-triangle ${color} border-b-2 border-white shadow-sm`} style={{clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)'}}></div>;
+            return null;
+        };
+
+        // --- Main App Component ---
+        const PatternGame = () => {
+          const [currentTab, setCurrentTab] = useState('learn');
+          const [score, setScore] = useState(0);
+          const [animateScore, setAnimateScore] = useState(false);
+
+          useEffect(() => {
+            if (score > 0) {
+              setAnimateScore(true);
+              const timer = setTimeout(() => setAnimateScore(false), 300);
+              return () => clearTimeout(timer);
+            }
+          }, [score]);
+
+          const renderTabContent = () => {
+            switch (currentTab) {
+              case 'learn': return <LearnSection onComplete={() => setCurrentTab('practice_1')} />;
+              case 'practice_1': return <PatternCracker score={score} setScore={setScore} onComplete={() => setCurrentTab('practice_2')} />;
+              case 'practice_2': return <IntervalMaster score={score} setScore={setScore} onComplete={() => setCurrentTab('practice_3')} />;
+              case 'practice_3': return <TableMaster score={score} setScore={setScore} onComplete={() => setCurrentTab('quiz')} />;
+              case 'quiz': return <QuizMode score={score} setScore={setScore} onRestart={() => { setScore(0); setCurrentTab('learn'); }} />;
+              default: return <LearnSection />;
+            }
+          };
+
+          return (
+            <div className="h-screen flex flex-col bg-indigo-50 font-sans text-slate-800 overflow-hidden select-none">
+              <header className="bg-white shadow-sm p-3 z-10 flex-none border-b border-indigo-100">
+                <div className="max-w-2xl mx-auto flex justify-between items-center">
+                  <div className="flex items-center space-x-2">
+                    <div className="bg-indigo-500 p-2 rounded-xl text-white shadow-sm"><Search size={20} /></div>
+                    <h1 className="text-lg font-bold text-indigo-700 tracking-wide">規律偵探</h1>
+                  </div>
+                  <div className={`flex items-center bg-yellow-100 px-3 py-1.5 rounded-full border border-yellow-300 transition-transform duration-200 ${animateScore ? 'scale-110 ring-4 ring-yellow-200' : ''}`}>
+                    <Trophy className={`text-yellow-600 mr-1.5 ${animateScore ? 'animate-spin' : ''}`} size={16} />
+                    <span className="font-bold text-yellow-700">{score} 分</span>
+                  </div>
+                </div>
+              </header>
+
+              <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-24 scroll-smooth">
+                <div className="max-w-2xl mx-auto bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-5 min-h-[400px] animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  {renderTabContent()}
+                </div>
+              </main>
+
+              <nav className="bg-white border-t border-slate-200 pb-safe pt-2 px-1 fixed bottom-0 w-full z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+                <div className="max-w-2xl mx-auto flex justify-between items-end pb-2">
+                  <NavButton active={currentTab === 'learn'} onClick={() => setCurrentTab('learn')} icon={<BookOpen size={20} />} label="學習" />
+                  <NavButton active={currentTab === 'practice_1'} onClick={() => setCurrentTab('practice_1')} icon={<Shapes size={20} />} label="找規律" />
+                  <NavButton active={currentTab === 'practice_2'} onClick={() => setCurrentTab('practice_2')} icon={<Trees size={20} />} label="種樹" />
+                  <NavButton active={currentTab === 'practice_3'} onClick={() => setCurrentTab('practice_3')} icon={<ClipboardList size={20} />} label="查表" />
+                  <NavButton active={currentTab === 'quiz'} onClick={() => setCurrentTab('quiz')} icon={<CheckCircle size={20} />} label="挑戰" />
+                </div>
+              </nav>
+            </div>
+          );
+        };
+
+        const NavButton = ({ active, onClick, icon, label }) => (
+          <button onClick={onClick} className={`flex-1 flex flex-col items-center justify-center py-2 px-1 transition-all duration-300 rounded-xl active:scale-95 touch-manipulation ${active ? 'text-indigo-600 -translate-y-2' : 'text-slate-400 hover:text-slate-600'}`}>
+            <div className={`p-1.5 rounded-full transition-all duration-300 ${active ? 'bg-indigo-100 shadow-sm' : ''}`}>{icon}</div>
+            <span className={`text-[10px] font-medium mt-1 ${active ? 'opacity-100' : 'opacity-70'}`}>{label}</span>
+            {active && <div className="w-1 h-1 bg-indigo-500 rounded-full mt-1"></div>}
+          </button>
+        );
+
+        // --- 1. Learning Section ---
+        const LearnSection = ({ onComplete }) => (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-800 flex items-center"><Play className="mr-2 text-indigo-500" style={{fill: 'currentColor'}} size={24} /> 觀念學習</h2>
+              <span className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded">CH9 列表與規律</span>
+            </div>
+            
+            <div className="aspect-video w-full bg-slate-900 rounded-2xl overflow-hidden shadow-lg ring-4 ring-indigo-50" style={{position:'relative', paddingBottom: '56.25%', height: 0}}>
+              <iframe src="https://www.youtube.com/embed/trtFYP3RFOQ" title="列表與規律教學" style={{position:'absolute', top:0, left:0, width:'100%', height:'100%'}} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+            </div>
+
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-5 rounded-2xl border border-indigo-100 mt-4 shadow-sm">
+              <h3 className="text-lg font-bold text-indigo-800 mb-3 flex items-center"><BookOpen className="w-5 h-5 mr-2" /> 偵探筆記</h3>
+              <div className="space-y-3 text-base text-slate-700">
+                <div className="flex bg-white p-3 rounded-xl shadow-sm border border-indigo-50 items-start">
+                   <div className="bg-indigo-100 text-indigo-700 font-bold rounded-lg w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">1</div>
+                   <div><strong className="text-indigo-700">查表技巧</strong>：<br/>看清楚「列」與「行」。<br/>火車票價表要找「出發」和「到達」的交叉點。</div>
+                </div>
+                <div className="flex bg-white p-3 rounded-xl shadow-sm border border-indigo-50 items-start">
+                   <div className="bg-indigo-100 text-indigo-700 font-bold rounded-lg w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">2</div>
+                   <div><strong className="text-indigo-700">列表解決問題</strong>：<br/>畫出表格，有順序地把所有可能都寫下來，就不會漏掉答案囉！</div>
+                </div>
+                <div className="flex bg-white p-3 rounded-xl shadow-sm border border-indigo-50 items-start">
+                  <div className="bg-indigo-100 text-indigo-700 font-bold rounded-lg w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">3</div>
+                  <div><strong className="text-indigo-700">規律</strong>：<br/>觀察重複出現的形狀或數字。例如：🍎🍌🍎🍌...</div>
+                </div>
+              </div>
+            </div>
+            <button onClick={onComplete} className="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center shadow-lg shadow-indigo-500/20 active:scale-95 transition-all">我準備好了！ <ArrowRight className="ml-2" /></button>
+          </div>
+        );
+
+        // --- 2. Pattern Cracker Game ---
+        const PatternCracker = ({ score, setScore, onComplete }) => {
+            const [level, setLevel] = useState(0);
+            const [feedback, setFeedback] = useState('');
+            
+            const patterns = [
+                {
+                    seq: ['circle', 'square', 'circle', 'square', 'circle'],
+                    colors: ['bg-red-500', 'bg-blue-500', 'bg-red-500', 'bg-blue-500', 'bg-red-500'],
+                    nextType: 'square',
+                    nextColor: 'bg-blue-500',
+                    options: [
+                        { type: 'square', color: 'bg-blue-500' },
+                        { type: 'circle', color: 'bg-red-500' },
+                        { type: 'triangle', color: 'bg-green-500' }
+                    ]
+                },
+                {
+                    seq: ['triangle', 'triangle', 'circle', 'triangle', 'triangle'],
+                    colors: ['bg-green-500', 'bg-green-500', 'bg-yellow-400', 'bg-green-500', 'bg-green-500'],
+                    nextType: 'circle',
+                    nextColor: 'bg-yellow-400',
+                    options: [
+                        { type: 'triangle', color: 'bg-green-500' },
+                        { type: 'circle', color: 'bg-yellow-400' },
+                        { type: 'square', color: 'bg-blue-500' }
+                    ]
+                },
+                {
+                    seq: ['square', 'circle', 'triangle', 'square', 'circle'],
+                    colors: ['bg-purple-500', 'bg-orange-500', 'bg-teal-500', 'bg-purple-500', 'bg-orange-500'],
+                    nextType: 'triangle',
+                    nextColor: 'bg-teal-500',
+                    options: [
+                        { type: 'square', color: 'bg-purple-500' },
+                        { type: 'circle', color: 'bg-orange-500' },
+                        { type: 'triangle', color: 'bg-teal-500' }
+                    ]
+                }
+            ];
+
+            const handleAnswer = (opt) => {
+                if (feedback) return;
+                const currentP = patterns[level];
+                if (opt.type === currentP.nextType && opt.color === currentP.nextColor) {
+                    setFeedback('correct');
+                    setScore(s => s + 15);
+                    setTimeout(() => {
+                        if (level + 1 < patterns.length) {
+                            setLevel(l => l + 1);
+                            setFeedback('');
+                        } else {
+                            onComplete();
+                        }
+                    }, 1000);
+                } else {
+                    setFeedback('incorrect');
+                    setTimeout(() => setFeedback(''), 1000);
+                }
+            };
+
+            const currentP = patterns[level];
+
+            return (
+                <div className="text-center space-y-8">
+                    <div className="flex justify-between items-center border-b border-indigo-100 pb-4">
+                        <h2 className="text-lg font-bold text-slate-700 flex items-center"><span className="bg-indigo-100 text-indigo-600 w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm">1</span>破解規律</h2>
+                        <div className="flex space-x-1">{patterns.map((_, i) => <div key={i} className={`w-2 h-2 rounded-full ${i <= level ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>)}</div>
+                    </div>
+
+                    <div className="py-8 bg-indigo-50 rounded-2xl border-2 border-indigo-100 overflow-x-auto whitespace-nowrap px-4">
+                        <div className="inline-flex items-center space-x-2 md:space-x-4">
+                            {currentP.seq.map((type, i) => (
+                                <div key={i} className="animate-in zoom-in duration-300" style={{animationDelay: `${i*100}ms`}}>
+                                    <ShapeIcon type={type} color={currentP.colors[i]} size={12} />
+                                </div>
+                            ))}
+                            <div className="w-12 h-12 rounded-lg border-2 border-dashed border-indigo-300 flex items-center justify-center bg-white/50 animate-pulse">
+                                <span className="text-2xl font-bold text-indigo-300">?</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p className="text-slate-500 mb-4 font-medium">下一個是什麼？</p>
+                        <div className="flex justify-center space-x-6">
+                            {currentP.options.map((opt, i) => (
+                                <button key={i} onClick={() => handleAnswer(opt)} 
+                                    className={`p-4 rounded-xl bg-white border-2 shadow-sm transition-all transform active:scale-90 hover:scale-105
+                                    ${feedback === 'correct' && opt.type === currentP.nextType && opt.color === currentP.nextColor ? 'border-green-500 ring-2 ring-green-200' : 'border-slate-100 hover:border-indigo-300'}`}>
+                                    <ShapeIcon type={opt.type} color={opt.color} size={16} />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                     <div className="h-8 flex justify-center items-center">
+                        {feedback === 'correct' && <span className="text-green-600 font-bold flex items-center animate-bounce"><CheckCircle className="mr-2"/> 答對了！</span>}
+                        {feedback === 'incorrect' && <span className="text-red-500 font-bold animate-shake">再觀察一下喔！</span>}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 3. Interval Master (Planting Trees) ---
+        const IntervalMaster = ({ score, setScore, onComplete }) => {
+            const [trees, setTrees] = useState(2);
+            const [showHint, setShowHint] = useState(false);
+            const [feedback, setFeedback] = useState('');
+            const [phase, setPhase] = useState('explore'); 
+
+            // For the quiz part
+            const [quizAns, setQuizAns] = useState(null);
+
+            const intervals = trees - 1;
+            const distancePerInterval = 5; 
+            const totalDistance = intervals * distancePerInterval;
+
+            const handleAddTree = () => {
+                if (trees < 6) setTrees(t => t + 1);
+            };
+
+            const handleRemoveTree = () => {
+                if (trees > 2) setTrees(t => t - 1);
+            };
+
+            const startQuiz = () => {
+                setPhase('quiz');
+            };
+
+            const checkQuiz = (ans) => {
+                if (ans === 5) { 
+                     setFeedback('correct');
+                     setScore(s => s + 20);
+                } else {
+                     setFeedback('incorrect');
+                }
+            };
+
+            if (feedback === 'correct') {
+                return (
+                    <div className="text-center py-12 animate-in zoom-in">
+                        <div className="inline-block p-4 bg-green-100 rounded-full mb-4 ring-8 ring-green-50"><Trees className="text-green-600" size={64} /></div>
+                        <h2 className="text-2xl font-bold mb-2 text-slate-800">種樹達人！</h2>
+                        <p className="text-slate-600 mb-8">你已經掌握了間隔的秘密</p>
+                        <button onClick={onComplete} className="w-full bg-indigo-500 text-white py-4 rounded-2xl font-bold text-xl shadow-xl active:scale-95 transition-all">前往下一關：查表與列表</button>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="text-center space-y-6">
+                    <div className="flex justify-between items-center border-b border-indigo-100 pb-4">
+                        <h2 className="text-lg font-bold text-slate-700 flex items-center"><span className="bg-indigo-100 text-indigo-600 w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm">2</span>種樹問題</h2>
+                    </div>
+
+                    {phase === 'explore' ? (
+                        <>
+                            <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 relative min-h-[160px] flex flex-col justify-end">
+                                <div className="absolute top-4 left-4 text-left">
+                                    <span className="bg-white px-2 py-1 rounded shadow-sm text-sm text-slate-500 font-bold">這條路長 {totalDistance} 公尺</span>
+                                </div>
+                                
+                                <div className="relative h-16 w-full flex items-end justify-between px-4 border-b-4 border-slate-300">
+                                    {[...Array(trees)].map((_, i) => (
+                                        <div key={i} className="flex flex-col items-center animate-in slide-in-from-bottom duration-300">
+                                            <Trees className="text-green-600 drop-shadow-md" size={32} />
+                                            <div className="w-2 h-2 bg-slate-400 rounded-full -mb-1"></div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="flex justify-between px-6 -mt-3">
+                                     {[...Array(intervals)].map((_, i) => (
+                                        <div key={i} className="flex-1 text-center text-[10px] text-slate-400 border-t border-slate-300 pt-1">5m</div>
+                                     ))}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                                <div className="text-center">
+                                    <p className="text-slate-500 text-sm">樹的數量</p>
+                                    <p className="text-3xl font-black text-green-600">{trees}</p>
+                                </div>
+                                <div className="text-center">
+                                    <p className="text-slate-500 text-sm">間隔數量</p>
+                                    <p className="text-3xl font-black text-blue-600">{intervals}</p>
+                                </div>
+                            </div>
+                            
+                            <p className="text-indigo-600 font-medium">發現了嗎？樹比間隔多 1！</p>
+
+                            <div className="flex justify-center space-x-4">
+                                <button onClick={handleRemoveTree} disabled={trees <= 2} className="w-12 h-12 rounded-full bg-slate-200 text-slate-600 font-bold text-xl disabled:opacity-50">-</button>
+                                <button onClick={handleAddTree} disabled={trees >= 6} className="w-12 h-12 rounded-full bg-indigo-500 text-white font-bold text-xl disabled:opacity-50">+</button>
+                            </div>
+
+                            <button onClick={startQuiz} className="w-full py-3 bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-xl font-bold shadow-md mt-4">
+                                我懂了，考考我！
+                            </button>
+                        </>
+                    ) : (
+                        <div className="animate-in slide-in-from-right">
+                            <h3 className="text-xl font-bold text-slate-800 mb-6">如果這條路上種了 6 棵樹，請問會有幾個間隔？</h3>
+                            <div className="grid grid-cols-1 gap-3">
+                                {[5, 6, 7].map(ans => (
+                                    <button key={ans} onClick={() => checkQuiz(ans)} 
+                                        className={`p-4 rounded-xl border-2 text-xl font-bold transition-all ${feedback === 'incorrect' ? 'border-red-200 bg-red-50' : 'border-indigo-100 bg-white hover:border-indigo-300'}`}>
+                                        {ans} 個間隔
+                                    </button>
+                                ))}
+                            </div>
+                            {feedback === 'incorrect' && <p className="text-red-500 font-bold mt-4">想一想，樹比間隔多 1 喔！</p>}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // --- NEW: Table & List Master (Reading & Making Tables) ---
+        const TableMaster = ({ score, setScore, onComplete }) => {
+            const [stage, setStage] = useState(0); // 0: Menu, 1: Train, 2: Coins
+            const [feedback, setFeedback] = useState('');
+            
+            // --- Stage 0: Menu Logic ---
+            const menuData = [
+                { name: "漢堡", price: 45 },
+                { name: "三明治", price: 30 },
+                { name: "蛋餅", price: 25 },
+                { name: "奶茶", price: 15 }
+            ];
+            
+            // --- Stage 1: Train Logic ---
+            const stations = ["蘋果站", "香蕉站", "櫻桃站"];
+            const fares = [
+                ["-", 20, 50],
+                [20, "-", 35],
+                [50, 35, "-"]
+            ];
+
+            // --- Stage 2: Coins Logic ---
+            const [coinLevel, setCoinLevel] = useState(0);
+            const totalTarget = 40;
+            const coinRows = [
+                { tens: 4, fives: 0 },
+                { tens: 3, fives: 2 },
+                { tens: 2, fives: 4 },
+                { tens: 1, fives: 6 },
+                { tens: 0, fives: 8 }
+            ];
+            const coinLevels = [
+                { q: "用 3 個 10 元，需要幾個 5 元湊成 40 元？", highlightRow: 1, missingCol: 'fives', options: [1, 2, 3], ans: 2 },
+                { q: "用 6 個 5 元，是用掉幾個 10 元？", highlightRow: 3, missingCol: 'tens', options: [1, 2, 0], ans: 1 },
+                { q: "請問一共有幾種湊法？", highlightRow: -1, missingCol: 'none', options: [4, 5, 6], ans: 5 }
+            ];
+
+            const handleMenuAnswer = (ans) => {
+                if (ans === 45) {
+                    setFeedback('correct'); setScore(s => s + 10);
+                    setTimeout(() => { setStage(1); setFeedback(''); }, 1500);
+                } else {
+                    setFeedback('incorrect'); setTimeout(() => setFeedback(''), 1000);
+                }
+            };
+
+            const handleTrainAnswer = (ans) => {
+                if (ans === 50) {
+                    setFeedback('correct'); setScore(s => s + 15);
+                    setTimeout(() => { setStage(2); setFeedback(''); }, 1500);
+                } else {
+                    setFeedback('incorrect'); setTimeout(() => setFeedback(''), 1000);
+                }
+            };
+
+            const handleCoinAnswer = (val) => {
+                if (feedback) return;
+                const currLvl = coinLevels[coinLevel];
+                if (val === currLvl.ans) {
+                    setFeedback('correct'); setScore(s => s + 20);
+                    setTimeout(() => {
+                        if (coinLevel + 1 < coinLevels.length) {
+                            setCoinLevel(l => l + 1); setFeedback('');
+                        } else {
+                            onComplete();
+                        }
+                    }, 1200);
+                } else {
+                    setFeedback('incorrect'); setTimeout(() => setFeedback(''), 1000);
+                }
+            };
+
+            return (
+                <div className="text-center space-y-6">
+                    <div className="flex justify-between items-center border-b border-indigo-100 pb-4">
+                        <h2 className="text-lg font-bold text-slate-700 flex items-center">
+                            <span className="bg-indigo-100 text-indigo-600 w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm">3</span>
+                            查表與列表 ({stage === 0 ? "早餐店" : stage === 1 ? "火車站" : "湊錢"})
+                        </h2>
+                    </div>
+
+                    {/* STAGE 0: MENU */}
+                    {stage === 0 && (
+                        <div className="animate-in slide-in-from-right">
+                            <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 mb-6">
+                                <div className="flex items-center justify-center mb-4 text-orange-700 font-bold text-lg"><Coffee className="mr-2"/> 快樂早餐店</div>
+                                <div className="grid grid-cols-4 gap-2 text-sm md:text-base">
+                                    {menuData.map((item, i) => (
+                                        <div key={i} className="bg-white p-2 rounded-lg shadow-sm border border-orange-100 flex flex-col items-center">
+                                            <span className="text-slate-600 font-bold">{item.name}</span>
+                                            <span className="text-orange-500 font-black">{item.price}元</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-800 mb-4">請問一個漢堡多少錢？</h3>
+                            <div className="flex justify-center gap-4">
+                                {[25, 45, 15].map(opt => (
+                                    <button key={opt} onClick={() => handleMenuAnswer(opt)} className="px-6 py-3 bg-white border-2 border-indigo-100 rounded-xl font-bold text-lg hover:border-indigo-400 shadow-sm">{opt} 元</button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STAGE 1: TRAIN TABLE */}
+                    {stage === 1 && (
+                        <div className="animate-in slide-in-from-right">
+                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-6">
+                                <div className="flex items-center justify-center mb-4 text-blue-700 font-bold text-lg"><Train className="mr-2"/> 票價表 (元)</div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm md:text-base bg-white rounded-lg shadow-sm">
+                                        <thead>
+                                            <tr className="bg-blue-100 text-blue-800">
+                                                <th className="p-2 border-r border-blue-200">起\迄</th>
+                                                {stations.map(s => <th key={s} className="p-2">{s}</th>)}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {stations.map((rowStation, rIdx) => (
+                                                <tr key={rIdx} className="border-t border-slate-100">
+                                                    <td className="p-2 font-bold text-blue-800 bg-blue-50 border-r border-blue-200">{rowStation}</td>
+                                                    {fares[rIdx].map((fare, cIdx) => (
+                                                        <td key={cIdx} className={`p-2 font-bold ${fare === '-' ? 'text-slate-300' : 'text-slate-700'}`}>
+                                                            {rIdx === 0 && cIdx === 2 ? <span className="text-red-500 animate-pulse">{fare}</span> : fare}
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-800 mb-4">從「蘋果站」到「櫻桃站」多少錢？</h3>
+                            <div className="flex justify-center gap-4">
+                                {[20, 35, 50].map(opt => (
+                                    <button key={opt} onClick={() => handleTrainAnswer(opt)} className="px-6 py-3 bg-white border-2 border-indigo-100 rounded-xl font-bold text-lg hover:border-indigo-400 shadow-sm">{opt} 元</button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STAGE 2: COINS (Original) */}
+                    {stage === 2 && (
+                        <div className="animate-in slide-in-from-right">
+                             <div className="bg-green-50 p-4 rounded-xl border border-green-100 mb-6">
+                                <div className="flex items-center justify-center mb-2 text-green-700 font-bold"><Coins className="mr-2" /> 目標：湊成 {totalTarget} 元</div>
+                                <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+                                    <div className="grid grid-cols-3 bg-slate-100 text-sm font-bold text-slate-600 py-2">
+                                        <div>方法</div><div>10元</div><div>5元</div>
+                                    </div>
+                                    {coinRows.map((row, idx) => {
+                                        const currLvl = coinLevels[coinLevel];
+                                        const isHighlight = idx === currLvl.highlightRow;
+                                        const showTens = currLvl.missingCol === 'tens' && isHighlight ? '?' : row.tens;
+                                        const showFives = currLvl.missingCol === 'fives' && isHighlight ? '?' : row.fives;
+                                        return (
+                                            <div key={idx} className={`grid grid-cols-3 py-2 border-t border-slate-100 text-lg ${isHighlight ? 'bg-yellow-100 text-indigo-700 font-bold' : 'text-slate-600'}`}>
+                                                <div className="text-sm flex items-center justify-center text-slate-400">#{idx + 1}</div>
+                                                <div>{showTens}</div><div>{showFives}</div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-800 mb-4">{coinLevels[coinLevel].q}</h3>
+                            <div className="flex justify-center gap-4">
+                                {coinLevels[coinLevel].options.map((opt, i) => (
+                                    <button key={i} onClick={() => handleCoinAnswer(opt)} 
+                                        className={`w-20 h-14 rounded-xl border-2 text-xl font-bold shadow-sm transition-all active:scale-95
+                                        ${feedback === 'correct' && opt === coinLevels[coinLevel].ans ? 'bg-green-500 text-white border-green-600' : 'bg-white border-indigo-100 text-indigo-600 hover:border-indigo-400'}`}>
+                                        {opt}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    
+                    {feedback === 'correct' && <p className="text-green-600 font-bold text-lg animate-bounce mt-4">答對了！</p>}
+                    {feedback === 'incorrect' && <p className="text-red-500 font-bold text-lg mt-4 animate-shake">再試試看！</p>}
+                </div>
+            );
+        };
+
+        // --- 4. Quiz Mode ---
+        const QuizMode = ({ score, setScore, onRestart }) => {
+            const [idx, setIdx] = useState(0);
+            const [finished, setFinished] = useState(false);
+            const [feedback, setFeedback] = useState(null);
+            
+            const questions = [
+                {
+                    q: "觀察規律：1, 3, 5, 1, 3, 5... 下一個是？",
+                    options: ["1", "3", "5"],
+                    ans: 0
+                },
+                {
+                    q: "查火車票價表時，如果想從A站到B站，要怎麼看？",
+                    options: ["只看第一行", "找A站那一列和B站那一行的交叉點", "隨便猜"],
+                    ans: 1
+                },
+                {
+                    q: "下面哪一個是偶數？",
+                    options: ["103", "58", "21"],
+                    ans: 1
+                },
+                {
+                    q: "用列表解決問題最大的好處是什麼？",
+                    options: ["可以畫畫", "不會漏掉答案", "不用動腦"],
+                    ans: 1
+                }
+            ];
+
+            const handleAnswer = (optIdx) => {
+                if (feedback) return;
+                if (optIdx === questions[idx].ans) {
+                    setFeedback('correct');
+                    setScore(s => s + 20);
+                } else {
+                    setFeedback('incorrect');
+                }
+                setTimeout(() => {
+                    if (idx + 1 < questions.length) {
+                        setIdx(i => i + 1);
+                        setFeedback(null);
+                    } else {
+                        setFinished(true);
+                    }
+                }, 1500);
+            };
+
+            if (finished) return (
+                <div className="text-center py-10 space-y-6 animate-in slide-in-from-bottom">
+                    <div className="inline-block p-6 bg-yellow-100 rounded-full mb-4 shadow-inner"><Trophy size={80} className="text-yellow-600" /></div>
+                    <h2 className="text-4xl font-bold text-slate-800">恭喜過關！</h2>
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <p className="text-sm text-slate-400 uppercase tracking-widest mb-2">總得分</p>
+                        <p className="text-6xl font-black text-indigo-500 mb-4">{score}</p>
+                        <p className="text-lg text-slate-600">你是規律偵探大師！</p>
+                    </div>
+                    <button onClick={onRestart} className="w-full bg-slate-800 text-white py-4 rounded-xl font-bold hover:bg-slate-700 flex items-center justify-center shadow-lg active:scale-95 transition-all"><RotateCcw className="mr-2" size={20} /> 再玩一次</button>
+                </div>
+            );
+
+            return (
+                <div className="py-2">
+                    <div className="mb-6 flex justify-between items-center text-sm font-medium text-slate-400"><span className="bg-slate-100 px-3 py-1 rounded-full">第 {idx + 1} / {questions.length} 題</span><span>分數: {score}</span></div>
+                    <h3 className="text-xl font-bold text-slate-800 mb-6 leading-relaxed">{questions[idx].q}</h3>
+                    <div className="space-y-3">
+                        {questions[idx].options.map((opt, i) => (
+                            <button key={i} onClick={() => handleAnswer(i)} disabled={!!feedback}
+                             className={`w-full text-left p-4 rounded-xl text-lg font-medium border-2 transition-all active:scale-98 
+                             ${feedback === 'correct' && i === questions[idx].ans ? 'bg-green-100 border-green-500 text-green-800' : 
+                               feedback === 'incorrect' && i !== questions[idx].ans && feedback ? 'bg-red-50 border-red-200 text-red-800 opacity-50' : 
+                               'bg-white border-slate-200 hover:border-indigo-400'}`}>
+                                <div className="flex items-center">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 text-sm font-bold ${feedback === 'correct' && i === questions[idx].ans ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{String.fromCharCode(65+i)}</div>
+                                    {opt}
+                                    {feedback === 'correct' && i === questions[idx].ans && <CheckCircle className="ml-auto text-green-600" />}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                    {feedback && <div className={`mt-6 text-center font-bold text-xl ${feedback === 'correct' ? 'text-green-500' : 'text-red-500'}`}>{feedback === 'correct' ? '正確！' : '答錯囉...'}</div>}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<PatternGame />);
+    </script>
+</body>
+</html>

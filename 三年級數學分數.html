@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>分數大冒險</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body { touch-action: manipulation; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+    </style>
+</head>
+<body class="bg-sky-50 text-slate-800 select-none">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Icons (Inline SVGs to avoid dependencies) ---
+        const IconWrapper = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        const Pizza = (props) => <IconWrapper {...props}><path d="M15 11h.01"/><path d="M11 15h.01"/><path d="M16 16h.01"/><path d="M2 16h20"/><path d="M2 16v-4a8.03 8.03 0 0 1 2.3-5.7"/><path d="M6 12v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M22 16v-4c0-1.7-.5-3.3-1.4-4.7"/></IconWrapper>;
+        const Star = (props) => <IconWrapper {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></IconWrapper>;
+        const Play = (props) => <IconWrapper {...props}><polygon points="5 3 19 12 5 21 5 3"/></IconWrapper>;
+        const BookOpen = (props) => <IconWrapper {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconWrapper>;
+        const PenTool = (props) => <IconWrapper {...props}><path d="m12 19 7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-7z"/><path d="m2 2 7.586 7.586"/><circle cx="11" cy="11" r="2"/></IconWrapper>;
+        const CheckCircle = (props) => <IconWrapper {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconWrapper>;
+        const Trophy = (props) => <IconWrapper {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></IconWrapper>;
+        const ArrowRight = (props) => <IconWrapper {...props}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></IconWrapper>;
+        const RotateCcw = (props) => <IconWrapper {...props}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></IconWrapper>;
+
+        // --- Main App Component ---
+        const FractionGame = () => {
+          const [currentTab, setCurrentTab] = useState('learn');
+          const [score, setScore] = useState(0);
+          const [animateScore, setAnimateScore] = useState(false);
+
+          useEffect(() => {
+            if (score > 0) {
+              setAnimateScore(true);
+              const timer = setTimeout(() => setAnimateScore(false), 300);
+              return () => clearTimeout(timer);
+            }
+          }, [score]);
+
+          const renderTabContent = () => {
+            switch (currentTab) {
+              case 'learn': return <LearnSection onComplete={() => setCurrentTab('practice_1')} />;
+              case 'practice_1': return <PracticeModeOne score={score} setScore={setScore} onComplete={() => setCurrentTab('practice_2')} />;
+              case 'practice_2': return <PracticeModeTwo score={score} setScore={setScore} onComplete={() => setCurrentTab('quiz')} />;
+              case 'quiz': return <QuizMode score={score} setScore={setScore} onRestart={() => { setScore(0); setCurrentTab('learn'); }} />;
+              default: return <LearnSection />;
+            }
+          };
+
+          return (
+            <div className="h-screen flex flex-col bg-sky-50 font-sans text-slate-800 overflow-hidden select-none">
+              <header className="bg-white shadow-sm p-3 z-10 flex-none border-b border-slate-100">
+                <div className="max-w-2xl mx-auto flex justify-between items-center">
+                  <div className="flex items-center space-x-2">
+                    <div className="bg-orange-500 p-2 rounded-xl text-white shadow-sm"><Pizza size={20} /></div>
+                    <h1 className="text-lg font-bold text-orange-600 tracking-wide">分數大冒險</h1>
+                  </div>
+                  <div className={`flex items-center bg-yellow-100 px-3 py-1.5 rounded-full border border-yellow-300 transition-transform duration-200 ${animateScore ? 'scale-110 ring-4 ring-yellow-200' : ''}`}>
+                    <Star className={`text-yellow-500 mr-1.5 ${animateScore ? 'animate-spin' : ''}`} size={18} style={{fill: 'currentColor'}} />
+                    <span className="font-bold text-yellow-700">{score} 分</span>
+                  </div>
+                </div>
+              </header>
+
+              <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-24 scroll-smooth">
+                <div className="max-w-2xl mx-auto bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-5 min-h-[400px] animate-fade-in-up">
+                  {renderTabContent()}
+                </div>
+                <div className="text-center mt-6 text-slate-400 text-xs pb-4">適合國小學生互動學習 | 均一教育平台影片授權</div>
+              </main>
+
+              <nav className="bg-white border-t border-slate-200 pb-safe pt-2 px-2 fixed bottom-0 w-full z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+                <div className="max-w-2xl mx-auto flex justify-around items-end pb-2">
+                  <NavButton active={currentTab === 'learn'} onClick={() => setCurrentTab('learn')} icon={<BookOpen size={22} />} label="學習" />
+                  <NavButton active={currentTab === 'practice_1'} onClick={() => setCurrentTab('practice_1')} icon={<PenTool size={22} />} label="切切看" />
+                  <NavButton active={currentTab === 'practice_2'} onClick={() => setCurrentTab('practice_2')} icon={<CheckCircle size={22} />} label="塗塗看" />
+                  <NavButton active={currentTab === 'quiz'} onClick={() => setCurrentTab('quiz')} icon={<Trophy size={22} />} label="測驗" />
+                </div>
+              </nav>
+            </div>
+          );
+        };
+
+        const NavButton = ({ active, onClick, icon, label }) => (
+          <button onClick={onClick} className={`flex flex-col items-center justify-center w-full py-2 px-1 transition-all duration-300 rounded-xl active:scale-95 touch-manipulation ${active ? 'text-orange-500 -translate-y-2' : 'text-slate-400 hover:text-slate-600'}`}>
+            <div className={`p-1.5 rounded-full transition-all duration-300 ${active ? 'bg-orange-100 shadow-sm' : ''}`}>{icon}</div>
+            <span className={`text-[10px] font-medium mt-1 ${active ? 'opacity-100' : 'opacity-70'}`}>{label}</span>
+            {active && <div className="w-1 h-1 bg-orange-500 rounded-full mt-1"></div>}
+          </button>
+        );
+
+        // --- Sections ---
+        const LearnSection = ({ onComplete }) => (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-800 flex items-center"><Play className="mr-2 text-orange-500" style={{fill: 'currentColor'}} size={24} /> 觀念學習</h2>
+              <span className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded">Step 1</span>
+            </div>
+            <div className="aspect-video w-full bg-slate-900 rounded-2xl overflow-hidden shadow-lg ring-4 ring-slate-100" style={{position:'relative', paddingBottom: '56.25%', height: 0}}>
+              <iframe src="https://www.youtube.com/embed/IO5_07lhSQY" title="認識分數幾分之幾" style={{position:'absolute', top:0, left:0, width:'100%', height:'100%'}} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+            </div>
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-2xl border border-blue-100 mt-4 shadow-sm">
+              <h3 className="text-lg font-bold text-blue-800 mb-3 flex items-center"><BookOpen className="w-5 h-5 mr-2" />重點筆記</h3>
+              <div className="space-y-3 text-base text-slate-700">
+                <div className="flex bg-white p-3 rounded-xl shadow-sm border border-blue-50">
+                  <div className="bg-blue-100 text-blue-600 font-bold rounded-lg w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">1</div>
+                  <div><strong className="text-blue-700">平分</strong>：切成一樣大的好幾份。</div>
+                </div>
+                <div className="flex bg-white p-3 rounded-xl shadow-sm border border-blue-50">
+                  <div className="bg-blue-100 text-blue-600 font-bold rounded-lg w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">2</div>
+                  <div><strong className="text-blue-700">分母</strong> (下)：一共切成幾份。</div>
+                </div>
+                <div className="flex bg-white p-3 rounded-xl shadow-sm border border-blue-50">
+                  <div className="bg-blue-100 text-blue-600 font-bold rounded-lg w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">3</div>
+                  <div><strong className="text-blue-700">分子</strong> (上)：拿走了幾份。</div>
+                </div>
+              </div>
+            </div>
+            <button onClick={onComplete} className="w-full bg-green-500 hover:bg-green-600 text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center shadow-lg shadow-green-500/20 active:scale-95 transition-all">我懂了，開始練習！ <ArrowRight className="ml-2" /></button>
+          </div>
+        );
+
+        const PieChart = ({ total, selected, interactive, onSegmentClick }) => {
+          const radius = 100, center = 100;
+          const getCoordinatesForPercent = (percent) => [center + radius * Math.cos(2 * Math.PI * percent), center + radius * Math.sin(2 * Math.PI * percent)];
+          const slices = [];
+          for (let i = 0; i < total; i++) {
+            const start = i / total, end = (i + 1) / total;
+            const [startX, startY] = getCoordinatesForPercent(start);
+            const [endX, endY] = getCoordinatesForPercent(end);
+            const largeArcFlag = 1 / total > 0.5 ? 1 : 0;
+            const isFilled = i < selected;
+            slices.push(
+              <path key={i} d={`M ${center} ${center} L ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY} Z`}
+                fill={isFilled ? '#f97316' : '#f1f5f9'} stroke="white" strokeWidth="3" strokeLinejoin="round"
+                className={`transition-all duration-200 ${interactive ? 'cursor-pointer hover:opacity-90 active:scale-95 origin-center' : ''}`}
+                onClick={() => interactive && onSegmentClick && onSegmentClick(i)} />
+            );
+          }
+          return <svg viewBox="0 0 200 200" className="w-48 h-48 md:w-56 md:h-56 drop-shadow-lg transform -rotate-90">{slices}</svg>;
+        };
+
+        const PracticeModeOne = ({ score, setScore, onComplete }) => {
+          const [parts, setParts] = useState(2);
+          const [options, setOptions] = useState([]);
+          const [feedback, setFeedback] = useState('');
+          const [correctCount, setCorrectCount] = useState(0);
+
+          useEffect(() => { if (correctCount < 5) generateNewQuestion(); }, [correctCount]);
+          const generateNewQuestion = () => {
+            setFeedback('');
+            const newParts = [2, 3, 4, 5, 6, 8][Math.floor(Math.random() * 6)];
+            setParts(newParts);
+            const uniqueOptions = new Set([newParts]);
+            while(uniqueOptions.size < 3) uniqueOptions.add(Math.floor(Math.random() * 8) + 2);
+            setOptions(Array.from(uniqueOptions).sort(() => Math.random() - 0.5));
+          };
+          const handleAnswer = (ans) => {
+            if (feedback) return;
+            if (ans === parts) {
+              setFeedback('correct'); setScore(prev => prev + 10);
+              setTimeout(() => setCorrectCount(prev => prev + 1), 1000);
+            } else {
+              setFeedback('incorrect'); setTimeout(() => setFeedback(''), 1000);
+            }
+          };
+
+          if (correctCount >= 5) return (
+            <div className="text-center py-12">
+              <div className="inline-block p-4 bg-yellow-100 rounded-full mb-4 ring-8 ring-yellow-50"><Trophy className="text-yellow-500" size={64} /></div>
+              <h2 className="text-3xl font-bold mb-4 text-slate-800">第一關通過！</h2>
+              <button onClick={onComplete} className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-2xl font-bold text-xl shadow-xl hover:shadow-2xl active:scale-95 transition-all">進入下一關</button>
+            </div>
+          );
+
+          return (
+            <div className="text-center space-y-6">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                <h2 className="text-lg font-bold text-slate-700 flex items-center"><span className="bg-orange-100 text-orange-600 w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm">1</span>這是幾分之幾的分母？</h2>
+                <div className="flex space-x-1">{[...Array(5)].map((_, i) => <div key={i} className={`w-2 h-2 rounded-full ${i < correctCount ? 'bg-green-500' : 'bg-slate-200'}`}></div>)}</div>
+              </div>
+              <div className="py-4"><p className="text-lg text-slate-600 mb-4">這個圖形被平分成幾份？</p><div className="flex justify-center"><PieChart total={parts} selected={0} interactive={false} /></div></div>
+              <div className="grid grid-cols-3 gap-3">{options.map((opt, idx) => (<button key={idx} onClick={() => handleAnswer(opt)} disabled={!!feedback} className={`py-4 rounded-2xl text-2xl font-bold shadow-sm border-b-4 transition-all active:scale-95 ${feedback === 'correct' && opt === parts ? 'bg-green-500 text-white border-green-700' : feedback === 'incorrect' && opt === parts ? 'bg-green-500 text-white border-green-700 opacity-50' : 'bg-white border-slate-200 text-slate-700 hover:bg-orange-50 hover:border-orange-200'}`}>{opt}</button>))}</div>
+              <div className="h-8 flex items-center justify-center">{feedback === 'correct' && <span className="text-green-600 font-bold text-xl flex items-center"><CheckCircle className="mr-2"/> 答對了！</span>}{feedback === 'incorrect' && <span className="text-red-500 font-bold text-xl">再試試看！</span>}</div>
+            </div>
+          );
+        };
+
+        const PracticeModeTwo = ({ score, setScore, onComplete }) => {
+          const [target, setTarget] = useState({num: 1, denom: 4});
+          const [current, setCurrent] = useState(0);
+          const [feedback, setFeedback] = useState('');
+          const [correctCount, setCorrectCount] = useState(0);
+
+          useEffect(() => { if (correctCount < 5) { setFeedback(''); setCurrent(0); const d = [3, 4, 5, 6, 8][Math.floor(Math.random() * 5)]; setTarget({num: Math.floor(Math.random() * (d - 1)) + 1, denom: d}); } }, [correctCount]);
+          const checkAnswer = () => {
+            if (current === target.num) {
+              setFeedback('correct'); setScore(prev => prev + 15);
+              setTimeout(() => setCorrectCount(prev => prev + 1), 1000);
+            } else { setFeedback('incorrect'); setTimeout(() => setFeedback(''), 1500); }
+          };
+
+          if (correctCount >= 5) return (
+            <div className="text-center py-12">
+              <div className="inline-block p-4 bg-yellow-100 rounded-full mb-4 ring-8 ring-yellow-50"><Star className="text-yellow-500" style={{fill:'currentColor'}} size={64} /></div>
+              <h2 className="text-3xl font-bold mb-4 text-slate-800">第二關通過！</h2>
+              <button onClick={onComplete} className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-4 rounded-2xl font-bold text-xl shadow-xl hover:shadow-2xl active:scale-95 transition-all">挑戰最終測驗</button>
+            </div>
+          );
+
+          return (
+            <div className="text-center space-y-6">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                <h2 className="text-lg font-bold text-slate-700 flex items-center"><span className="bg-orange-100 text-orange-600 w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm">2</span>塗出正確的分數</h2>
+                <div className="flex space-x-1">{[...Array(5)].map((_, i) => <div key={i} className={`w-2 h-2 rounded-full ${i < correctCount ? 'bg-green-500' : 'bg-slate-200'}`}></div>)}</div>
+              </div>
+              <div className="flex items-center justify-center space-x-4 bg-orange-50 p-4 rounded-2xl border border-orange-100">
+                <div className="text-left"><p className="text-sm text-slate-500">目標分數</p><p className="text-lg font-bold text-slate-700">請塗出：</p></div>
+                <div className="flex flex-col items-center justify-center font-black text-4xl text-orange-500 leading-none bg-white px-4 py-2 rounded-xl shadow-sm"><span>{target.num}</span><span className="w-10 h-1 bg-slate-200 my-1 rounded-full"></span><span className="text-slate-400">{target.denom}</span></div>
+              </div>
+              <div className="flex justify-center py-2"><div className="cursor-pointer relative group tap-highlight-transparent" onClick={() => !feedback && setCurrent(p => (p + 1) % (target.denom + 1))}><PieChart total={target.denom} selected={current} interactive={true} /><div className="absolute -bottom-8 left-0 right-0 text-center"><span className="text-sm font-medium text-slate-400 bg-slate-100 px-3 py-1 rounded-full">點擊圓形來塗色</span></div></div></div>
+              <div className="pt-6"><button onClick={checkAnswer} disabled={!!feedback} className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all active:scale-95 duration-200 ${feedback === 'correct' ? 'bg-green-500 text-white shadow-green-500/30' : feedback === 'incorrect' ? 'bg-red-500 text-white shadow-red-500/30' : 'bg-blue-500 hover:bg-blue-600 text-white shadow-blue-500/30'}`}>{feedback === 'correct' ? '太棒了！' : feedback === 'incorrect' ? '數量不對喔，再數數看' : '送出答案'}</button></div>
+            </div>
+          );
+        };
+
+        const QuizMode = ({ score, setScore, onRestart }) => {
+          const [idx, setIdx] = useState(0);
+          const [finished, setFinished] = useState(false);
+          const [feedback, setFeedback] = useState(null);
+          const questions = [
+            { q: "下面哪一個是「分母」？", visual: <div className="flex flex-col items-center font-bold text-4xl bg-white p-4 rounded-xl shadow-sm"><span>2</span><span className="w-12 h-1 bg-slate-800 my-2 rounded-full"></span><span className="text-orange-500">5</span></div>, options: ["上面的 2", "下面的 5", "中間的線"], ans: 1 },
+            { q: "把一個披薩平分成 8 塊，每一塊是幾分之幾？", visual: null, options: ["1/2", "1/4", "1/8"], ans: 2 },
+            { q: "右圖有 3/4 塗了顏色，代表什麼意思？", visual: <div className="flex justify-center bg-white p-2 rounded-full shadow-sm"><PieChart total={4} selected={3} interactive={false} /></div>, options: ["平分成 3 份，拿了 4 份", "平分成 4 份，拿了 3 份", "一共有 7 份"], ans: 1 },
+            { q: "如果分母越大（例如 1/2 和 1/10），切出來的每一塊會？", visual: <div className="flex justify-center space-x-4 items-center"><div className="w-16"><PieChart total={2} selected={1} /></div><ArrowRight className="text-slate-300" /><div className="w-16"><PieChart total={10} selected={1} /></div></div>, options: ["越小塊", "越大塊", "一樣大"], ans: 0 }
+          ];
+
+          const handleOption = (optIdx) => {
+            if (feedback) return;
+            if (optIdx === questions[idx].ans) { setFeedback('correct'); setScore(p => p + 20); } else { setFeedback('incorrect'); }
+            setTimeout(() => { if (idx + 1 < questions.length) { setIdx(p => p + 1); setFeedback(null); } else setFinished(true); }, 1500);
+          };
+
+          if (finished) return (
+            <div className="text-center py-10 space-y-6">
+              <div className="inline-block p-6 bg-yellow-100 rounded-full mb-4 shadow-inner"><Trophy size={80} className="text-yellow-600" /></div>
+              <h2 className="text-4xl font-bold text-slate-800">恭喜完成！</h2>
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100"><p className="text-sm text-slate-400 uppercase tracking-widest mb-2">Total Score</p><p className="text-6xl font-black text-orange-500 mb-4">{score}</p><p className="text-lg text-slate-600">你是分數小達人！</p></div>
+              <button onClick={onRestart} className="w-full bg-slate-800 text-white py-4 rounded-xl font-bold hover:bg-slate-700 flex items-center justify-center shadow-lg active:scale-95 transition-all"><RotateCcw className="mr-2" size={20} /> 再玩一次</button>
+            </div>
+          );
+
+          return (
+            <div className="py-2">
+              <div className="mb-6 flex justify-between items-center text-sm font-medium text-slate-400"><span className="bg-slate-100 px-3 py-1 rounded-full">第 {idx + 1} / {questions.length} 題</span><span>分數: {score}</span></div>
+              <h3 className="text-xl font-bold text-slate-800 mb-6 leading-relaxed">{questions[idx].q}</h3>
+              {questions[idx].visual && <div className="mb-8 p-6 bg-slate-50 rounded-2xl border border-slate-100 flex justify-center">{questions[idx].visual}</div>}
+              <div className="space-y-3">{questions[idx].options.map((opt, i) => (<button key={i} onClick={() => handleOption(i)} disabled={!!feedback} className={`w-full text-left p-4 rounded-xl text-lg font-medium border-2 transition-all active:scale-98 ${feedback === 'correct' && i === questions[idx].ans ? 'bg-green-50 border-green-500 text-green-800' : feedback === 'incorrect' && i !== questions[idx].ans && feedback ? 'bg-red-50 border-red-200 text-red-800 opacity-50' : 'bg-white border-slate-200 hover:border-blue-400 hover:bg-blue-50'}`}><div className="flex items-center"><div className={`w-10 h-10 rounded-full flex items-center justify-center mr-4 text-base font-bold shadow-sm ${feedback === 'correct' && i === questions[idx].ans ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{String.fromCharCode(65 + i)}</div>{opt}{feedback === 'correct' && i === questions[idx].ans && <CheckCircle className="ml-auto text-green-600" />}</div></button>))}</div>
+              {feedback && <div className={`mt-6 text-center font-bold text-xl ${feedback === 'correct' ? 'text-green-500' : 'text-red-500'}`}>{feedback === 'correct' ? '正確！' : '答錯囉...'}</div>}
+            </div>
+          );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<FractionGame />);
+    </script>
+</body>
+</html>
