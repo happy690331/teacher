@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>減法大冒險小朋友下樓梯</title>
+    <!-- 引入像素字體與現代字體 -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* 全局基礎設定 */
+        body {
+            background-color: #202020;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
+            position: relative;
+            min-height: 750px;
+            /* 第一層的默認樣式 - 木頭地磚背景 */
+            background-color: #8b5a2b; /* 基礎木色 */
+            background-image: 
+                linear-gradient(45deg, #a06a35 25%, transparent 25%, transparent 75%, #a06a35 75%, #a06a35),
+                linear-gradient(45deg, #a06a35 25%, transparent 25%, transparent 75%, #a06a35 75%, #a06a35);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            
+            border: 8px solid #5d4037; /* 深木色邊框 */
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* === 第一層：8-bit 任天堂風格 === */
+        #menuScreen {
+            font-family: 'Press Start 2P', cursive;
+            color: #fff;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 標題樣式 - 標楷體 + 大字 */
+        #menuScreen h1 {
+            /* 字體設定：標楷體 */
+            font-family: 'KaiTi', 'BiauKai', 'DFKai-SB', 'Noto Serif TC', serif;
+            font-size: 3.5rem; /* 再大一點 */
+            text-align: center;
+            line-height: 1.4;
+            margin-bottom: 40px;
+            
+            /* 單行顯示設定 */
+            white-space: nowrap;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+
+            /* 顏色設定：紅色配白陰影 */
+            color: #e60012; 
+            text-shadow: 4px 4px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff; /* 加強描邊感 */
+        }
+
+        .pixel-box {
+            border: 4px solid #5d4037;
+            padding: 30px;
+            width: 90%;
+            background-color: rgba(0, 0, 0, 0.7); /* 半透明黑底以凸顯文字 */
+            box-shadow: 8px 8px 0px rgba(0,0,0,0.3);
+            text-align: left;
+            border-radius: 4px;
+        }
+
+        .pixel-text {
+            font-size: 1.2rem;
+            color: #ffeb3b; /* 亮黃色 */
+            margin-bottom: 30px;
+            text-align: center;
+            line-height: 1.5;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .pixel-checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .pixel-checkbox-item {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #fff;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .pixel-checkbox-item input {
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border: 3px solid #fff;
+            background: #000;
+            margin-right: 15px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .pixel-checkbox-item input:checked {
+            background: #00aa00;
+        }
+
+        .pixel-checkbox-item input:checked::after {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            top: 3px;
+            left: 3px;
+        }
+
+        .pixel-btn {
+            background-color: #e60012;
+            color: #fff;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1.4rem;
+            padding: 20px 40px;
+            border: 4px solid #fff;
+            margin-top: 40px;
+            cursor: pointer;
+            box-shadow: 6px 6px 0px #000;
+            transition: transform 0.1s, box-shadow 0.1s;
+            width: 100%;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .pixel-btn:hover {
+            background-color: #ff3333;
+        }
+
+        .pixel-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 2px 2px 0px #000;
+        }
+
+        /* === 第二層：現代/磚牆風格 (復原) === */
+        #gameScreen {
+            font-family: 'Inter', sans-serif;
+            color: #334155;
+            width: 100%;
+            height: 100%;
+            display: none; /* 預設隱藏 */
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 遊戲層啟用時，改變容器樣式 */
+        .game-container.modern-style {
+            background: #ffffff;
+            background-image: none; /* 移除木紋 */
+            border: 8px solid #334155;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            padding: 20px;
+        }
+
+        /* 畫布 */
+        #gameCanvas {
+            border: 4px solid #1e293b;
+            background-color: #0f172a;
+            border-radius: 8px;
+            margin: 10px 0;
+            touch-action: none;
+        }
+
+        .score-panel {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0 10px 10px 10px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #334155;
+        }
+
+        /* 現代按鈕 */
+        .modern-btn {
+            background-color: #4f46e5;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .modern-btn:active {
+            transform: translateY(1px);
+        }
+
+        #startGameOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 15;
+            border-radius: 8px;
+        }
+
+        #startGameOverlayButton {
+            background-color: #10b981;
+            font-size: 1.5rem;
+            padding: 20px 40px;
+            border-radius: 50px;
+            animation: pulse 1.5s infinite;
+            border: none;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .controls {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        /* 觸控板 */
+        .mobile-controls {
+            display: none;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0 10px;
+        }
+
+        .d-pad-btn {
+            width: 70px;
+            height: 70px;
+            background-color: #0d9488;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            color: white;
+            box-shadow: 0 4px #0f766e;
+            user-select: none;
+        }
+
+        @media (max-width: 1024px) { 
+            .mobile-controls { display: flex; }
+        }
+
+        /* 彈窗樣式 (通用) */
+        .message-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            border-radius: 16px;
+        }
+
+        .message-box {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 90%;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* 測驗區 */
+        #quizInput {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.5rem;
+            margin: 15px 0;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="mainContainer" class="game-container">
+        
+        <!-- === 第一層：8-bit 主選單 === -->
+        <div id="menuScreen">
+            <h1>減法大冒險小朋友下樓梯</h1>
+            
+            <div class="pixel-box">
+                <p class="pixel-text">請選擇挑戰題型</p>
+                <div class="pixel-checkbox-group">
+                    <label class="pixel-checkbox-item">
+                        <input type="checkbox" id="opt1" checked>
+                        一位數 - 一位數 (例如: 8 - 3)
+                    </label>
+                    <label class="pixel-checkbox-item">
+                        <input type="checkbox" id="opt2" checked>
+                        二位數 - 一位數 (例如: 25 - 4)
+                    </label>
+                    <label class="pixel-checkbox-item">
+                        <input type="checkbox" id="opt3">
+                        二位數 - 二位數 (例如: 45 - 23)
+                    </label>
+                    <div style="border-top: 2px dashed #fff; margin: 10px 0;"></div>
+                    <label class="pixel-checkbox-item">
+                        <input type="checkbox" id="optBorrow">
+                        必須包含退位 (挑戰模式)
+                    </label>
+                </div>
+                <button id="menuConfirmButton" class="pixel-btn">START GAME</button>
+            </div>
+            
+            <div style="margin-top: 40px; font-size: 0.6rem; color: #fff; text-shadow: 1px 1px 0 #000;">
+                © 2025 PIXEL EDU GAMES
+            </div>
+        </div>
+
+        <!-- === 第二層：現代磚牆風格遊戲畫面 === -->
+        <div id="gameScreen">
+            <div class="score-panel">
+                <span>分數: <span id="scoreDisplay">0</span></span>
+                <span>最高分: <span id="highScoreDisplay">0</span></span>
+            </div>
+            
+            <div style="position: relative;">
+                <canvas id="gameCanvas" width="380" height="600"></canvas>
+                <!-- 開始遊戲按鈕覆蓋層 -->
+                <div id="startGameOverlay" class="start-overlay">
+                    <button id="startGameOverlayButton">開始挑戰</button>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <div class="mobile-controls">
+                    <div class="d-pad-btn" id="leftButton">◀</div>
+                    <div class="d-pad-btn" id="rightButton">▶</div>
+                </div>
+                <div class="action-buttons">
+                    <button id="pauseButton" class="modern-btn" style="background-color: #f59e0b;">暫停</button>
+                    <button id="backButton" class="modern-btn" style="background-color: #64748b;">主選單</button>
+                    <!-- 隱藏的上傳按鈕 -->
+                    <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                    <button id="uploadButton" class="modern-btn" style="background-color: #0ea5e9;">換角色圖</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 訊息彈窗 (遊戲結束/通用) -->
+        <div class="message-overlay" id="messageOverlay">
+            <div class="message-box">
+                <h2 id="messageTitle" style="color:#dc2626; margin:0 0 15px 0;">遊戲結束</h2>
+                <p id="messageText" style="color:#4b5563; font-size:1.1rem;">得分: 100</p>
+                <button id="closeMessageButton" class="modern-btn">確定</button>
+            </div>
+        </div>
+
+        <!-- 答題彈窗 -->
+        <div class="message-overlay" id="quizOverlay">
+            <div class="message-box">
+                <h2 style="color: #4f46e5; margin-top:0;">數學挑戰！</h2>
+                <div style="font-size: 1.8rem; margin: 15px 0; font-weight: bold; color: #1e293b;" id="quizQuestion">
+                    25 - 5 = ?
+                </div>
+                <input type="number" pattern="[0-9]*" inputmode="numeric" id="quizInput" placeholder="輸入答案" autocomplete="off">
+                <div id="quizError" style="color: #dc2626; font-weight: bold; display: none; margin-bottom: 10px;">答案不正確，請再試一次！</div>
+                <p style="font-size: 0.9rem; color: #64748b;">提示：請輸入計算結果</p>
+                <button id="submitQuizButton" class="modern-btn">送出答案</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Init ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'math-stairs-adventure';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let db, auth, userId = null, isAuthReady = false;
+        const HIGH_SCORE_DOC_PATH = `/artifacts/${appId}/public/data/highScores/global_sub_hybrid_v2`; // Updated path for versioning
+
+        // --- DOM Elements ---
+        const mainContainer = document.getElementById('mainContainer');
+        const menuScreen = document.getElementById('menuScreen');
+        const gameScreen = document.getElementById('gameScreen');
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // UI
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const highScoreDisplay = document.getElementById('highScoreDisplay');
+        const menuConfirmButton = document.getElementById('menuConfirmButton'); 
+        const startGameOverlayButton = document.getElementById('startGameOverlayButton'); 
+        const startGameOverlay = document.getElementById('startGameOverlay');
+        const backButton = document.getElementById('backButton');
+        const pauseButton = document.getElementById('pauseButton');
+        const uploadButton = document.getElementById('uploadButton');
+        const imageInput = document.getElementById('imageInput');
+        
+        // Overlays
+        const messageOverlay = document.getElementById('messageOverlay');
+        const messageTitle = document.getElementById('messageTitle');
+        const messageText = document.getElementById('messageText');
+        const closeMessageButton = document.getElementById('closeMessageButton');
+        const quizOverlay = document.getElementById('quizOverlay');
+        const quizQuestion = document.getElementById('quizQuestion');
+        const quizInput = document.getElementById('quizInput');
+        const quizError = document.getElementById('quizError');
+        const submitQuizButton = document.getElementById('submitQuizButton');
+
+        // Checkboxes
+        const opt1 = document.getElementById('opt1'); 
+        const opt2 = document.getElementById('opt2'); 
+        const opt3 = document.getElementById('opt3'); 
+        const optBorrow = document.getElementById('optBorrow'); 
+
+        // Game Constants
+        const PLAYER_SIZE = 35; 
+        const GRAVITY = 0.8;
+        const OBSTACLE_HEIGHT = 20; 
+        const OBSTACLE_ROW_DISTANCE = 120;
+        const OBSTACLE_GAP_MIN = 45; 
+        const OBSTACLE_GAP_MAX = 75;
+        const KNOWLEDGE_NODE_SIZE = 14;
+        
+        // Speed Settings (FIXED SPEED)
+        const SPEED_START = 1.5; 
+        const PLAYER_SPEED = 5; 
+
+        // Assets
+        const playerImage = new Image();
+        let playerImageLoaded = false;
+        let backgroundPattern = null;
+        let platformPattern = null;
+
+        // Game State
+        let gameState = {
+            isRunning: false,
+            isPaused: false,
+            isQuizActive: false,
+            gameOver: false,
+            score: 0,
+            floorsPassed: 0,
+            highScore: 0,
+            player: { x: 0, y: 0, dx: 0, dy: 0, isJumping: false, width: PLAYER_SIZE, height: PLAYER_SIZE },
+            obstacles: [],
+            obstacleSpeed: SPEED_START, // Will remain constant
+            countedRows: new Set(),
+            remainingQuestions: [],
+            currentQuizNode: null
+        };
+
+        // --- Firebase Functions ---
+        async function initializeFirebase() {
+            try {
+                if (firebaseConfig) {
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                    if (initialAuthToken) await signInWithCustomToken(auth, initialAuthToken);
+                    else await signInAnonymously(auth);
+
+                    onAuthStateChanged(auth, (user) => {
+                        userId = user ? user.uid : 'anon_' + crypto.randomUUID();
+                        isAuthReady = true;
+                        setupHighScoreListener();
+                    });
+                } else isAuthReady = true;
+            } catch (e) { console.error(e); isAuthReady = true; }
+        }
+
+        function setupHighScoreListener() {
+            if (!db || !isAuthReady) return;
+            onSnapshot(doc(db, HIGH_SCORE_DOC_PATH), (snap) => {
+                if (snap.exists()) {
+                    gameState.highScore = snap.data().score || 0;
+                    highScoreDisplay.textContent = gameState.highScore;
+                }
+            });
+        }
+
+        async function updateHighScore() {
+            if (!db || !isAuthReady || !userId || gameState.score <= gameState.highScore) return;
+            await setDoc(doc(db, HIGH_SCORE_DOC_PATH), { 
+                score: gameState.score, setBy: userId, timestamp: new Date().toISOString()
+            }, { merge: true });
+        }
+
+        // --- Patterns ---
+        function createBrickPattern(width, height, brickColor, mortarColor) {
+            const pCanvas = document.createElement('canvas');
+            pCanvas.width = width;
+            pCanvas.height = height;
+            const pCtx = pCanvas.getContext('2d');
+            pCtx.fillStyle = brickColor;
+            pCtx.fillRect(0, 0, width, height);
+            pCtx.strokeStyle = mortarColor;
+            pCtx.lineWidth = 2;
+            pCtx.beginPath(); pCtx.moveTo(0, 0); pCtx.lineTo(width, 0); pCtx.stroke(); 
+            pCtx.beginPath(); pCtx.moveTo(0, height/2); pCtx.lineTo(width, height/2); pCtx.stroke(); 
+            pCtx.beginPath(); pCtx.moveTo(width/2, 0); pCtx.lineTo(width/2, height/2); pCtx.stroke(); 
+            pCtx.beginPath(); pCtx.moveTo(0, height/2); pCtx.lineTo(0, height); pCtx.stroke(); 
+            pCtx.beginPath(); pCtx.moveTo(width, height/2); pCtx.lineTo(width, height); pCtx.stroke(); 
+            return ctx.createPattern(pCanvas, 'repeat');
+        }
+        
+        function createBackgroundPattern() {
+            const width = 64;
+            const height = 64;
+            const pCanvas = document.createElement('canvas');
+            pCanvas.width = width;
+            pCanvas.height = height;
+            const pCtx = pCanvas.getContext('2d');
+            pCtx.fillStyle = '#1e3a8a'; 
+            pCtx.fillRect(0, 0, width, height);
+            pCtx.strokeStyle = '#172554'; 
+            pCtx.lineWidth = 2;
+            pCtx.strokeRect(0, 0, width, height/2);
+            pCtx.strokeRect(width/2, 0, width/2, height/2); 
+            pCtx.strokeRect(0, height/2, width, height/2);
+            pCtx.strokeRect(width/4, height/2, width/2, height/2); 
+            pCtx.fillStyle = 'rgba(0,0,0,0.2)';
+            for(let i=0; i<10; i++) pCtx.fillRect(Math.random()*width, Math.random()*height, 2, 2);
+            return ctx.createPattern(pCanvas, 'repeat');
+        }
+
+        // --- Question Logic ---
+        function generateQuestions() {
+            let pool = [];
+            const useOpt1 = opt1.checked;
+            const useOpt2 = opt2.checked;
+            const useOpt3 = opt3.checked;
+            const forceBorrow = optBorrow.checked;
+
+            if (!useOpt1 && !useOpt2 && !useOpt3) {
+                pool.push({ a: 10, b: 5, ans: 5 });
+                return pool;
+            }
+
+            const addRange = (minA, maxA, minB, maxB) => {
+                for (let a = minA; a <= maxA; a++) {
+                    for (let b = minB; b <= maxB; b++) {
+                        if (a >= b) {
+                            const unitA = a % 10;
+                            const unitB = b % 10;
+                            const needsBorrow = unitA < unitB;
+                            if (forceBorrow) {
+                                if (needsBorrow) pool.push({a, b, ans: a-b});
+                            } else {
+                                if (!needsBorrow) pool.push({a, b, ans: a-b});
+                            }
+                        }
+                    }
+                }
+            };
+
+            if (useOpt1) addRange(1, 9, 1, 9);
+            if (useOpt2) addRange(10, 99, 1, 9);
+            if (useOpt3) addRange(10, 99, 10, 99);
+
+            if (pool.length === 0) return [{a: 10, b: 1, ans: 9}];
+
+            for (let i = pool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pool[i], pool[j]] = [pool[j], pool[i]];
+            }
+            return pool.slice(0, 30);
+        }
+
+        // --- Game Logic ---
+
+        function setupGameScene() {
+            const pool = generateQuestions();
+            if (pool.length < 1) {
+                alert("找不到符合條件的題目！請調整選項。");
+                return;
+            }
+            gameState.remainingQuestions = pool;
+            
+            // 切換 CSS Style
+            mainContainer.classList.remove('game-container'); 
+            mainContainer.classList.add('game-container', 'modern-style'); 
+
+            menuScreen.classList.add('hidden');
+            gameScreen.style.display = 'flex'; 
+            
+            startGameOverlay.style.display = 'flex';
+            pauseButton.textContent = '暫停';
+
+            gameState.isRunning = false;
+            gameState.isPaused = false;
+            gameState.isQuizActive = false;
+            gameState.gameOver = false;
+            gameState.score = 0;
+            gameState.obstacleSpeed = SPEED_START; // RESET SPEED
+            gameState.countedRows = new Set();
+            gameState.obstacles = [];
+            
+            gameState.player.x = canvas.width/2 - PLAYER_SIZE/2;
+            gameState.player.y = canvas.height - PLAYER_SIZE * 2; 
+            gameState.player.dx = 0;
+            gameState.player.dy = 0;
+            gameState.player.isJumping = true;
+
+            scoreDisplay.textContent = "0";
+
+            for(let i=0; i<5; i++) {
+                generateObstacleRow(canvas.height - i * OBSTACLE_ROW_DISTANCE - OBSTACLE_ROW_DISTANCE);
+            }
+
+            draw();
+        }
+
+        function startGamePlay() {
+            startGameOverlay.style.display = 'none';
+            gameState.isRunning = true;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function returnToMenu() {
+            gameState.isRunning = false;
+            // Switch styles back
+            mainContainer.classList.remove('modern-style');
+            
+            gameScreen.style.display = 'none';
+            menuScreen.classList.remove('hidden');
+            quizOverlay.style.display = 'none';
+            messageOverlay.style.display = 'none';
+            startGameOverlay.style.display = 'none';
+        }
+
+        function generateObstacleRow(y) {
+            const rowId = crypto.randomUUID();
+            let numGaps = 1;
+            const r = Math.random();
+            if (r > 0.6) numGaps = 2; 
+            if (r > 0.9) numGaps = 3; 
+
+            const minPlatformWidth = 30; 
+            let platforms = [{x: 0, width: canvas.width}];
+
+            for (let i = 0; i < numGaps; i++) {
+                const candidates = platforms.filter(p => p.width >= minPlatformWidth * 2 + OBSTACLE_GAP_MIN);
+                if (candidates.length === 0) break; 
+
+                const target = candidates[Math.floor(Math.random() * candidates.length)];
+                platforms = platforms.filter(p => p !== target);
+
+                const gapW = Math.random() * (OBSTACLE_GAP_MAX - OBSTACLE_GAP_MIN) + OBSTACLE_GAP_MIN;
+                const minGapX = target.x + minPlatformWidth;
+                const maxGapX = target.x + target.width - minPlatformWidth - gapW;
+                const gapX = Math.random() * (maxGapX - minGapX) + minGapX;
+
+                const p1 = { x: target.x, width: gapX - target.x };
+                const p2 = { x: gapX + gapW, width: (target.x + target.width) - (gapX + gapW) };
+                
+                platforms.push(p1);
+                platforms.push(p2);
+            }
+
+            platforms.sort((a, b) => a.x - b.x);
+
+            platforms.forEach((p, index) => {
+                let obs = {
+                    x: p.x, y: y, width: p.width, height: OBSTACLE_HEIGHT,
+                    rowId: rowId, hasNode: false, question: null
+                };
+                
+                if (gameState.remainingQuestions.length > 0 && p.width > 40 && Math.random() < 0.11) {
+                    obs.hasNode = true;
+                    obs.question = gameState.remainingQuestions[Math.floor(Math.random() * gameState.remainingQuestions.length)];
+                    let placeNear = 'center';
+                    if (index === 0) placeNear = 'right';
+                    else if (index === platforms.length - 1) placeNear = 'left';
+                    else placeNear = Math.random() < 0.5 ? 'left' : 'right';
+                    const offset = 25; 
+                    if (placeNear === 'right') obs.nodeX = obs.x + obs.width - offset;
+                    else if (placeNear === 'left') obs.nodeX = obs.x + offset;
+                    else obs.nodeX = obs.x + obs.width / 2;
+                    if (obs.nodeX < obs.x + 10) obs.nodeX = obs.x + 10;
+                    if (obs.nodeX > obs.x + obs.width - 10) obs.nodeX = obs.x + obs.width - 10;
+                }
+                gameState.obstacles.push(obs);
+            });
+        }
+
+        function update() {
+            if (!gameState.isRunning || gameState.isPaused || gameState.isQuizActive) return;
+
+            gameState.player.dy += GRAVITY;
+            gameState.player.y += gameState.player.dy;
+            gameState.player.x += gameState.player.dx;
+
+            if (gameState.player.x < 0) gameState.player.x = 0;
+            if (gameState.player.x + PLAYER_SIZE > canvas.width) gameState.player.x = canvas.width - PLAYER_SIZE;
+
+            let onPlatform = false;
+            if (gameState.player.y + PLAYER_SIZE > canvas.height) {
+                gameState.player.y = canvas.height - PLAYER_SIZE;
+                gameState.player.dy = 0;
+                gameState.player.isJumping = false;
+                onPlatform = true;
+            }
+
+            gameState.obstacles.forEach(obstacle => {
+                if (gameState.player.dy >= 0 && checkLanding(gameState.player, obstacle)) {
+                    gameState.player.y = obstacle.y - PLAYER_SIZE;
+                    gameState.player.dy = 0;
+                    gameState.player.isJumping = false;
+                    onPlatform = true;
+                }
+                if (obstacle.hasNode) {
+                    const px = gameState.player.x + PLAYER_SIZE / 2;
+                    const py = gameState.player.y + PLAYER_SIZE / 2;
+                    const nodeY = obstacle.y + OBSTACLE_HEIGHT / 2; 
+                    const dist = Math.sqrt(Math.pow(px - obstacle.nodeX, 2) + Math.pow(py - nodeY, 2));
+                    if (dist < PLAYER_SIZE + KNOWLEDGE_NODE_SIZE) triggerQuiz(obstacle);
+                }
+            });
+
+            if (onPlatform) {
+                gameState.player.isJumping = false;
+            } else if (gameState.player.dy === 0) {
+                gameState.player.isJumping = true;
+            }
+            
+            const newObstacles = [];
+            const rowsPassedAndUnscored = new Set();
+            let platformSpeed = gameState.obstacleSpeed;
+
+            for (let i = 0; i < gameState.obstacles.length; i++) {
+                const obstacle = gameState.obstacles[i];
+                obstacle.y -= platformSpeed;
+                if (obstacle.y + OBSTACLE_HEIGHT < -10) {
+                    if (!gameState.countedRows.has(obstacle.rowId)) {
+                        rowsPassedAndUnscored.add(obstacle.rowId);
+                    }
+                }
+                if (obstacle.y > -OBSTACLE_HEIGHT * 2) newObstacles.push(obstacle);
+            }
+
+            rowsPassedAndUnscored.forEach(rowId => {
+                gameState.score += 1;
+                scoreDisplay.textContent = gameState.score;
+                gameState.countedRows.add(rowId);
+            });
+            
+            gameState.obstacles = newObstacles;
+
+            const lowestY = gameState.obstacles.reduce((max, obs) => Math.max(max, obs.y), -Infinity);
+            if (gameState.obstacles.length === 0 || canvas.height - lowestY >= OBSTACLE_ROW_DISTANCE) {
+                generateObstacleRow(canvas.height);
+            }
+
+            if (gameState.player.y < 0) {
+                gameOver();
+                return;
+            }
+        }
+
+        function checkLanding(player, platform) {
+            return player.x < platform.x + platform.width && 
+                   player.x + player.width > platform.x &&  
+                   player.y + player.height >= platform.y && 
+                   player.y + player.height <= platform.y + platform.height && 
+                   player.dy >= 0; 
+        }
+
+        function triggerQuiz(obs) {
+            gameState.isPaused = true;
+            gameState.isQuizActive = true;
+            gameState.currentQuizNode = obs;
+            
+            quizQuestion.textContent = `${obs.question.a} - ${obs.question.b} = ?`;
+            quizInput.value = '';
+            quizError.style.display = 'none';
+            quizOverlay.style.display = 'flex';
+            setTimeout(() => quizInput.focus(), 100);
+        }
+
+        function checkAnswer() {
+            const val = parseInt(quizInput.value.trim());
+            if (isNaN(val)) {
+                quizError.style.display = 'block';
+                return;
+            }
+
+            if (val === gameState.currentQuizNode.question.ans) {
+                quizOverlay.style.display = 'none';
+                gameState.currentQuizNode.hasNode = false;
+                
+                gameState.score += 10;
+                scoreDisplay.textContent = gameState.score;
+
+                const qIndex = gameState.remainingQuestions.indexOf(gameState.currentQuizNode.question);
+                if (qIndex > -1) gameState.remainingQuestions.splice(qIndex, 1);
+                
+                // FIXED SPEED: Removed speed increment logic
+                // gameState.obstacleSpeed = Math.min(gameState.obstacleSpeed + SPEED_INCREMENT, SPEED_MAX);
+                
+                gameState.currentQuizNode = null;
+                gameState.isQuizActive = false;
+                gameState.isPaused = false;
+                requestAnimationFrame(gameLoop);
+            } else {
+                quizError.style.display = 'block';
+                quizInput.value = '';
+                quizInput.focus();
+            }
+        }
+
+        function draw() {
+            if (backgroundPattern) {
+                ctx.fillStyle = backgroundPattern;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            gameState.obstacles.forEach(obstacle => {
+                if (platformPattern) {
+                    ctx.save();
+                    ctx.translate(0, obstacle.y);
+                    ctx.fillStyle = platformPattern;
+                    ctx.fillRect(obstacle.x, 0, obstacle.width, obstacle.height);
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(obstacle.x, 0, obstacle.width, obstacle.height);
+                    ctx.restore();
+                } else {
+                    ctx.fillStyle = '#b45309';
+                    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                }
+
+                if (obstacle.hasNode) {
+                    ctx.beginPath();
+                    ctx.arc(obstacle.nodeX, obstacle.y + OBSTACLE_HEIGHT/2, KNOWLEDGE_NODE_SIZE/2, 0, Math.PI * 2);
+                    ctx.fillStyle = '#fbbf24'; 
+                    ctx.fill();
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#f59e0b';
+                    ctx.stroke();
+                    ctx.shadowBlur = 0; 
+                    
+                    ctx.fillStyle = '#000';
+                    ctx.font = '10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('?', obstacle.nodeX, obstacle.y + OBSTACLE_HEIGHT/2);
+                }
+            });
+
+            if (playerImageLoaded) {
+                ctx.drawImage(playerImage, gameState.player.x, gameState.player.y, PLAYER_SIZE, PLAYER_SIZE);
+            } else {
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(gameState.player.x, gameState.player.y, gameState.player.width, gameState.player.height);
+                ctx.font = `${PLAYER_SIZE * 0.9}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🏃', gameState.player.x + PLAYER_SIZE / 2, gameState.player.y + PLAYER_SIZE / 2);
+            }
+        }
+
+        function gameLoop() {
+            if(gameState.isRunning) {
+                update();
+                draw();
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function gameOver() {
+            gameState.isRunning = false;
+            gameState.gameOver = true;
+            updateHighScore();
+            messageTitle.textContent = "遊戲結束";
+            messageText.textContent = `得分: ${gameState.score}`;
+            messageOverlay.style.display = 'flex';
+        }
+
+        // --- Listeners ---
+        menuConfirmButton.addEventListener('click', setupGameScene); 
+        startGameOverlayButton.addEventListener('click', startGamePlay);
+        backButton.addEventListener('click', returnToMenu);
+        
+        pauseButton.addEventListener('click', () => {
+            if (!gameState.isRunning || gameState.gameOver) return;
+            gameState.isPaused = !gameState.isPaused;
+            if(!gameState.isPaused) {
+                pauseButton.textContent = '暫停';
+                requestAnimationFrame(gameLoop);
+            } else {
+                pauseButton.textContent = '繼續';
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(0,0,canvas.width,canvas.height);
+                ctx.fillStyle = '#fff';
+                ctx.font = '30px Inter';
+                ctx.textAlign = 'center';
+                ctx.fillText("已暫停", canvas.width/2, canvas.height/2);
+            }
+        });
+
+        closeMessageButton.addEventListener('click', () => {
+            messageOverlay.style.display = 'none';
+            returnToMenu();
+        });
+
+        submitQuizButton.addEventListener('click', checkAnswer);
+        quizInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') checkAnswer(); });
+
+        document.addEventListener('keydown', (e) => {
+            if (!gameState.isRunning || gameState.isPaused) return;
+            if (e.key === 'ArrowLeft') gameState.player.dx = -PLAYER_SPEED;
+            if (e.key === 'ArrowRight') gameState.player.dx = PLAYER_SPEED;
+        });
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') gameState.player.dx = 0;
+        });
+
+        const lBtn = document.getElementById('leftButton');
+        const rBtn = document.getElementById('rightButton');
+        lBtn.addEventListener('mousedown', () => gameState.player.dx = -PLAYER_SPEED);
+        lBtn.addEventListener('mouseup', () => gameState.player.dx = 0);
+        lBtn.addEventListener('touchstart', (e) => { e.preventDefault(); gameState.player.dx = -PLAYER_SPEED; });
+        lBtn.addEventListener('touchend', (e) => { e.preventDefault(); gameState.player.dx = 0; });
+        
+        rBtn.addEventListener('mousedown', () => gameState.player.dx = PLAYER_SPEED);
+        rBtn.addEventListener('mouseup', () => gameState.player.dx = 0);
+        rBtn.addEventListener('touchstart', (e) => { e.preventDefault(); gameState.player.dx = PLAYER_SPEED; });
+        rBtn.addEventListener('touchend', (e) => { e.preventDefault(); gameState.player.dx = 0; });
+
+        uploadButton.addEventListener('click', () => imageInput.click());
+        imageInput.addEventListener('change', (e) => {
+            const f = e.target.files[0];
+            if(f) {
+                const r = new FileReader();
+                r.onload = (ev) => { playerImage.src = ev.target.result; playerImage.onload = () => playerImageLoaded = true; };
+                r.readAsDataURL(f);
+            }
+        });
+
+        window.onload = () => {
+            platformPattern = createBrickPattern(32, 20, '#b45309', '#78350f');
+            backgroundPattern = createBackgroundPattern();
+            initializeFirebase();
+        };
+
+    </script>
+</body>
+</html>
