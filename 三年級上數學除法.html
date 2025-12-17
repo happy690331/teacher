@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>快樂分分看：除法小學堂</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Phosphor Icons (for cute icons) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <style>
+        body { touch-action: manipulation; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        .hand-font { font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif; }
+        
+        /* 餅乾動畫 */
+        @keyframes distribute {
+            0% { transform: scale(1) translateY(0); opacity: 1; }
+            50% { transform: scale(1.2) translateY(-20px); opacity: 0.8; }
+            100% { transform: scale(0) translateY(50px); opacity: 0; }
+        }
+        .animate-distribute { animation: distribute 0.5s ease-in-out forwards; }
+        
+        /* 溫和的跳動 */
+        @keyframes gentle-bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        .animate-float { animation: gentle-bounce 2s infinite ease-in-out; }
+
+        /* 隱藏滾動條但保留功能 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fdf4ff', // Pinkish background for warmth
+                            100: '#fae8ff',
+                            500: '#d946ef', 
+                            600: '#c026d3',
+                        },
+                        accent: {
+                            100: '#e0f2fe', // Light blue
+                            500: '#0ea5e9',
+                        },
+                        cookie: {
+                            100: '#fef3c7',
+                            500: '#d97706',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-brand-50 text-slate-800 select-none overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- Shared Components ---
+        const Button = ({ onClick, children, className = "", color="brand" }) => {
+            const baseStyle = "transform transition-all duration-200 active:scale-95 rounded-2xl font-bold shadow-md flex items-center justify-center";
+            const colors = {
+                brand: "bg-brand-500 text-white hover:bg-brand-600 shadow-brand-500/30",
+                accent: "bg-accent-500 text-white hover:bg-accent-600 shadow-accent-500/30",
+                white: "bg-white text-slate-700 border-2 border-slate-100 hover:border-brand-200"
+            };
+            return (
+                <button onClick={onClick} className={`${baseStyle} ${colors[color]} ${className}`}>
+                    {children}
+                </button>
+            );
+        };
+
+        const Card = ({ children, className = "" }) => (
+            <div className={`bg-white rounded-3xl shadow-lg border-2 border-white/50 p-6 ${className}`}>
+                {children}
+            </div>
+        );
+
+        // --- Main App ---
+        const App = () => {
+            const [tab, setTab] = useState('learn');
+            const [score, setScore] = useState(0);
+            const [showConfetti, setShowConfetti] = useState(false);
+
+            // Simple score animation
+            useEffect(() => {
+                if(score > 0) {
+                    setShowConfetti(true);
+                    setTimeout(() => setShowConfetti(false), 2000);
+                }
+            }, [score]);
+
+            const renderContent = () => {
+                switch(tab) {
+                    case 'learn': return <LearnSection onFinish={() => setTab('game1')} />;
+                    case 'game1': return <VisualGame score={score} setScore={setScore} onFinish={() => setTab('game2')} />;
+                    case 'game2': return <MultiplicationBridge score={score} setScore={setScore} onFinish={() => setTab('quiz')} />;
+                    case 'quiz': return <QuizSection score={score} setScore={setScore} onRestart={() => { setScore(0); setTab('learn'); }} />;
+                    default: return <LearnSection />;
+                }
+            };
+
+            return (
+                <div className="h-[100dvh] flex flex-col max-w-md mx-auto bg-brand-50 shadow-2xl overflow-hidden relative">
+                    {/* Header */}
+                    <header className="p-4 flex justify-between items-center bg-white/80 backdrop-blur-md z-10 border-b border-brand-100">
+                        <div className="flex items-center gap-2">
+                            <div className="bg-brand-100 p-2 rounded-xl text-brand-600">
+                                <i className="ph-fill ph-cookie text-2xl"></i>
+                            </div>
+                            <h1 className="font-bold text-xl text-slate-700 tracking-tight">快樂分分看</h1>
+                        </div>
+                        <div className="flex items-center bg-yellow-100 px-3 py-1 rounded-full border border-yellow-200">
+                            <i className="ph-fill ph-star text-yellow-500 mr-1 text-lg"></i>
+                            <span className="font-bold text-yellow-700">{score}</span>
+                        </div>
+                    </header>
+
+                    {/* Main Content Area */}
+                    <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 no-scrollbar">
+                        {renderContent()}
+                    </main>
+
+                    {/* Navigation Bar */}
+                    <nav className="bg-white border-t border-slate-100 p-2 pb-safe">
+                        <div className="flex justify-around items-center">
+                            <NavBtn active={tab === 'learn'} icon="ph-video" label="看影片" onClick={() => setTab('learn')} />
+                            <NavBtn active={tab === 'game1'} icon="ph-hand-pointing" label="分餅乾" onClick={() => setTab('game1')} />
+                            <NavBtn active={tab === 'game2'} icon="ph-lightbulb" label="動動腦" onClick={() => setTab('game2')} />
+                            <NavBtn active={tab === 'quiz'} icon="ph-exam" label="小測驗" onClick={() => setTab('quiz')} />
+                        </div>
+                    </nav>
+
+                    {/* Confetti Effect (Simple Overlay) */}
+                    {showConfetti && (
+                        <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-50">
+                            <div className="text-6xl animate-bounce">🎉</div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const NavBtn = ({ active, icon, label, onClick }) => (
+            <button onClick={onClick} className={`flex flex-col items-center p-2 rounded-xl transition-all ${active ? 'text-brand-600 bg-brand-50' : 'text-slate-400'}`}>
+                <i className={`ph-fill ${icon} text-2xl mb-1`}></i>
+                <span className="text-xs font-medium">{label}</span>
+            </button>
+        );
+
+        // --- 1. Learning Section ---
+        const LearnSection = ({ onFinish }) => (
+            <div className="space-y-6 animate-fade-in">
+                <div className="bg-white rounded-2xl overflow-hidden shadow-lg ring-4 ring-brand-100">
+                    <div className="aspect-video bg-slate-100 relative">
+                        {/* Embedding the requested video */}
+                        <iframe 
+                            width="100%" 
+                            height="100%" 
+                            src="https://www.youtube.com/embed/sltdH3eyYKU" 
+                            title="除法教學" 
+                            frameBorder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowFullScreen
+                            className="absolute inset-0"
+                        ></iframe>
+                    </div>
+                    <div className="p-4">
+                        <h2 className="text-lg font-bold text-slate-800">跟著沈老師學除法</h2>
+                        <p className="text-slate-500 text-sm mt-1">三上第六單元：分裝與平分</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-2xl border-2 border-blue-100 flex items-start gap-4">
+                        <div className="bg-white p-2 rounded-xl shadow-sm text-2xl">🍬</div>
+                        <div>
+                            <h3 className="font-bold text-blue-700 mb-1">平分是什麼？</h3>
+                            <p className="text-slate-600 text-sm leading-relaxed">大家拿到的糖果一樣多，就叫做<span className="text-blue-600 font-bold mx-1 bg-blue-100 px-1 rounded">平分</span>。</p>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-pink-50 to-rose-50 p-5 rounded-2xl border-2 border-pink-100 flex items-start gap-4">
+                        <div className="bg-white p-2 rounded-xl shadow-sm text-2xl">➗</div>
+                        <div>
+                            <h3 className="font-bold text-pink-700 mb-1">除法算式</h3>
+                            <div className="text-slate-600 text-sm mt-1 bg-white/60 p-2 rounded-lg inline-block">
+                                <span className="font-mono text-lg font-bold">12 ÷ 3 = 4</span>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-2">全部 ÷ 幾個人 = 每個人分到的</p>
+                        </div>
+                    </div>
+                </div>
+
+                <Button onClick={onFinish} className="w-full py-4 text-lg">
+                    我學會了，去練習！ <i className="ph-bold ph-arrow-right ml-2"></i>
+                </Button>
+            </div>
+        );
+
+        // --- 2. Visual Game (Scaffolding: Concrete Operation) ---
+        const VisualGame = ({ score, setScore, onFinish }) => {
+            // Level state: total cookies, plates
+            const [level, setLevel] = useState(0);
+            const [cookiesLeft, setCookiesLeft] = useState(0);
+            const [plates, setPlates] = useState([]); // Array of counts
+            const [message, setMessage] = useState("點擊餅乾分給大家！");
+            
+            const levels = [
+                { total: 6, people: 2 }, // Simple start
+                { total: 9, people: 3 },
+                { total: 8, people: 4 }
+            ];
+
+            useEffect(() => {
+                resetLevel();
+            }, [level]);
+
+            const resetLevel = () => {
+                const current = levels[level];
+                setCookiesLeft(current.total);
+                setPlates(Array(current.people).fill(0));
+                setMessage("點擊下面的大餅乾！");
+            };
+
+            const distributeCookie = () => {
+                if (cookiesLeft <= 0) return;
+
+                // Simple logic: distribute one by one to each plate in order
+                const currentPlateIndex = (levels[level].total - cookiesLeft) % levels[level].people;
+                
+                const newPlates = [...plates];
+                newPlates[currentPlateIndex] += 1;
+                setPlates(newPlates);
+                setCookiesLeft(c => c - 1);
+
+                if (cookiesLeft - 1 === 0) {
+                    setMessage("太棒了！分完了！");
+                    setScore(s => s + 10);
+                    setTimeout(() => {
+                        if (level < levels.length - 1) {
+                            setLevel(l => l + 1);
+                        } else {
+                            onFinish();
+                        }
+                    }, 1500);
+                }
+            };
+
+            const currentTotal = levels[level].total;
+            const currentPeople = levels[level].people;
+
+            return (
+                <div className="flex flex-col items-center h-full space-y-6">
+                    <div className="w-full flex justify-between items-center text-sm font-bold text-slate-400 uppercase">
+                        <span>Level {level + 1}/{levels.length}</span>
+                        <span>目標：每人幾個？</span>
+                    </div>
+
+                    {/* Question */}
+                    <div className="text-center">
+                        <h2 className="text-2xl font-bold text-slate-800 mb-2">
+                            {currentTotal} 個餅乾，平分給 {currentPeople} 人
+                        </h2>
+                        <div className="bg-white px-4 py-2 rounded-full inline-block shadow-sm text-brand-500 font-bold">
+                            {cookiesLeft === 0 ? `每人分到 ${currentTotal / currentPeople} 個` : message}
+                        </div>
+                    </div>
+
+                    {/* Plates Area */}
+                    <div className="flex justify-center flex-wrap gap-4 w-full">
+                        {plates.map((count, idx) => (
+                            <div key={idx} className="bg-white rounded-full w-24 h-24 border-4 border-slate-100 flex items-center justify-center relative shadow-inner">
+                                <div className="absolute -top-8 text-2xl">🐵</div>
+                                <div className="grid grid-cols-2 gap-1 w-12 justify-items-center">
+                                    {Array(count).fill(0).map((_, i) => (
+                                        <div key={i} className="w-4 h-4 rounded-full bg-cookie-500 border border-cookie-100 animate-distribute"></div>
+                                    ))}
+                                </div>
+                                <div className="absolute -bottom-2 bg-slate-800 text-white text-xs px-2 py-0.5 rounded-full">
+                                    {count} 個
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Source Cookie */}
+                    <div className="mt-auto pb-8">
+                        <button 
+                            onClick={distributeCookie}
+                            disabled={cookiesLeft === 0}
+                            className={`w-32 h-32 rounded-full bg-cookie-100 border-4 border-cookie-500 flex flex-col items-center justify-center shadow-xl transition-transform active:scale-90 ${cookiesLeft === 0 ? 'opacity-50 grayscale' : 'animate-float'}`}
+                        >
+                            <span className="text-4xl mb-1">🍪</span>
+                            <span className="font-bold text-cookie-500 text-lg">剩 {cookiesLeft} 個</span>
+                        </button>
+                        <p className="text-center text-slate-400 text-xs mt-4">點擊餅乾來分發</p>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 3. Bridge Game (Scaffolding: Multiplication -> Division) ---
+        const MultiplicationBridge = ({ score, setScore, onFinish }) => {
+            const [qIdx, setQIdx] = useState(0);
+            const [showHint, setShowHint] = useState(false);
+            const [feedback, setFeedback] = useState(null);
+
+            const questions = [
+                { total: 12, group: 3, text: "12顆糖果，每3顆裝一袋..." }, // 3 x ? = 12
+                { total: 20, group: 5, text: "20個布丁，每5個裝一盒..." }, // 5 x ? = 20
+                { total: 16, group: 4, text: "16根香蕉，每4根放一盤..." }, // 4 x ? = 16
+            ];
+
+            const currentQ = questions[qIdx];
+            const answer = currentQ.total / currentQ.group;
+
+            // Generate options
+            const options = [answer, answer + 1, answer - 1].sort(() => Math.random() - 0.5);
+
+            const handleAnswer = (val) => {
+                if (val === answer) {
+                    setFeedback('correct');
+                    setScore(s => s + 15);
+                    setTimeout(() => {
+                        if (qIdx < questions.length - 1) {
+                            setQIdx(q => q + 1);
+                            setFeedback(null);
+                            setShowHint(false);
+                        } else {
+                            onFinish();
+                        }
+                    }, 1500);
+                } else {
+                    setFeedback('wrong');
+                    setShowHint(true); // Show hint if wrong
+                    setTimeout(() => setFeedback(null), 1000);
+                }
+            };
+
+            return (
+                <div className="space-y-6 h-full flex flex-col justify-center">
+                    <div className="text-center mb-4">
+                        <div className="bg-accent-100 text-accent-500 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2 text-2xl">
+                            <i className="ph-fill ph-brain"></i>
+                        </div>
+                        <h2 className="text-xl font-bold text-slate-800">想一想，乘法表</h2>
+                    </div>
+
+                    <Card className="border-accent-100 bg-white">
+                        <p className="text-lg font-medium text-center mb-6">{currentQ.text}</p>
+                        
+                        <div className="flex items-center justify-center gap-4 text-2xl font-mono font-bold text-slate-600 bg-slate-50 p-4 rounded-xl">
+                            <span>{currentQ.group}</span>
+                            <span>×</span>
+                            <span className="w-12 h-12 bg-white border-2 border-brand-300 rounded-lg flex items-center justify-center text-brand-600 shadow-inner">?</span>
+                            <span>=</span>
+                            <span>{currentQ.total}</span>
+                        </div>
+
+                        {showHint && (
+                            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700 text-center animate-pulse">
+                                💡 提示：背背看 {currentQ.group} 的乘法表！ <br/>
+                                {currentQ.group} × 1 = {currentQ.group}, {currentQ.group} × 2 = {currentQ.group * 2}...
+                            </div>
+                        )}
+                    </Card>
+
+                    <div className="grid grid-cols-3 gap-3 mt-4">
+                        {options.map((opt, i) => (
+                            <button 
+                                key={i}
+                                onClick={() => handleAnswer(opt)}
+                                className="py-6 rounded-xl bg-white border-b-4 border-slate-200 active:border-b-0 active:translate-y-1 transition-all font-bold text-2xl text-slate-700 hover:bg-slate-50"
+                            >
+                                {opt}
+                            </button>
+                        ))}
+                    </div>
+
+                    {feedback === 'correct' && (
+                        <div className="text-center text-green-500 font-bold text-xl animate-bounce">
+                            答對了！ {currentQ.total} ÷ {currentQ.group} = {answer}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // --- 4. Quiz Section ---
+        const QuizSection = ({ score, setScore, onRestart }) => {
+            const [qIdx, setQIdx] = useState(0);
+            const [isFinished, setIsFinished] = useState(false);
+            const [feedback, setFeedback] = useState("");
+
+            const quizzes = [
+                { q: "10 顆蘋果平分給 2 個人，每人得幾顆？", options: [3, 5, 2], ans: 5 },
+                { q: "被除數是 24，除數是 4，商是多少？", options: [6, 8, 4], ans: 6 }, // Slightly harder wording
+                { q: "有 15 個布丁，每 3 個裝一盒，可以裝幾盒？", options: [3, 4, 5], ans: 5 },
+            ];
+
+            const handleAns = (val) => {
+                if (val === quizzes[qIdx].ans) {
+                    setFeedback("correct");
+                    setScore(s => s + 20);
+                } else {
+                    setFeedback("wrong");
+                }
+                
+                setTimeout(() => {
+                    if (qIdx < quizzes.length - 1) {
+                        setQIdx(q => q + 1);
+                        setFeedback("");
+                    } else {
+                        setIsFinished(true);
+                    }
+                }, 1000);
+            };
+
+            if (isFinished) {
+                return (
+                    <div className="text-center flex flex-col items-center justify-center h-full space-y-8 animate-fade-in">
+                        <div className="relative">
+                            <div className="text-8xl animate-bounce">🏆</div>
+                            <div className="absolute -top-2 -right-2 text-4xl">✨</div>
+                        </div>
+                        <div>
+                            <h2 className="text-3xl font-bold text-slate-800 mb-2">恭喜完成！</h2>
+                            <p className="text-slate-500">你是除法小達人</p>
+                        </div>
+                        <div className="bg-white p-6 rounded-2xl shadow-lg border-2 border-brand-100 w-full">
+                            <p className="text-sm text-slate-400 uppercase tracking-widest mb-1">總得分</p>
+                            <div className="text-5xl font-black text-brand-500">{score}</div>
+                        </div>
+                        <Button onClick={onRestart} className="w-full py-4 text-lg" color="accent">
+                            再玩一次
+                        </Button>
+                    </div>
+                );
+            }
+
+            const q = quizzes[qIdx];
+
+            return (
+                <div className="h-full flex flex-col pt-4">
+                    <div className="mb-6 flex items-center justify-between px-2">
+                        <span className="text-slate-400 font-bold">第 {qIdx + 1} 題</span>
+                        <div className="flex gap-1">
+                            {quizzes.map((_, i) => (
+                                <div key={i} className={`h-2 w-8 rounded-full ${i <= qIdx ? 'bg-brand-500' : 'bg-slate-200'}`}></div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <Card className="mb-6 flex-1 flex items-center justify-center relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-10 text-6xl">📝</div>
+                        <h3 className="text-xl font-bold text-slate-700 leading-relaxed text-center">
+                            {q.q}
+                        </h3>
+                    </Card>
+
+                    <div className="space-y-3 mb-8">
+                        {q.options.map((opt, i) => (
+                            <button
+                                key={i}
+                                onClick={() => handleAns(opt)}
+                                disabled={!!feedback}
+                                className={`w-full py-4 rounded-xl font-bold text-xl border-2 transition-all flex items-center justify-center
+                                    ${feedback === 'correct' && opt === q.ans ? 'bg-green-100 border-green-500 text-green-700' : 
+                                      feedback === 'wrong' && opt !== q.ans && feedback ? 'opacity-50' :
+                                      'bg-white border-slate-200 hover:border-brand-300 text-slate-600'
+                                    }`}
+                            >
+                                {opt}
+                            </button>
+                        ))}
+                    </div>
+                    
+                    {feedback === 'correct' && <div className="text-center font-bold text-green-500 text-lg">太棒了！答對了！</div>}
+                    {feedback === 'wrong' && <div className="text-center font-bold text-red-400 text-lg">再想一下喔...</div>}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
