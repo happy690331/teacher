@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>森林語詞大冒險：塔防守護戰</title>
+    <style>
+        :root {
+            --forest-green: #2ecc71;
+            --dark-green: #27ae60;
+            --path-brown: #d3a676;
+            --castle-pink: #ff7979;
+            --ui-bg: rgba(44, 62, 80, 0.9);
+            --text-color: #ffffff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Microsoft JhengHei', sans-serif;
+            background-color: #1e272e;
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 縮放容器：確保整個遊戲內容都能在預覽視窗內顯示 */
+        #game-scaler {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform-origin: center center;
+            transition: transform 0.2s;
+        }
+
+        #ui-layer {
+            width: 800px;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px;
+            background: var(--ui-bg);
+            border-bottom: 4px solid #34495e;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        .stat-box { text-align: center; }
+        .stat-label { font-size: 14px; opacity: 0.8; }
+        .stat-value { font-size: 22px; font-weight: bold; color: #f1c40f; }
+
+        #game-container {
+            position: relative;
+            border: 8px solid #3d3d3d;
+            border-top: none;
+            border-radius: 0 0 15px 15px;
+            overflow: hidden;
+            background-color: var(--forest-green);
+            width: 800px;
+            height: 550px;
+        }
+
+        canvas { display: block; cursor: crosshair; }
+
+        #quiz-container {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #2d3436;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            text-align: center;
+            z-index: 100;
+            display: none;
+            border: 4px solid #f1c40f;
+            width: 320px;
+            max-height: 380px;
+            overflow-y: auto;
+        }
+
+        #quiz-question {
+            font-size: 18px;
+            line-height: 1.5;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .option-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 3px 0 #2980b9;
+        }
+
+        .option-btn:hover { background: #2980b9; transform: translateY(-2px); }
+        .option-btn:active { transform: translateY(1px); box-shadow: 0 0 0; }
+
+        #start-screen, #overlay-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+
+        #start-screen h1 { font-size: 36px; color: #f1c40f; margin: 0 0 5px 0; text-shadow: 2px 2px 4px #000; }
+        #start-screen p { margin-bottom: 15px; color: #ffffff; font-weight: bold; }
+        
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 90%; max-width: 650px; margin-bottom: 20px; }
+
+        .mode-btn {
+            padding: 12px;
+            font-size: 16px;
+            background: rgba(44, 62, 80, 0.9);
+            color: white;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .mode-btn.selected {
+            background: #27ae60;
+            border-color: #f1c40f;
+            transform: scale(1.02);
+            box-shadow: 0 0 15px rgba(241, 196, 15, 0.6);
+        }
+
+        .btn {
+            padding: 12px 25px;
+            font-size: 18px;
+            background: #e67e22;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 5px;
+            box-shadow: 0 4px 0 #d35400;
+            text-align: center;
+        }
+
+        .btn:hover:not(:disabled) { background: #d35400; transform: translateY(-2px); }
+        .btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 0 0; }
+        .btn:disabled { background: #7f8c8d; box-shadow: 0 4px 0 #3d3d3d; cursor: not-allowed; opacity: 0.6; }
+
+        .btn-green { background: #27ae60; box-shadow: 0 4px 0 #1e8449; }
+
+        #controls-container {
+            margin-top: 10px;
+            display: flex;
+            gap: 20px;
+            width: 800px;
+            justify-content: center;
+        }
+
+        .legend { font-size: 14px; color: #bdc3c7; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+    <div id="game-scaler">
+        <div id="ui-layer">
+            <div class="stat-box">
+                <div class="stat-label">守護積分</div>
+                <div id="score-val" class="stat-value">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">入侵進度</div>
+                <div id="monster-progress-val" class="stat-value">0 / 60</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">可用大砲</div>
+                <div id="tower-count" class="stat-value">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">當前模式</div>
+                <div id="mode-val" class="stat-value" style="color: #2ecc71;">待機中</div>
+            </div>
+        </div>
+
+        <div id="game-container">
+            <canvas id="gameCanvas" width="800" height="550"></canvas>
+            
+            <div id="start-screen">
+                <h1>森林語詞守護戰</h1>
+                <p>請選擇挑戰的課次 (可複選)</p>
+                <div class="menu-grid">
+                    <div class="mode-btn" data-lesson="7" onclick="toggleMode(this)">第七課 大小剛好的鞋子</div>
+                    <div class="mode-btn" data-lesson="8" onclick="toggleMode(this)">第八課 狐假虎威</div>
+                    <div class="mode-btn" data-lesson="9" onclick="toggleMode(this)">第九課 空城計</div>
+                    <div class="mode-btn" data-lesson="10" onclick="toggleMode(this)">第十課 耶誕節</div>
+                    <div class="mode-btn" data-lesson="11" onclick="toggleMode(this)">第十一課 下午茶風波</div>
+                    <div class="mode-btn" data-lesson="12" onclick="toggleMode(this)">第十二課 祕密花園</div>
+                </div>
+                <button id="start-game-btn" class="btn btn-green" style="width: 250px; font-weight: bold;" onclick="confirmStart()" disabled>開始挑戰</button>
+            </div>
+
+            <div id="quiz-container">
+                <div id="quiz-question">讀取中...</div>
+                <div class="options-grid" id="quiz-options"></div>
+            </div>
+
+            <div id="overlay-screen">
+                <h2 id="overlay-title">暫停中</h2>
+                <p id="overlay-desc" style="font-size: 20px;"></p>
+                <div id="overlay-btns">
+                    <button id="resume-btn" class="btn btn-green" onclick="togglePause()">回到遊戲</button>
+                    <button class="btn" onclick="backToMenu()">回到設置選單</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="controls-container">
+            <button id="pause-btn" class="btn" onclick="togglePause()">遊戲暫停</button>
+            <button class="btn" onclick="backToMenu()">重新設置</button>
+        </div>
+        <div class="legend">提示：答對語詞可獲得大砲。收回大砲會導致彈藥減半！</div>
+    </div>
+
+    <script>
+        // 縮放控制邏輯
+        function updateScale() {
+            const scaler = document.getElementById('game-scaler');
+            const winW = window.innerWidth;
+            const winH = window.innerHeight;
+            const targetW = 840; // UI Layer width + safe margin
+            const targetH = 720; // UI + Game + Controls + margin
+            
+            const scale = Math.min(winW / targetW, winH / targetH, 1);
+            scaler.style.transform = `scale(${scale})`;
+        }
+        window.addEventListener('resize', updateScale);
+        window.addEventListener('load', updateScale);
+
+        const VOCAB_DATA = {
+            "7": [
+                {w:"仰光", d:"城市名。位於伊洛瓦底江三角洲東側。為緬甸最大和最重要的工商業城市。"},
+                {w:"緬甸", d:"國名。位於亞洲東南部。"},
+                {w:"腳踝", d:"小腿與腳掌間，腳骨兩旁凸起的部位。"},
+                {w:"呢絨", d:"用獸毛或人造毛等製成的毛織品的統稱。"},
+                {w:"下襬", d:"上衣、長袍和裙子等的下緣部分。"},
+                {w:"恣意", d:"放任而不加以約束。"},
+                {w:"批判", d:"評論判斷。"},
+                {w:"行徑", d:"行為、舉動。"},
+                {w:"謹記", d:"恭謹牢記；恭敬慎重的寫下。"},
+                {w:"恰恰", d:"恰巧、剛好。"},
+                {w:"乏人問津", d:"沒有人洽詢或探問。"},
+                {w:"放之四海而皆準", d:"用到任何地方任何方面都可作為準則。"},
+                {w:"嗤之以鼻", d:"從鼻子裡發出冷笑。表示不屑或鄙視。"}
+            ],
+            "8": [
+                {w:"縫隙", d:"空隙。"},
+                {w:"旨意", d:"帝王的命令；主旨目的。"},
+                {w:"悠閒", d:"閒適自得而無所牽掛。"},
+                {w:"寓言", d:"以淺近假託的故事或自然物的擬人手法，表達某種哲理或隱含訓誨教育作用的文體。"},
+                {w:"鷸蚌相爭", d:"比喻兩相爭執必會造成兩敗毀傷，而讓第三者獲利的局面。"},
+                {w:"狡兔三窟", d:"比喻人有多處藏身的地方或多種避禍的準備。"},
+                {w:"狡猾", d:"詭變多詐。"},
+                {w:"招搖撞騙", d:"假借他人的名義或聲勢而到處詐騙。"},
+                {w:"偽裝", d:"假裝，改裝掩飾真正的面目或身分。"},
+                {w:"誇大", d:"言語超過原有的事實。"},
+                {w:"分辨", d:"辨別。"},
+                {w:"謊言", d:"不實在的話。"},
+                {w:"諷刺", d:"以隱微的方式嘲諷譏刺。"},
+                {w:"警惕", d:"對可能發生的情況，心生警覺而加以戒備。"},
+                {w:"觀察", d:"仔細察看。"},
+                {w:"蒙蔽", d:"欺騙、隱瞞事實的真相。"},
+                {w:"虛張聲勢", d:"誇大聲威氣勢，用以嚇阻或欺騙他人。"}
+            ],
+            "9": [
+                {w:"街亭", d:"三國時期諸葛亮北伐的一場戰事重地。"},
+                {w:"誘敵", d:"引誘敵人。"},
+                {w:"旗幟", d:"旌旗的泛稱；或比喻名義、藉口。"},
+                {w:"崗位", d:"職責、本分；軍警執勤的處所。"},
+                {w:"百姓", d:"泛指一般平民、國民。"},
+                {w:"倘若", d:"表示假設語氣的連接詞，即如果、假使。"},
+                {w:"書僮", d:"舊時在富人家中侍候主人或其弟子讀書，兼做雜役的未成年僮僕。"},
+                {w:"撤退", d:"放棄陣地或遷離已占領的地區。"},
+                {w:"謹慎", d:"仔細慎重。"},
+                {w:"丞相", d:"古時輔佐天子處理國事的最高行政官員。"}
+            ],
+            "10": [
+                {w:"耶誕節", d:"紀念耶穌誕生的節日，是歐美重要節慶之一。"},
+                {w:"郊外", d:"環繞城市外面的地方。"},
+                {w:"慈祥", d:"慈善祥和。"},
+                {w:"劈啪", d:"狀聲詞。形容燃燒時爆裂或撞擊拍打的聲音。"},
+                {w:"零用錢", d:"零碎花用的錢。"},
+                {w:"厭倦", d:"不再喜歡或提不起興趣。"},
+                {w:"辯護", d:"提出理由、事實來加以袒護；或法律上的辯白。"},
+                {w:"自私自利", d:"只圖自己的私利，而不顧及一切。"},
+                {w:"貧窮", d:"缺少錢財，生活拮据困乏。"},
+                {w:"關係", d:"對相關事物的影響；泛指原因、條件；人事物間的關連。"},
+                {w:"稍微", d:"程度或分量上極少的。"},
+                {w:"暖烘烘", d:"溫暖的樣子。"},
+                {w:"衷心", d:"出自內心。"},
+                {w:"鋼琴", d:"樂器名。屬鍵盤樂器，手指按動鍵盤時，敲打鋼絲弦發出聲音。"}
+            ],
+            "11": [
+                {w:"恢復", d:"回復到原來的樣子；收復。"},
+                {w:"活潑", d:"生動而不呆板。"},
+                {w:"草莓", d:"植物名。果實熟呈紅色，肉質多汁，味道酸甜。"},
+                {w:"客廳", d:"用來接待賓客的場所。"},
+                {w:"前額", d:"額頭。"},
+                {w:"灌醉", d:"勉強別人喝酒以致於酒醉。"},
+                {w:"原諒", d:"寬恕諒解。"},
+                {w:"雙脣", d:"上、下嘴脣。"},
+                {w:"乞求", d:"懇求、請求。"},
+                {w:"神采煥發", d:"精神充足，光采照人。"},
+                {w:"雪橇", d:"利用長條形平滑板塊在雪地上滑行的無輪交通工具。"},
+                {w:"迴盪", d:"迴旋飄浮。"}
+            ],
+            "12": [
+                {w:"訝異", d:"覺得意外，難以相信。"},
+                {w:"臉頰", d:"臉的兩邊。"},
+                {w:"蓬勃", d:"茂盛繁榮的樣子。"},
+                {w:"家庭醫師", d:"照顧家庭各成員健康的第一線醫師。"},
+                {w:"嚴肅", d:"態度嚴正莊重；嚴格、認真。"},
+                {w:"薔薇", d:"植物名。枝幹多刺，花朵有紅、白、黃等色，富有香氣。"},
+                {w:"瀰漫", d:"遍布、滿布。"},
+                {w:"包括", d:"包含、涵蓋。"},
+                {w:"螞蟻", d:"蟻科昆蟲的總稱。喜於地下築巢群居。"},
+                {w:"儘管", d:"即使、雖然；或隨意去做不用考慮。"}
+            ]
+        };
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('start-screen');
+        const startGameBtn = document.getElementById('start-game-btn');
+        const quizContainer = document.getElementById('quiz-container');
+        const quizQuestion = document.getElementById('quiz-question');
+        const quizOptions = document.getElementById('quiz-options');
+        const scoreDisplay = document.getElementById('score-val');
+        const monsterProgressDisplay = document.getElementById('monster-progress-val');
+        const towerDisplay = document.getElementById('tower-count');
+        const modeDisplay = document.getElementById('mode-val');
+        const overlayScreen = document.getElementById('overlay-screen');
+        const overlayTitle = document.getElementById('overlay-title');
+        const overlayDesc = document.getElementById('overlay-desc');
+        const pauseBtn = document.getElementById('pause-btn');
+
+        let score = 0;
+        let towerAmmoPool = [];
+        let isGameOver = false;
+        let isPaused = true;
+        let monstersSpawned = 0;
+        let monstersDefeated = 0;
+        const MAX_MONSTERS = 60;
+        let selectedLessons = []; 
+        
+        let monsters = [];
+        let towers = [];
+        let bullets = [];
+        let decorativeTrees = [];
+        let quizTimer, spawnTimer;
+
+        const path = [
+            {x: -50, y: 100}, {x: 150, y: 100}, {x: 150, y: 250}, {x: 50, y: 250},
+            {x: 50, y: 450}, {x: 350, y: 450}, {x: 350, y: 50}, {x: 600, y: 50},
+            {x: 600, y: 350}, {x: 850, y: 350}
+        ];
+
+        function initDecorations() {
+            decorativeTrees = [];
+            for(let i=0; i<25; i++) {
+                let tx, ty;
+                do { tx = Math.random() * canvas.width; ty = Math.random() * canvas.height; }
+                while (isPointOnPath(tx, ty));
+                decorativeTrees.push({x: tx, y: ty, size: 8 + Math.random()*12});
+            }
+        }
+
+        function isPointOnPath(x, y) {
+            const pWidth = 65;
+            for (let i = 0; i < path.length - 1; i++) {
+                const p1 = path[i]; const p2 = path[i+1];
+                const minX = Math.min(p1.x, p2.x) - pWidth/2;
+                const maxX = Math.max(p1.x, p2.x) + pWidth/2;
+                const minY = Math.min(p1.y, p2.y) - pWidth/2;
+                const maxY = Math.max(p1.y, p2.y) + pWidth/2;
+                if (x >= minX && x <= maxX && y >= minY && y <= maxY) return true;
+            }
+            return false;
+        }
+
+        function drawMonster(x, y, hp, maxHp, isBoss) {
+            ctx.save();
+            ctx.translate(x, y);
+            const scale = isBoss ? 1.5 : 1.0;
+            ctx.scale(scale, scale);
+            ctx.fillStyle = isBoss ? "#e74c3c" : "#9b59b6";
+            ctx.beginPath(); ctx.ellipse(0, 0, 18, 12, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(12, -10, 10, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(15, -12, 3, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "black"; ctx.beginPath(); ctx.arc(16, -12, 1.5, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+            const barW = 40 * scale;
+            ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(x - barW/2, y - 35, barW, 6);
+            ctx.fillStyle = "#e74c3c"; ctx.fillRect(x - barW/2, y - 35, (hp / maxHp) * barW, 6);
+        }
+
+        function drawCannon(x, y, angle, shotsRemaining) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.fillStyle = "white"; ctx.font = "bold 12px Arial"; ctx.textAlign = "center";
+            ctx.fillText(shotsRemaining, 0, 28);
+            ctx.fillStyle = "#34495e"; ctx.beginPath(); ctx.arc(0, 5, 18, Math.PI, 0); ctx.fill();
+            ctx.rotate(angle || 0);
+            ctx.fillStyle = "#2c3e50"; ctx.fillRect(0, -8, 28, 16);
+            ctx.strokeStyle = "#bdc3c7"; ctx.lineWidth = 2; ctx.strokeRect(0, -8, 28, 16);
+            ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        }
+
+        class Monster {
+            constructor(hp, speed, isBoss = false) {
+                this.x = path[0].x; this.y = path[0].y; this.targetIndex = 1;
+                this.speed = speed; this.hp = hp; this.maxHp = hp; this.isBoss = isBoss;
+            }
+            update() {
+                if (isPaused || isGameOver) return;
+                const target = path[this.targetIndex];
+                if (!target) { endGame(); return; }
+                const dx = target.x - this.x; const dy = target.y - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < this.speed) {
+                    this.targetIndex++;
+                    if (this.targetIndex >= path.length) endGame();
+                } else {
+                    this.x += (dx / dist) * this.speed;
+                    this.y += (dy / dist) * this.speed;
+                }
+            }
+            draw() { drawMonster(this.x, this.y, this.hp, this.maxHp, this.isBoss); }
+        }
+
+        class Tower {
+            constructor(x, y, maxShots) {
+                this.x = x; this.y = y; this.range = 160; this.cooldown = 0; 
+                this.fireRate = 45; this.angle = 0;
+                this.shotsFired = 0; 
+                this.maxShots = maxShots; 
+            }
+            update() {
+                if (isPaused || isGameOver) return;
+                if (this.cooldown > 0) this.cooldown--;
+                let target = null; let minDist = this.range;
+                monsters.forEach(m => {
+                    const d = Math.sqrt((m.x-this.x)**2 + (m.y-this.y)**2);
+                    if (d < minDist) { minDist = d; target = m; }
+                });
+                if (target) {
+                    this.angle = Math.atan2(target.y - this.y, target.x - this.x);
+                    if (this.cooldown <= 0) {
+                        bullets.push(new Bullet(this.x, this.y, target));
+                        this.cooldown = this.fireRate;
+                        this.shotsFired++;
+                        if (this.shotsFired >= this.maxShots) {
+                            const tIdx = towers.indexOf(this);
+                            if (tIdx > -1) towers.splice(tIdx, 1);
+                        }
+                    }
+                }
+            }
+            draw() { drawCannon(this.x, this.y, this.angle, this.maxShots - this.shotsFired); }
+        }
+
+        class Bullet {
+            constructor(x, y, target) {
+                this.x = x; this.y = y; this.target = target; this.speed = 7.5; this.finished = false;
+            }
+            update() {
+                if (isPaused || isGameOver) return;
+                const dx = this.target.x - this.x; const dy = this.target.y - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < this.speed) {
+                    this.target.hp--;
+                    this.finished = true;
+                    if (this.target.hp <= 0) {
+                        const idx = monsters.indexOf(this.target);
+                        if (idx > -1) {
+                            monsters.splice(idx, 1); score += 5; monstersDefeated++;
+                            scoreDisplay.innerText = score; updateProgress();
+                        }
+                    }
+                } else { this.x += (dx/dist)*this.speed; this.y += (dy/dist)*this.speed; }
+            }
+            draw() { ctx.fillStyle = "#2c3e50"; ctx.beginPath(); ctx.arc(this.x, this.y, 6, 0, Math.PI*2); ctx.fill(); }
+        }
+
+        function toggleMode(element) {
+            const lesson = element.getAttribute('data-lesson');
+            if (selectedLessons.includes(lesson)) {
+                selectedLessons = selectedLessons.filter(l => l !== lesson);
+                element.classList.remove('selected');
+            } else {
+                selectedLessons.push(lesson);
+                element.classList.add('selected');
+            }
+            startGameBtn.disabled = selectedLessons.length === 0;
+        }
+
+        function confirmStart() {
+            if (selectedLessons.length === 0) return;
+            startGame();
+        }
+
+        function startGame() {
+            isPaused = false;
+            isGameOver = false;
+            startScreen.style.display = 'none';
+            overlayScreen.style.display = 'none';
+            pauseBtn.innerText = "遊戲暫停";
+            
+            modeDisplay.innerText = selectedLessons.length > 1 ? "混和模式" : `第${selectedLessons[0]}課`;
+
+            score = 0; towerAmmoPool = []; monstersSpawned = 0; monstersDefeated = 0;
+            monsters = []; towers = []; bullets = [];
+            scoreDisplay.innerText = "0"; towerDisplay.innerText = "0"; updateProgress();
+            
+            clearInterval(quizTimer);
+            clearInterval(spawnTimer);
+            quizTimer = setInterval(generateQuiz, 4000);
+            spawnTimer = setInterval(spawnMonster, 5000);
+            generateQuiz(); 
+        }
+
+        function updateProgress() {
+            monsterProgressDisplay.innerText = `${monstersDefeated} / ${MAX_MONSTERS}`;
+        }
+
+        function spawnMonster() {
+            if (isGameOver || isPaused || monstersSpawned >= MAX_MONSTERS) return;
+            monstersSpawned++;
+            let hp = 4; let speed = 1.3; let isBoss = false;
+            if (monstersSpawned % 20 === 0) { hp = 40; speed = 1.0; isBoss = true; } 
+            else if (monstersSpawned > 30) { speed = 1.6; } 
+            monsters.push(new Monster(hp, speed, isBoss));
+            
+            if (monstersSpawned === 30) { clearInterval(spawnTimer); spawnTimer = setInterval(spawnMonster, 1200); }
+            if (monstersSpawned >= MAX_MONSTERS) clearInterval(spawnTimer);
+        }
+
+        function generateQuiz() {
+            if (isGameOver || isPaused || quizContainer.style.display === 'block') return;
+            
+            let pool = [];
+            selectedLessons.forEach(l => { pool = pool.concat(VOCAB_DATA[l]); });
+            
+            const target = pool[Math.floor(Math.random() * pool.length)];
+            quizQuestion.innerText = `「${target.d}」是什麼語詞？`;
+            
+            let choices = [target.w];
+            while(choices.length < 4) {
+                let rItem = pool[Math.floor(Math.random() * pool.length)];
+                if(!choices.includes(rItem.w)) choices.push(rItem.w);
+            }
+            choices.sort(() => Math.random() - 0.5);
+            
+            quizOptions.innerHTML = "";
+            choices.forEach(c => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn"; btn.innerText = c;
+                btn.onclick = () => {
+                    if (c === target.w) {
+                        towerAmmoPool.push(50);
+                        towerDisplay.innerText = towerAmmoPool.length;
+                        quizContainer.style.display = "none";
+                    } else { 
+                        btn.style.background = "#e74c3c";
+                        btn.style.boxShadow = "0 3px 0 #c0392b";
+                    }
+                };
+                quizOptions.appendChild(btn);
+            });
+            quizContainer.style.display = "block";
+        }
+
+        function togglePause() {
+            if (isGameOver || startScreen.style.display === 'flex') return;
+            isPaused = !isPaused;
+            overlayScreen.style.display = isPaused ? "flex" : "none";
+            overlayTitle.innerText = "遊戲暫停中";
+            overlayDesc.innerText = "正在思考語詞，大砲剩餘彈藥收回會減半喔！";
+            pauseBtn.innerText = isPaused ? "回到遊戲" : "遊戲暫停";
+        }
+
+        function backToMenu() {
+            isPaused = true; isGameOver = false;
+            clearInterval(quizTimer); clearInterval(spawnTimer);
+            overlayScreen.style.display = "none"; startScreen.style.display = "flex";
+            quizContainer.style.display = "none";
+            document.getElementById('resume-btn').style.display = "block";
+        }
+
+        function winGame() {
+            isGameOver = true;
+            overlayTitle.innerText = "語詞大師！";
+            overlayDesc.innerText = `成功守護森林！積分：${score}`;
+            overlayScreen.style.display = "flex";
+            document.getElementById('resume-btn').style.display = "none";
+            clearInterval(quizTimer); clearInterval(spawnTimer);
+        }
+
+        function endGame() {
+            isGameOver = true;
+            overlayTitle.innerText = "城堡失守！";
+            overlayDesc.innerText = `加油，再多複習幾次語詞解釋吧。積分：${score}`;
+            overlayScreen.style.display = "flex";
+            document.getElementById('resume-btn').style.display = "none";
+            clearInterval(quizTimer); clearInterval(spawnTimer);
+        }
+
+        canvas.addEventListener('click', (e) => {
+            if (isGameOver || isPaused) return;
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left; const my = e.clientY - rect.top;
+            
+            const tIdx = towers.findIndex(t => Math.sqrt((t.x-mx)**2 + (t.y-my)**2) < 30);
+            if (tIdx > -1) {
+                const tower = towers[tIdx];
+                const remainingAmmo = Math.floor((tower.maxShots - tower.shotsFired) / 2);
+                if (remainingAmmo > 0) { towerAmmoPool.push(remainingAmmo); }
+                towers.splice(tIdx, 1); 
+                towerDisplay.innerText = towerAmmoPool.length;
+                return;
+            }
+            
+            if (towerAmmoPool.length > 0 && !isPointOnPath(mx, my)) {
+                const ammo = towerAmmoPool.pop();
+                towers.push(new Tower(mx, my, ammo)); 
+                towerDisplay.innerText = towerAmmoPool.length;
+            }
+        });
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#2ecc71"; ctx.fillRect(0, 0, 800, 550);
+            decorativeTrees.forEach(t => { ctx.fillStyle="#196f3d"; ctx.beginPath(); ctx.arc(t.x, t.y, t.size, 0, Math.PI*2); ctx.fill(); });
+            ctx.strokeStyle = "#c09060"; ctx.lineWidth = 60; ctx.lineCap="round"; ctx.lineJoin="round";
+            ctx.beginPath(); ctx.moveTo(path[0].x, path[0].y);
+            for(let i=1; i<path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+            ctx.stroke(); 
+            ctx.strokeStyle = "#d3a676"; ctx.lineWidth = 45; ctx.stroke();
+            const lastPoint = path[path.length-1];
+            ctx.fillStyle = "#ecf0f1"; ctx.fillRect(lastPoint.x - 90, lastPoint.y - 25, 60, 50);
+            ctx.fillStyle = "#ff7979"; ctx.beginPath(); ctx.moveTo(lastPoint.x-90, lastPoint.y-25); ctx.lineTo(lastPoint.x-60, lastPoint.y-50); ctx.lineTo(lastPoint.x-30, lastPoint.y-25); ctx.fill();
+
+            if (!isPaused) {
+                monsters.forEach(m => m.update());
+                towers.forEach(t => t.update());
+                for(let i=bullets.length-1; i>=0; i--) {
+                    bullets[i].update();
+                    if(bullets[i].finished) bullets.splice(i, 1);
+                }
+            }
+            monsters.forEach(m => m.draw());
+            towers.forEach(t => t.draw());
+            bullets.forEach(b => b.draw());
+            if (!isGameOver && monstersSpawned === MAX_MONSTERS && monsters.length === 0) winGame();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = () => {
+            initDecorations();
+            gameLoop();
+            updateScale();
+        };
+    </script>
+</body>
+</html>
