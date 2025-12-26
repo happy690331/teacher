@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>除法探險隊：除數是二位數</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <style>
+        body { 
+            touch-action: manipulation; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f9ff; /* Sky 50 */
+        }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        
+        /* 動畫效果 */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+
+        @keyframes pop {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+        /* 隱藏滾動條 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        ocean: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            800: '#075985',
+                        },
+                        coral: {
+                            100: '#ffe4e6',
+                            500: '#f43f5e',
+                        },
+                        gold: {
+                            100: '#fef9c3',
+                            500: '#eab308',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="text-slate-800 select-none overflow-hidden h-screen flex flex-col">
+    <div id="root" class="h-full flex flex-col"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- 元件：通用按鈕 ---
+        const Button = ({ onClick, children, className = "", variant = "primary", disabled = false }) => {
+            const baseStyle = "transform transition-all duration-200 active:scale-95 rounded-2xl font-bold shadow-md flex items-center justify-center py-3 px-4";
+            const variants = {
+                primary: "bg-ocean-500 text-white hover:bg-ocean-600 shadow-ocean-500/30",
+                secondary: "bg-white text-ocean-600 border-2 border-ocean-100 hover:border-ocean-300",
+                gold: "bg-gold-500 text-white hover:bg-yellow-500 shadow-yellow-500/30",
+                disabled: "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none active:scale-100"
+            };
+            return (
+                <button onClick={onClick} disabled={disabled} className={`${baseStyle} ${disabled ? variants.disabled : variants[variant]} ${className}`}>
+                    {children}
+                </button>
+            );
+        };
+
+        // --- 元件：卡片容器 ---
+        const Card = ({ children, className = "" }) => (
+            <div className={`bg-white rounded-3xl shadow-lg border border-ocean-100 p-5 ${className}`}>
+                {children}
+            </div>
+        );
+
+        // --- 主程式 App ---
+        const App = () => {
+            const [tab, setTab] = useState('learn');
+            const [score, setScore] = useState(0);
+            const [showFeedback, setShowFeedback] = useState(false);
+
+            // 分數增加時的特效
+            useEffect(() => {
+                if (score > 0) {
+                    setShowFeedback(true);
+                    const timer = setTimeout(() => setShowFeedback(false), 2000);
+                    return () => clearTimeout(timer);
+                }
+            }, [score]);
+
+            const renderContent = () => {
+                switch(tab) {
+                    case 'learn': return <LearnSection onFinish={() => setTab('game1')} />;
+                    case 'game1': return <EstimationGame score={score} setScore={setScore} onFinish={() => setTab('game2')} />;
+                    case 'game2': return <StepDivisionGame score={score} setScore={setScore} onFinish={() => setTab('quiz')} />;
+                    case 'quiz': return <QuizSection score={score} setScore={setScore} onRestart={() => { setScore(0); setTab('learn'); }} />;
+                    default: return <LearnSection />;
+                }
+            };
+
+            return (
+                <div className="flex flex-col h-full max-w-md mx-auto bg-ocean-50 shadow-2xl relative">
+                    {/* Header */}
+                    <header className="px-5 py-3 flex justify-between items-center bg-white/90 backdrop-blur-sm z-20 border-b border-ocean-100">
+                        <div className="flex items-center gap-2">
+                            <div className="bg-ocean-100 p-2 rounded-xl text-ocean-600">
+                                <i className="ph-fill ph-calculator text-2xl"></i>
+                            </div>
+                            <h1 className="font-bold text-lg text-slate-700">除法探險隊</h1>
+                        </div>
+                        <div className={`flex items-center bg-yellow-50 px-3 py-1.5 rounded-full border border-yellow-200 transition-transform ${showFeedback ? 'scale-110 ring-2 ring-yellow-300' : ''}`}>
+                            <i className="ph-fill ph-coin text-gold-500 mr-1.5 text-xl"></i>
+                            <span className="font-black text-yellow-700 text-lg">{score}</span>
+                        </div>
+                    </header>
+
+                    {/* Content */}
+                    <main className="flex-1 overflow-y-auto no-scrollbar p-4 pb-24">
+                        {renderContent()}
+                    </main>
+
+                    {/* Navigation */}
+                    <nav className="bg-white border-t border-slate-100 p-2 pb-safe fixed bottom-0 w-full max-w-md z-30 shadow-[0_-5px_20px_rgba(0,0,0,0.03)]">
+                        <div className="flex justify-around items-center">
+                            <NavBtn active={tab === 'learn'} icon="ph-video" label="影片學習" onClick={() => setTab('learn')} />
+                            <NavBtn active={tab === 'game1'} icon="ph-crosshair" label="猜猜看" onClick={() => setTab('game1')} />
+                            <NavBtn active={tab === 'game2'} icon="ph-steps" label="算算看" onClick={() => setTab('game2')} />
+                            <NavBtn active={tab === 'quiz'} icon="ph-exam" label="小測驗" onClick={() => setTab('quiz')} />
+                        </div>
+                    </nav>
+
+                    {/* 加分特效 Overlay */}
+                    {showFeedback && (
+                        <div className="absolute top-20 right-10 pointer-events-none animate-bounce z-50">
+                            <span className="text-gold-500 font-black text-2xl drop-shadow-md">+10</span>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const NavBtn = ({ active, icon, label, onClick }) => (
+            <button onClick={onClick} className={`flex flex-col items-center justify-center w-16 py-1 rounded-xl transition-all duration-300 ${active ? 'text-ocean-600 -translate-y-1' : 'text-slate-400 hover:text-slate-500'}`}>
+                <div className={`p-1.5 rounded-full mb-1 ${active ? 'bg-ocean-100' : ''}`}>
+                    <i className={`ph-fill ${icon} text-2xl`}></i>
+                </div>
+                <span className="text-[10px] font-bold">{label}</span>
+            </button>
+        );
+
+        // --- 1. 學習區 (Learn Section) ---
+        const LearnSection = ({ onFinish }) => (
+            <div className="space-y-6 animate-pop">
+                <div className="bg-slate-900 rounded-2xl overflow-hidden shadow-lg ring-4 ring-ocean-100 aspect-video relative">
+                    <iframe 
+                        className="absolute inset-0 w-full h-full"
+                        src="https://www.youtube.com/embed/OoMEZ3YMeTE" 
+                        title="除數是二位數的除法" 
+                        frameBorder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allowFullScreen
+                    ></iframe>
+                </div>
+                
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                        <i className="ph-fill ph-lightbulb text-gold-500 text-xl"></i>
+                        <h2 className="font-bold text-slate-700">老師的小撇步</h2>
+                    </div>
+
+                    <Card className="flex gap-4 items-start bg-gradient-to-br from-white to-ocean-50">
+                        <div className="bg-ocean-100 text-ocean-600 w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-lg">1</div>
+                        <div>
+                            <h3 className="font-bold text-ocean-800">把除數變簡單</h3>
+                            <p className="text-slate-600 text-sm mt-1">除數如果是 21，就把它當作 <span className="text-red-500 font-bold">20</span> 來猜猜看。</p>
+                            <div className="mt-2 text-xs bg-white p-2 rounded border border-ocean-100 inline-block text-slate-500">
+                                例如：63 ÷ 21 → 60 ÷ 20 = 3
+                            </div>
+                        </div>
+                    </Card>
+
+                    <Card className="flex gap-4 items-start bg-gradient-to-br from-white to-indigo-50">
+                        <div className="bg-indigo-100 text-indigo-600 w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-lg">2</div>
+                        <div>
+                            <h3 className="font-bold text-indigo-800">除法的四步驟</h3>
+                            <p className="text-slate-600 text-sm mt-1">按照順序慢慢來，就不會算錯喔！</p>
+                            <div className="flex gap-2 mt-2">
+                                {['商', '乘', '減', '降'].map((step, i) => (
+                                    <span key={i} className="bg-white px-2 py-1 rounded text-xs font-bold text-indigo-500 border border-indigo-100">{step}</span>
+                                ))}
+                            </div>
+                        </div>
+                    </Card>
+                </div>
+
+                <Button onClick={onFinish} className="w-full text-lg shadow-ocean-500/40">
+                    我看懂了，開始練習！ <i className="ph-bold ph-arrow-right ml-2"></i>
+                </Button>
+            </div>
+        );
+
+        // --- 2. 估商遊戲 (Estimation Game) ---
+        // 設計理念：資源班學生常卡在"不知道要商多少"。這個遊戲只專注練習"猜大概"。
+        const EstimationGame = ({ score, setScore, onFinish }) => {
+            const [level, setLevel] = useState(0);
+            const [feedback, setFeedback] = useState(null); // 'correct' | 'wrong'
+            
+            // 題目設計：被除數, 除數, 選項(包含正確答案)
+            const questions = [
+                { dividend: 62, divisor: 20, options: [2, 3, 4], ans: 3, hint: "60 裡面有幾個 20？" },
+                { dividend: 80, divisor: 40, options: [1, 2, 3], ans: 2, hint: "80 裡面有幾個 40？" },
+                { dividend: 93, divisor: 31, options: [2, 3, 4], ans: 3, hint: "把 31 看成 30，90 裡面有幾個 30？" },
+                { dividend: 48, divisor: 12, options: [3, 4, 5], ans: 4, hint: "把 12 看成 10，40 裡面有幾個 10？" },
+                { dividend: 75, divisor: 25, options: [2, 3, 5], ans: 3, hint: "25 + 25 = 50，再加一個 25 呢？" }
+            ];
+
+            const currentQ = questions[level];
+
+            const handleAnswer = (val) => {
+                if(feedback) return;
+                
+                if (val === currentQ.ans) {
+                    setFeedback('correct');
+                    setScore(s => s + 10);
+                    setTimeout(() => {
+                        if (level < questions.length - 1) {
+                            setLevel(l => l + 1);
+                            setFeedback(null);
+                        } else {
+                            onFinish();
+                        }
+                    }, 1500);
+                } else {
+                    setFeedback('wrong');
+                    setTimeout(() => setFeedback(null), 1500);
+                }
+            };
+
+            if (!currentQ) return null;
+
+            return (
+                <div className="h-full flex flex-col items-center pt-4 animate-pop">
+                    <div className="w-full flex justify-between text-xs font-bold text-slate-400 mb-6 uppercase tracking-wider">
+                        <span>Level {level + 1} / {questions.length}</span>
+                        <span>估商練習</span>
+                    </div>
+
+                    <div className="text-center mb-8 relative">
+                        <div className="bg-white p-8 rounded-full shadow-lg border-4 border-ocean-100 w-48 h-48 flex flex-col items-center justify-center mx-auto mb-6 relative overflow-hidden">
+                            <div className="absolute top-0 w-full h-4 bg-ocean-50"></div>
+                            <span className="text-5xl font-black text-slate-700 mb-2">{currentQ.dividend} <span className="text-2xl text-slate-400">÷</span> {currentQ.divisor}</span>
+                            <div className="text-sm bg-ocean-100 text-ocean-700 px-3 py-1 rounded-full font-bold">
+                                商大概是多少？
+                            </div>
+                        </div>
+                        
+                        {/* 視覺提示：錢幣或積木圖示 */}
+                        <div className="h-12 flex justify-center gap-2 items-center">
+                            {feedback === 'wrong' ? (
+                                <span className="text-coral-500 font-bold bg-white px-4 py-2 rounded-xl shadow-sm border border-coral-100 animate-pulse">
+                                    💡 提示：{currentQ.hint}
+                                </span>
+                            ) : (
+                                <span className="text-slate-400 text-sm">點選下方正確的數字</span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4 w-full">
+                        {currentQ.options.map((opt, i) => (
+                            <button
+                                key={i}
+                                onClick={() => handleAnswer(opt)}
+                                disabled={!!feedback}
+                                className={`h-24 rounded-2xl text-4xl font-black transition-all duration-200 border-b-4 active:border-b-0 active:translate-y-1 shadow-sm
+                                    ${feedback === 'correct' && opt === currentQ.ans ? 'bg-green-500 text-white border-green-700' :
+                                      feedback === 'wrong' && opt !== currentQ.ans ? 'bg-slate-100 text-slate-300 border-slate-200' :
+                                      'bg-white text-ocean-600 border-ocean-200 hover:bg-ocean-50'
+                                    }`}
+                            >
+                                {opt}
+                            </button>
+                        ))}
+                    </div>
+
+                    {feedback === 'correct' && (
+                        <div className="mt-8 text-green-500 font-bold text-xl flex items-center animate-bounce">
+                            <i className="ph-fill ph-check-circle mr-2 text-2xl"></i> 答對了！
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // --- 3. 分步驟除法遊戲 (Step-by-Step Division) ---
+        // 設計理念：將除法拆解為「填空題」，學生不需要自己寫算式，只需要在關鍵步驟做決定。
+        const StepDivisionGame = ({ score, setScore, onFinish }) => {
+            const [step, setStep] = useState(0); // 0: 商, 1: 乘, 2: 減, 3: 完成
+            const [qIndex, setQIndex] = useState(0);
+            const [userInput, setUserInput] = useState('');
+            const [msg, setMsg] = useState('請在上面填入商');
+
+            const questions = [
+                { dividend: 46, divisor: 21, quotient: 2, product: 42, remainder: 4 }, // 46/21=2...4
+                { dividend: 65, divisor: 30, quotient: 2, product: 60, remainder: 5 }, // 65/30=2...5
+                { dividend: 96, divisor: 32, quotient: 3, product: 96, remainder: 0 }  // 96/32=3...0
+            ];
+
+            const q = questions[qIndex];
+
+            // 處理數字鍵盤輸入
+            const handleNumClick = (num) => {
+                // 限制輸入長度
+                if (userInput.length >= 2) return;
+                const nextVal = userInput + num;
+                setUserInput(nextVal);
+                checkAnswer(nextVal);
+            };
+
+            const handleClear = () => setUserInput('');
+
+            const checkAnswer = (val) => {
+                const numVal = parseInt(val);
+                
+                if (step === 0) { // 檢查商
+                    if (numVal === q.quotient) {
+                        correctAction("商對了！接下來算乘積");
+                        setStep(1);
+                        setUserInput('');
+                    }
+                } else if (step === 1) { // 檢查乘積 (商 x 除數)
+                    if (numVal === q.product) {
+                        correctAction("乘積對了！接下來算餘數");
+                        setStep(2);
+                        setUserInput('');
+                    }
+                } else if (step === 2) { // 檢查餘數 (被除數 - 乘積)
+                    if (numVal === q.remainder) {
+                        correctAction("太棒了！這一題完成了！");
+                        setScore(s => s + 20);
+                        setTimeout(() => {
+                            if (qIndex < questions.length - 1) {
+                                setQIndex(i => i + 1);
+                                setStep(0);
+                                setUserInput('');
+                                setMsg('請在上面填入商');
+                            } else {
+                                onFinish();
+                            }
+                        }, 1500);
+                    }
+                }
+            };
+
+            const correctAction = (message) => {
+                setMsg(message);
+                // 播放音效或視覺回饋可加在這裡
+            };
+
+            return (
+                <div className="h-full flex flex-col pt-2 animate-pop">
+                    <div className="text-center mb-4">
+                        <span className="bg-ocean-100 text-ocean-700 px-3 py-1 rounded-full text-xs font-bold">
+                            第 {qIndex + 1} 題 / 共 {questions.length} 題
+                        </span>
+                    </div>
+
+                    {/* 直式除法顯示區 - CSS Grid Layout */}
+                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 mx-auto mb-4 relative w-64 select-none">
+                        <div className="grid grid-cols-4 gap-x-1 gap-y-2 text-3xl font-mono font-bold text-slate-700 leading-none">
+                            
+                            {/* 第一列：商 */}
+                            <div className="col-span-2"></div>
+                            <div className={`col-span-2 border-b-2 border-transparent h-10 flex items-center justify-center ${step === 0 ? 'bg-yellow-100 rounded border-yellow-300 animate-pulse' : ''}`}>
+                                {step > 0 ? q.quotient : (step === 0 ? userInput : '')}
+                            </div>
+
+                            {/* 第二列：除號與題目 */}
+                            <div className="col-span-1 flex items-center justify-end pr-2 text-xl text-slate-400"></div>
+                            <div className="col-span-1 flex items-center justify-center">{Math.floor(q.divisor/10)}</div>
+                            <div className="col-span-1 flex items-center justify-center">{q.divisor%10}</div>
+                            <div className="col-span-1 border-l-2 border-t-2 border-slate-800 relative pl-1 flex items-center">
+                                <span className="absolute -left-3 top-1 text-base text-slate-400">)</span>
+                                {q.dividend}
+                            </div>
+
+                            {/* 第三列：乘積 */}
+                            <div className="col-span-2 flex items-center justify-end text-xl text-slate-400">-</div>
+                            <div className={`col-span-2 border-b-2 border-slate-800 h-10 flex items-center justify-end pr-2 ${step === 1 ? 'bg-yellow-100 rounded border-yellow-300 animate-pulse' : ''}`}>
+                                {step > 1 ? q.product : (step === 1 ? userInput : '')}
+                            </div>
+
+                            {/* 第四列：餘數 */}
+                            <div className="col-span-2"></div>
+                            <div className={`col-span-2 h-10 flex items-center justify-end pr-2 ${step === 2 ? 'bg-yellow-100 rounded border-yellow-300 animate-pulse' : ''}`}>
+                                {step > 2 ? q.remainder : (step === 2 ? userInput : '')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="text-center text-ocean-600 font-bold mb-4 min-h-[1.5rem]">{msg}</div>
+
+                    {/* 數字鍵盤 */}
+                    <div className="grid grid-cols-3 gap-3 px-4 mt-auto">
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((num) => (
+                            <button
+                                key={num}
+                                onClick={() => handleNumClick(num.toString())}
+                                className="bg-white hover:bg-ocean-50 border-b-4 border-slate-200 active:border-b-0 active:translate-y-1 rounded-xl py-3 text-2xl font-bold text-slate-600 shadow-sm transition-all"
+                            >
+                                {num}
+                            </button>
+                        ))}
+                        <button onClick={handleClear} className="col-span-2 bg-coral-100 text-coral-600 font-bold rounded-xl py-3 active:scale-95">清除</button>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 4. 測驗區 (Quiz) ---
+        const QuizSection = ({ score, setScore, onRestart }) => {
+            const [qIndex, setQIndex] = useState(0);
+            const [isFinished, setIsFinished] = useState(false);
+            const [feedback, setFeedback] = useState(null);
+
+            const quizzes = [
+                { q: "40 ÷ 20 = ?", options: ["2", "20", "4"], ans: "2" },
+                { q: "一包糖果有 20 顆，60 顆糖果可以裝成幾包？", options: ["30 包", "3 包", "2 包"], ans: "3 包" },
+                { q: "估估看，82 ÷ 21 的商大約是多少？", options: ["2", "4", "8"], ans: "4" },
+                { q: "除法算式中，剩下的數叫做什麼？", options: ["商", "積", "餘數"], ans: "餘數" }
+            ];
+
+            const handleOption = (opt) => {
+                if (feedback) return;
+                const correct = quizzes[qIndex].ans;
+                if (opt === correct) {
+                    setFeedback('correct');
+                    setScore(s => s + 25);
+                } else {
+                    setFeedback('wrong');
+                }
+
+                setTimeout(() => {
+                    if (qIndex < quizzes.length - 1) {
+                        setQIndex(i => i + 1);
+                        setFeedback(null);
+                    } else {
+                        setIsFinished(true);
+                    }
+                }, 1500);
+            };
+
+            if (isFinished) {
+                return (
+                    <div className="flex flex-col items-center justify-center h-full space-y-6 animate-pop">
+                        <div className="relative">
+                            <i className="ph-fill ph-trophy text-6xl text-gold-500 animate-bounce"></i>
+                            <i className="ph-fill ph-confetti absolute -top-4 -right-4 text-4xl text-coral-500"></i>
+                        </div>
+                        <h2 className="text-2xl font-bold text-slate-800">測驗完成！</h2>
+                        
+                        <Card className="w-full text-center py-8">
+                            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">Total Score</p>
+                            <div className="text-6xl font-black text-ocean-500">{score}</div>
+                            <p className="text-slate-500 mt-2">太厲害了！你是除法大師！</p>
+                        </Card>
+
+                        <Button onClick={onRestart} className="w-full" variant="secondary">
+                            <i className="ph-bold ph-arrow-counter-clockwise mr-2"></i> 再玩一次
+                        </Button>
+                    </div>
+                );
+            }
+
+            const currentQ = quizzes[qIndex];
+
+            return (
+                <div className="h-full flex flex-col pt-4 animate-pop">
+                    <div className="flex justify-between items-center mb-6 px-2">
+                        <span className="text-slate-400 font-bold">Question {qIndex + 1}</span>
+                        <div className="flex gap-1">
+                            {quizzes.map((_, i) => (
+                                <div key={i} className={`h-1.5 w-6 rounded-full transition-colors ${i <= qIndex ? 'bg-ocean-500' : 'bg-slate-200'}`}></div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 min-h-[120px] flex items-center justify-center mb-6">
+                        <h3 className="text-xl font-bold text-slate-700 text-center leading-relaxed">
+                            {currentQ.q}
+                        </h3>
+                    </div>
+
+                    <div className="space-y-3">
+                        {currentQ.options.map((opt, i) => (
+                            <button
+                                key={i}
+                                onClick={() => handleOption(opt)}
+                                disabled={!!feedback}
+                                className={`w-full p-4 rounded-xl text-lg font-bold border-2 transition-all flex items-center
+                                    ${feedback === 'correct' && opt === currentQ.ans ? 'bg-green-50 border-green-500 text-green-700' :
+                                      feedback === 'wrong' && opt !== currentQ.ans && feedback ? 'opacity-50' :
+                                      'bg-white border-slate-200 text-slate-600 hover:border-ocean-300 hover:bg-ocean-50'
+                                    }`}
+                            >
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm font-bold 
+                                    ${feedback === 'correct' && opt === currentQ.ans ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                                    {String.fromCharCode(65 + i)}
+                                </div>
+                                {opt}
+                                {feedback === 'correct' && opt === currentQ.ans && <i className="ph-fill ph-check-circle ml-auto text-green-500 text-xl"></i>}
+                            </button>
+                        ))}
+                    </div>
+
+                    {feedback === 'wrong' && (
+                        <div className="mt-6 text-center text-coral-500 font-bold animate-pulse">
+                            再試著想一想...
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
