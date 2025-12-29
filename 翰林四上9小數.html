@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>小數偵探社：二位小數大冒險</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body { touch-action: manipulation; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        @keyframes bounce-slow {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        .animate-bounce-slow { animation: bounce-slow 2s infinite; }
+        .grid-cell { transition: background-color 0.3s ease; }
+    </style>
+</head>
+<body class="bg-indigo-50 text-slate-800 select-none">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Config ---
+        const QUESTIONS_PER_LEVEL = 6; // 依照要求設定為6題
+
+        // --- Icons ---
+        const IconWrapper = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        const GridIcon = (props) => <IconWrapper {...props}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></IconWrapper>;
+        const Search = (props) => <IconWrapper {...props}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></IconWrapper>;
+        const Play = (props) => <IconWrapper {...props}><polygon points="5 3 19 12 5 21 5 3"/></IconWrapper>;
+        const BookOpen = (props) => <IconWrapper {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconWrapper>;
+        const Target = (props) => <IconWrapper {...props}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></IconWrapper>;
+        const CheckCircle = (props) => <IconWrapper {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconWrapper>;
+        const Trophy = (props) => <IconWrapper {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></IconWrapper>;
+        const ArrowRight = (props) => <IconWrapper {...props}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></IconWrapper>;
+        const RotateCcw = (props) => <IconWrapper {...props}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></IconWrapper>;
+        const Calculator = (props) => <IconWrapper {...props}><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></IconWrapper>;
+
+        // --- Visual Component: Hundred Grid (百格板) ---
+        // 視覺化 0.01 的概念：1個大正方形平分成100格，每格是0.01
+        const HundredGrid = ({ filledCount, showLabel = false }) => {
+            // filledCount 是總共有幾格被塗色 (例如 135 格 = 1.35)
+            // 每個 grid 有 100 格
+            const gridsNeeded = Math.ceil(Math.max(filledCount, 1) / 100);
+            
+            return (
+                <div className="flex flex-wrap justify-center gap-4 items-end">
+                    {[...Array(gridsNeeded)].map((_, gridIndex) => {
+                        const isFull = filledCount >= (gridIndex + 1) * 100;
+                        const currentGridFill = isFull ? 100 : Math.max(0, filledCount - gridIndex * 100);
+                        
+                        return (
+                            <div key={gridIndex} className="flex flex-col items-center">
+                                <div className="bg-white p-1 border-2 border-slate-300 shadow-sm" style={{width: '120px', height: '120px'}}>
+                                    <div className="grid grid-cols-10 grid-rows-10 h-full w-full gap-[1px] bg-slate-100">
+                                        {[...Array(100)].map((_, i) => (
+                                            <div 
+                                                key={i} 
+                                                className={`w-full h-full ${i < currentGridFill ? 'bg-indigo-500' : 'bg-white'}`}
+                                            ></div>
+                                        ))}
+                                    </div>
+                                </div>
+                                {showLabel && (
+                                    <span className="mt-1 text-xs font-bold text-slate-500">
+                                        {isFull ? "1" : `0.${currentGridFill.toString().padStart(2, '0')}`}
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        };
+
+        // --- Main App Component ---
+        const DecimalApp = () => {
+          const [currentTab, setCurrentTab] = useState('learn');
+          const [score, setScore] = useState(0);
+          const [animateScore, setAnimateScore] = useState(false);
+
+          useEffect(() => {
+            if (score > 0) {
+              setAnimateScore(true);
+              const timer = setTimeout(() => setAnimateScore(false), 300);
+              return () => clearTimeout(timer);
+            }
+          }, [score]);
+
+          const renderTabContent = () => {
+            switch (currentTab) {
+              case 'learn': return <LearnSection onComplete={() => setCurrentTab('practice_1')} />;
+              case 'practice_1': return <VisualGridGame score={score} setScore={setScore} onComplete={() => setCurrentTab('practice_2')} />;
+              case 'practice_2': return <PlaceValueGame score={score} setScore={setScore} onComplete={() => setCurrentTab('quiz')} />;
+              case 'quiz': return <QuizMode score={score} setScore={setScore} onRestart={() => { setScore(0); setCurrentTab('learn'); }} />;
+              default: return <LearnSection />;
+            }
+          };
+
+          return (
+            <div className="h-screen flex flex-col bg-indigo-50 font-sans text-slate-800 overflow-hidden select-none">
+              {/* Header */}
+              <header className="bg-white shadow-sm p-3 z-10 flex-none border-b border-indigo-100">
+                <div className="max-w-2xl mx-auto flex justify-between items-center">
+                  <div className="flex items-center space-x-2">
+                    <div className="bg-indigo-500 p-2 rounded-xl text-white shadow-sm"><Search size={20} /></div>
+                    <h1 className="text-lg font-bold text-indigo-700 tracking-wide">小數偵探社</h1>
+                  </div>
+                  <div className={`flex items-center bg-yellow-100 px-3 py-1.5 rounded-full border border-yellow-300 transition-transform duration-200 ${animateScore ? 'scale-110 ring-4 ring-yellow-200' : ''}`}>
+                    <Trophy className={`text-yellow-600 mr-1.5 ${animateScore ? 'animate-spin' : ''}`} size={16} />
+                    <span className="font-bold text-yellow-700">{score} 分</span>
+                  </div>
+                </div>
+              </header>
+
+              {/* Main Content Area */}
+              <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-24 scroll-smooth">
+                <div className="max-w-2xl mx-auto bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-5 min-h-[400px] animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  {renderTabContent()}
+                </div>
+              </main>
+
+              {/* Bottom Navigation */}
+              <nav className="bg-white border-t border-slate-200 pb-safe pt-2 px-2 fixed bottom-0 w-full z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+                <div className="max-w-2xl mx-auto flex justify-around items-end pb-2">
+                  <NavButton active={currentTab === 'learn'} onClick={() => setCurrentTab('learn')} icon={<BookOpen size={22} />} label="概念學習" />
+                  <NavButton active={currentTab === 'practice_1'} onClick={() => setCurrentTab('practice_1')} icon={<GridIcon size={22} />} label="百格板" />
+                  <NavButton active={currentTab === 'practice_2'} onClick={() => setCurrentTab('practice_2')} icon={<Target size={22} />} label="位值戰" />
+                  <NavButton active={currentTab === 'quiz'} onClick={() => setCurrentTab('quiz')} icon={<CheckCircle size={22} />} label="總測驗" />
+                </div>
+              </nav>
+            </div>
+          );
+        };
+
+        const NavButton = ({ active, onClick, icon, label }) => (
+          <button onClick={onClick} className={`flex flex-col items-center justify-center w-full py-2 px-1 transition-all duration-300 rounded-xl active:scale-95 touch-manipulation ${active ? 'text-indigo-600 -translate-y-2' : 'text-slate-400 hover:text-slate-600'}`}>
+            <div className={`p-1.5 rounded-full transition-all duration-300 ${active ? 'bg-indigo-100 shadow-sm' : ''}`}>{icon}</div>
+            <span className={`text-[10px] font-medium mt-1 ${active ? 'opacity-100' : 'opacity-70'}`}>{label}</span>
+            {active && <div className="w-1 h-1 bg-indigo-500 rounded-full mt-1"></div>}
+          </button>
+        );
+
+        // --- 1. Learning Section (Concept) ---
+        const LearnSection = ({ onComplete }) => (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-800 flex items-center"><Play className="mr-2 text-indigo-500" style={{fill: 'currentColor'}} size={24} /> 觀念學習</h2>
+              <span className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded">四上 CH9 二位小數</span>
+            </div>
+            
+            {/* Video Container (使用相關教學影片) */}
+            <div className="aspect-video w-full bg-slate-900 rounded-2xl overflow-hidden shadow-lg ring-4 ring-indigo-50" style={{position:'relative', paddingBottom: '56.25%', height: 0}}>
+              <iframe src="https://www.youtube.com/embed/n8_j2o4I6Sg" title="二位小數教學" style={{position:'absolute', top:0, left:0, width:'100%', height:'100%'}} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+            </div>
+
+            {/* Notes */}
+            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-5 rounded-2xl border border-indigo-100 mt-4 shadow-sm">
+              <h3 className="text-lg font-bold text-indigo-800 mb-3 flex items-center"><BookOpen className="w-5 h-5 mr-2" />重點筆記</h3>
+              <div className="space-y-3 text-base text-slate-700">
+                <div className="flex bg-white p-3 rounded-xl shadow-sm border border-indigo-50 items-center">
+                  <div className="bg-indigo-100 text-indigo-700 font-bold rounded-lg w-10 h-10 flex items-center justify-center mr-3 flex-shrink-0 text-sm">0.01</div>
+                  <div className="text-lg">把 1 平分成 100 份，每一份是 <strong className="text-indigo-600">0.01</strong> (百分之一)。</div>
+                </div>
+                <div className="flex bg-white p-3 rounded-xl shadow-sm border border-indigo-50 items-center">
+                   <div className="bg-orange-100 text-orange-700 font-bold rounded-lg w-10 h-10 flex items-center justify-center mr-3 flex-shrink-0 text-sm">讀法</div>
+                   <div>
+                      <p>2.35 讀作：</p>
+                      <p className="text-indigo-600 font-bold text-xl">二點三五</p>
+                      <p className="text-xs text-slate-400">(小數點後面的數字要分開讀喔！)</p>
+                   </div>
+                </div>
+                <div className="flex bg-white p-3 rounded-xl shadow-sm border border-indigo-50 flex-col items-start">
+                   <div className="flex items-center mb-2">
+                       <div className="bg-pink-100 text-pink-700 font-bold rounded-lg w-10 h-10 flex items-center justify-center mr-3 flex-shrink-0 text-sm">位值</div>
+                       <span className="font-bold">定位板</span>
+                   </div>
+                   <div className="w-full grid grid-cols-3 gap-1 text-center text-sm">
+                       <div className="bg-slate-100 p-1 rounded">個位</div>
+                       <div className="bg-slate-100 p-1 rounded">十分位</div>
+                       <div className="bg-slate-100 p-1 rounded">百分位</div>
+                       <div className="bg-white border text-xl font-mono">1</div>
+                       <div className="bg-white border text-xl font-mono">2</div>
+                       <div className="bg-white border text-xl font-mono">5</div>
+                   </div>
+                   <p className="text-xs mt-2 text-slate-500">1.25 的 5 在百分位，表示 5 個 0.01</p>
+                </div>
+              </div>
+            </div>
+            <button onClick={onComplete} className="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center shadow-lg shadow-indigo-500/20 active:scale-95 transition-all">我學會了，開始練習！ <ArrowRight className="ml-2" /></button>
+          </div>
+        );
+
+        // --- 2. Practice 1: Visual Grid (Recognition) ---
+        const VisualGridGame = ({ score, setScore, onComplete }) => {
+            const [squares, setSquares] = useState(25);
+            const [options, setOptions] = useState([]);
+            const [feedback, setFeedback] = useState('');
+            const [progress, setProgress] = useState(0);
+            
+            useEffect(() => {
+                if(progress < QUESTIONS_PER_LEVEL) generateQuestion();
+            }, [progress]);
+
+            const generateQuestion = () => {
+                setFeedback('');
+                // 產生題目：1~150 格 (跨越 1 的整數)
+                const s = Math.floor(Math.random() * 140 + 1); 
+                setSquares(s);
+                
+                const correctVal = s / 100;
+                
+                // 產生選項 (製造常見錯誤)
+                let wrong1 = Math.round((correctVal + 0.1) * 100) / 100; // 加 0.1
+                let wrong2 = Math.round((correctVal * 10) * 100) / 100; // 位值錯誤 (e.g., 0.05 -> 0.5)
+                
+                if (wrong2 === correctVal || wrong2 > 100) wrong2 = Math.round((Math.random() * 2) * 100) / 100;
+                if (wrong1 === correctVal) wrong1 = Math.round((correctVal + 0.01) * 100) / 100;
+
+                const opts = [correctVal.toFixed(2), wrong1.toFixed(2), wrong2.toFixed(2)].sort(() => Math.random() - 0.5);
+                setOptions([...new Set(opts)]); 
+            };
+
+            const handleAnswer = (ans) => {
+                if (feedback) return;
+                const correctAns = (squares / 100).toFixed(2);
+                if (parseFloat(ans) === parseFloat(correctAns)) {
+                    setFeedback('correct');
+                    setScore(s => s + 10);
+                    setTimeout(() => setProgress(p => p + 1), 1000);
+                } else {
+                    setFeedback('incorrect');
+                    setTimeout(() => setFeedback(''), 1000);
+                }
+            };
+
+            if (progress >= QUESTIONS_PER_LEVEL) return (
+                <div className="text-center py-12 animate-in zoom-in">
+                    <div className="inline-block p-4 bg-yellow-100 rounded-full mb-4 ring-8 ring-yellow-50"><Trophy className="text-yellow-600" size={64} /></div>
+                    <h2 className="text-2xl font-bold mb-2 text-slate-800">眼力真好！</h2>
+                    <p className="text-slate-600 mb-8">你已經能看懂百格板了</p>
+                    <button onClick={onComplete} className="w-full bg-indigo-500 text-white py-4 rounded-2xl font-bold text-xl shadow-xl active:scale-95 transition-all">前往下一關</button>
+                </div>
+            );
+
+            // 如果是整數 (1.00)，顯示 1
+            const displaySquares = squares / 100;
+            const isInteger = Number.isInteger(displaySquares);
+
+            return (
+                <div className="text-center space-y-6">
+                    <div className="flex justify-between items-center border-b border-indigo-100 pb-4">
+                        <h2 className="text-lg font-bold text-slate-700 flex items-center"><span className="bg-indigo-100 text-indigo-600 w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm">1</span>數數看</h2>
+                        <div className="flex space-x-1">{[...Array(QUESTIONS_PER_LEVEL)].map((_, i) => <div key={i} className={`w-2 h-2 rounded-full ${i < progress ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>)}</div>
+                    </div>
+
+                    <div className="flex flex-col items-center py-4 bg-white rounded-xl shadow-sm border border-slate-100 min-h-[180px] justify-center">
+                        <HundredGrid filledCount={squares} />
+                        <p className="mt-4 text-slate-500 text-sm">塗色的部分用小數怎麼表示？</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3">
+                        {options.map((opt, idx) => (
+                            <button key={idx} onClick={() => handleAnswer(opt)} disabled={!!feedback} 
+                                className={`py-4 rounded-xl text-xl font-bold border-2 transition-all active:scale-95 font-mono 
+                                ${feedback === 'correct' && parseFloat(opt) === squares/100 ? 'bg-indigo-100 border-indigo-500 text-indigo-700' : 
+                                  feedback === 'incorrect' && parseFloat(opt) === squares/100 ? 'bg-indigo-100 border-indigo-500 text-indigo-700 opacity-50' : 
+                                  'bg-white border-slate-200 hover:border-indigo-300 text-slate-700'}`}>
+                                {Number(opt) === squares/100 && Number.isInteger(squares/100) ? Math.floor(squares/100) : opt}
+                            </button>
+                        ))}
+                    </div>
+                    
+                    <div className="h-6 flex justify-center">
+                        {feedback === 'correct' && <span className="text-emerald-600 font-bold flex items-center"><CheckCircle className="mr-1" size={20}/> 答對了！</span>}
+                        {feedback === 'incorrect' && <span className="text-red-500 font-bold">再數一次喔！</span>}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 3. Practice 2: Place Value & Conversion (Concepts) ---
+        const PlaceValueGame = ({ score, setScore, onComplete }) => {
+            const [question, setQuestion] = useState({});
+            const [options, setOptions] = useState([]);
+            const [feedback, setFeedback] = useState('');
+            const [progress, setProgress] = useState(0);
+
+            useEffect(() => {
+                if (progress < QUESTIONS_PER_LEVEL) generateQuestion();
+            }, [progress]);
+
+            const generateQuestion = () => {
+                setFeedback('');
+                const type = Math.floor(Math.random() * 3); // 0: 讀作, 1: 分數轉小數, 2: 位值問答
+                
+                let qText = "";
+                let correct = "";
+                let distractor1 = "";
+                let distractor2 = "";
+
+                if (type === 0) {
+                    // 讀作
+                    const a = Math.floor(Math.random() * 9);
+                    const b = Math.floor(Math.random() * 9);
+                    const c = Math.floor(Math.random() * 9) + 1;
+                    const num = `${a}.${b}${c}`;
+                    qText = `請問 ${num} 讀作什麼？`;
+                    
+                    const numMap = ['零','一','二','三','四','五','六','七','八','九'];
+                    correct = `${numMap[a]}點${numMap[b]}${numMap[c]}`;
+                    distractor1 = `${numMap[a]}點${b*10+c}`; // 錯誤讀法：二點三十五
+                    distractor2 = `${numMap[a]}點${numMap[c]}${numMap[b]}`; // 數字顛倒
+                } else if (type === 1) {
+                    // 分數轉小數
+                    const den = 100;
+                    const num = Math.floor(Math.random() * 250) + 1; // 1 ~ 250
+                    qText = (
+                        <div className="flex items-center justify-center text-2xl font-bold font-serif">
+                            <div className="flex flex-col items-center mr-2">
+                                <span className="border-b-2 border-slate-800 px-2">{num}</span>
+                                <span>{den}</span>
+                            </div>
+                            <span> = ?</span>
+                        </div>
+                    );
+                    correct = (num / 100).toFixed(2);
+                    distractor1 = (num / 10).toFixed(1); // 位值錯誤
+                    distractor2 = (num / 100 + 0.1).toFixed(2);
+                    
+                    // 去除尾數0 (e.g. 1.50 -> 1.5)
+                    correct = parseFloat(correct).toString();
+                } else {
+                    // 位值
+                    const a = Math.floor(Math.random() * 9) + 1;
+                    const b = Math.floor(Math.random() * 9) + 1;
+                    const c = Math.floor(Math.random() * 9) + 1;
+                    const numStr = `${a}.${b}${c}`;
+                    
+                    const targetPos = Math.random() > 0.5 ? 'b' : 'c';
+                    if (targetPos === 'b') {
+                        qText = `數字 ${numStr} 中的「${b}」在什麼位？`;
+                        correct = "十分位";
+                        distractor1 = "個位";
+                        distractor2 = "百分位";
+                    } else {
+                        qText = `數字 ${numStr} 中的「${c}」在什麼位？`;
+                        correct = "百分位";
+                        distractor1 = "十分位";
+                        distractor2 = "個位";
+                    }
+                }
+
+                setQuestion({ text: qText, correct });
+                setOptions([correct, distractor1, distractor2].sort(() => Math.random() - 0.5));
+            };
+
+            const handleOptionClick = (opt) => {
+                if(feedback) return;
+                
+                if (opt === question.correct) {
+                    setFeedback('correct');
+                    setScore(s => s + 15);
+                    setTimeout(() => setProgress(p => p + 1), 1000);
+                } else {
+                    setFeedback('incorrect');
+                    setTimeout(() => setFeedback(''), 1000);
+                }
+            };
+
+            if (progress >= QUESTIONS_PER_LEVEL) return (
+                <div className="text-center py-12 animate-in zoom-in">
+                    <div className="inline-block p-4 bg-orange-100 rounded-full mb-4 ring-8 ring-orange-50"><Target className="text-orange-600" size={64} /></div>
+                    <h2 className="text-2xl font-bold mb-2 text-slate-800">觀念通！</h2>
+                    <p className="text-slate-600 mb-8">你對小數很熟悉囉</p>
+                    <button onClick={onComplete} className="w-full bg-indigo-500 text-white py-4 rounded-2xl font-bold text-xl shadow-xl active:scale-95 transition-all">挑戰總測驗</button>
+                </div>
+            );
+
+            return (
+                 <div className="text-center space-y-6">
+                    <div className="flex justify-between items-center border-b border-indigo-100 pb-4">
+                        <h2 className="text-lg font-bold text-slate-700 flex items-center"><span className="bg-orange-100 text-orange-600 w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm">2</span>位值大戰</h2>
+                        <div className="flex space-x-1">{[...Array(QUESTIONS_PER_LEVEL)].map((_, i) => <div key={i} className={`w-2 h-2 rounded-full ${i < progress ? 'bg-orange-500' : 'bg-slate-200'}`}></div>)}</div>
+                    </div>
+                    
+                    <div className="bg-orange-50 p-6 rounded-2xl border-2 border-orange-100 relative overflow-hidden min-h-[160px] flex items-center justify-center flex-col">
+                        <div className="absolute -right-4 -top-4 opacity-10 rotate-12"><Calculator size={120}/></div>
+                        <div className="text-xl font-bold text-slate-800 z-10">
+                            {question.text}
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        {options.map((opt, i) => (
+                            <button key={i} onClick={() => handleOptionClick(opt)} disabled={!!feedback}
+                            className={`w-full py-4 rounded-xl text-lg font-bold border-2 transition-all active:scale-95 flex items-center justify-center
+                                ${feedback === 'correct' && opt === question.correct 
+                                    ? 'bg-green-100 border-green-500 text-green-700' 
+                                    : 'bg-white border-slate-200 hover:border-orange-300 text-slate-700'}`}>
+                                {opt}
+                            </button>
+                        ))}
+                    </div>
+                    {feedback === 'incorrect' && <div className="text-red-500 font-bold animate-pulse">想一想，0.01 是什麼位呢？</div>}
+                </div>
+            );
+        };
+
+        // --- 4. Quiz Mode ---
+        const QuizMode = ({ score, setScore, onRestart }) => {
+            const [idx, setIdx] = useState(0);
+            const [finished, setFinished] = useState(false);
+            const [feedback, setFeedback] = useState(null);
+            
+            // 6題綜合測驗
+            const questions = [
+                {
+                    q: "10個 0.01 合起來是多少？",
+                    options: ["0.01", "0.1", "1.0"],
+                    ans: 1
+                },
+                {
+                    q: "「2.08」讀作什麼？",
+                    options: ["二點零八", "二點八", "二點八零"],
+                    ans: 0
+                },
+                {
+                    q: "3.56 中的「6」代表多少？",
+                    options: ["6個 1", "6個 0.1", "6個 0.01"],
+                    ans: 2
+                },
+                {
+                    q: "把分數 145/100 換成小數是多少？",
+                    options: ["0.145", "1.45", "14.5"],
+                    ans: 1
+                },
+                {
+                    q: "下面哪一個數最大？",
+                    options: ["2.99", "3.01", "3.10"],
+                    ans: 2
+                },
+                {
+                    q: "5個 1，3個 0.1 和 8個 0.01 合起來是多少？",
+                    options: ["5.38", "53.8", "0.538"],
+                    ans: 0
+                }
+            ];
+
+            const handleAnswer = (optIdx) => {
+                if (feedback) return;
+                if (optIdx === questions[idx].ans) {
+                    setFeedback('correct');
+                    setScore(s => s + 20);
+                } else {
+                    setFeedback('incorrect');
+                }
+                setTimeout(() => {
+                    if (idx + 1 < questions.length) {
+                        setIdx(i => i + 1);
+                        setFeedback(null);
+                    } else {
+                        setFinished(true);
+                    }
+                }, 1500);
+            };
+
+            if (finished) return (
+                <div className="text-center py-10 space-y-6 animate-in slide-in-from-bottom">
+                    <div className="inline-block p-6 bg-yellow-100 rounded-full mb-4 shadow-inner"><Trophy size={80} className="text-yellow-600" /></div>
+                    <h2 className="text-4xl font-bold text-slate-800">測驗完成！</h2>
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <p className="text-sm text-slate-400 uppercase tracking-widest mb-2">總得分</p>
+                        <p className="text-6xl font-black text-indigo-500 mb-4">{score}</p>
+                        <p className="text-lg text-slate-600">
+                            {score >= 200 ? "太厲害了！你是小數大師！" : "做得很好！再多練習會更棒喔！"}
+                        </p>
+                    </div>
+                    <button onClick={onRestart} className="w-full bg-slate-800 text-white py-4 rounded-xl font-bold hover:bg-slate-700 flex items-center justify-center shadow-lg active:scale-95 transition-all"><RotateCcw className="mr-2" size={20} /> 再玩一次</button>
+                </div>
+            );
+
+            return (
+                <div className="py-2">
+                    <div className="mb-6 flex justify-between items-center text-sm font-medium text-slate-400"><span className="bg-slate-100 px-3 py-1 rounded-full">第 {idx + 1} / {questions.length} 題</span><span>分數: {score}</span></div>
+                    <h3 className="text-xl font-bold text-slate-800 mb-6 leading-relaxed">{questions[idx].q}</h3>
+                    <div className="space-y-3">
+                        {questions[idx].options.map((opt, i) => (
+                            <button key={i} onClick={() => handleAnswer(i)} disabled={!!feedback}
+                             className={`w-full text-left p-4 rounded-xl text-lg font-medium border-2 transition-all active:scale-98 
+                             ${feedback === 'correct' && i === questions[idx].ans ? 'bg-green-100 border-green-500 text-green-800' : 
+                               feedback === 'incorrect' && i !== questions[idx].ans && feedback ? 'bg-red-50 border-red-200 text-red-800 opacity-50' : 
+                               'bg-white border-slate-200 hover:border-indigo-400'}`}>
+                                <div className="flex items-center">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 text-sm font-bold ${feedback === 'correct' && i === questions[idx].ans ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{String.fromCharCode(65+i)}</div>
+                                    {opt}
+                                    {feedback === 'correct' && i === questions[idx].ans && <CheckCircle className="ml-auto text-green-600" />}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                    {feedback && <div className={`mt-6 text-center font-bold text-xl ${feedback === 'correct' ? 'text-green-500' : 'text-red-500'}`}>{feedback === 'correct' ? '正確！' : '答錯囉...'}</div>}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<DecimalApp />);
+    </script>
+</body>
+</html>

@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>小小幾何建築師：三角形與全等</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body { touch-action: manipulation; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-5deg); }
+            75% { transform: rotate(5deg); }
+        }
+        .animate-wiggle { animation: wiggle 0.5s ease-in-out; }
+        .animate-bounce-slow { animation: bounce 3s infinite; }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(-5%); animation-timing-function: cubic-bezier(0.8,0,1,1); }
+            50% { transform: translateY(0); animation-timing-function: cubic-bezier(0,0,0.2,1); }
+        }
+    </style>
+</head>
+<body class="bg-indigo-50 text-slate-800 select-none">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- Icons ---
+        const IconWrapper = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        // Using basic shapes for geometry icons
+        const TriangleIcon = (props) => <IconWrapper {...props}><path d="M13.73 4a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/></IconWrapper>;
+        const Ruler = (props) => <IconWrapper {...props}><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></IconWrapper>;
+        const Play = (props) => <IconWrapper {...props}><polygon points="5 3 19 12 5 21 5 3"/></IconWrapper>;
+        const BookOpen = (props) => <IconWrapper {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconWrapper>;
+        const CheckCircle = (props) => <IconWrapper {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconWrapper>;
+        const Trophy = (props) => <IconWrapper {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></IconWrapper>;
+        const ArrowRight = (props) => <IconWrapper {...props}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></IconWrapper>;
+        const RotateCcw = (props) => <IconWrapper {...props}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></IconWrapper>;
+        const Search = (props) => <IconWrapper {...props}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></IconWrapper>;
+        const Shapes = (props) => <IconWrapper {...props}><path d="M8.3 10a.7.7 0 0 1-.626-1.079l1.7-2.798A.7.7 0 0 1 10 6h5a.7.7 0 0 1 .6.3L17 11c.5 1 .5 2.5 0 3.5l-2 4"/><path d="M2 2v20h20"/></IconWrapper>;
+
+        // --- Visual Components ---
+        
+        // Dynamic Triangle Renderer
+        const TriangleShape = ({ type, rotation = 0, scale = 1, color = "fill-indigo-400" }) => {
+            // Define points for different triangle types in a 100x100 viewBox
+            let points = "";
+            let viewBox = "0 0 100 100";
+            
+            switch (type) {
+                case 'equilateral': // 正三角形
+                    points = "50,10 90,90 10,90"; 
+                    break;
+                case 'isosceles': // 等腰 (Tall)
+                    points = "50,10 70,90 30,90";
+                    break;
+                case 'right': // 直角
+                    points = "20,20 20,80 80,80";
+                    break;
+                case 'obtuse': // 鈍角
+                    points = "20,80 90,80 40,20";
+                    break;
+                case 'acute': // 銳角 (General)
+                    points = "30,80 90,80 60,10";
+                    break;
+                case 'right_isosceles': // 等腰直角
+                    points = "20,20 20,80 80,80"; // Same as right but intended visual logic implies sides
+                    break;
+                default:
+                    points = "50,10 90,90 10,90";
+            }
+
+            return (
+                <svg 
+                    width={100 * scale} 
+                    height={100 * scale} 
+                    viewBox={viewBox} 
+                    className="transition-all duration-500 ease-in-out"
+                    style={{ transform: `rotate(${rotation}deg)` }}
+                >
+                    <polygon points={points} className={`${color} stroke-slate-700 stroke-[3]`} />
+                    {/* Markings for Right Angle */}
+                    {(type === 'right' || type === 'right_isosceles') && (
+                        <path d="M20,70 L30,70 L30,80" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-600"/>
+                    )}
+                </svg>
+            );
+        };
+
+        // --- Main App Component ---
+        const GeometryApp = () => {
+          const [currentTab, setCurrentTab] = useState('learn');
+          const [score, setScore] = useState(0);
+          const [animateScore, setAnimateScore] = useState(false);
+
+          useEffect(() => {
+            if (score > 0) {
+              setAnimateScore(true);
+              const timer = setTimeout(() => setAnimateScore(false), 300);
+              return () => clearTimeout(timer);
+            }
+          }, [score]);
+
+          const renderTabContent = () => {
+            switch (currentTab) {
+              case 'learn': return <LearnSection onComplete={() => setCurrentTab('practice_1')} />;
+              case 'practice_1': return <ClassifierGame score={score} setScore={setScore} onComplete={() => setCurrentTab('practice_2')} />;
+              case 'practice_2': return <CongruenceGame score={score} setScore={setScore} onComplete={() => setCurrentTab('quiz')} />;
+              case 'quiz': return <QuizMode score={score} setScore={setScore} onRestart={() => { setScore(0); setCurrentTab('learn'); }} />;
+              default: return <LearnSection />;
+            }
+          };
+
+          return (
+            <div className="h-screen flex flex-col bg-indigo-50 font-sans text-slate-800 overflow-hidden select-none">
+              <header className="bg-white shadow-sm p-3 z-10 flex-none border-b border-indigo-100">
+                <div className="max-w-2xl mx-auto flex justify-between items-center">
+                  <div className="flex items-center space-x-2">
+                    <div className="bg-indigo-500 p-2 rounded-xl text-white shadow-sm"><TriangleIcon size={20} /></div>
+                    <h1 className="text-lg font-bold text-indigo-700 tracking-wide">小小幾何建築師</h1>
+                  </div>
+                  <div className={`flex items-center bg-yellow-100 px-3 py-1.5 rounded-full border border-yellow-300 transition-transform duration-200 ${animateScore ? 'scale-110 ring-4 ring-yellow-200' : ''}`}>
+                    <Trophy className={`text-yellow-600 mr-1.5 ${animateScore ? 'animate-spin' : ''}`} size={16} />
+                    <span className="font-bold text-yellow-700">{score} 分</span>
+                  </div>
+                </div>
+              </header>
+
+              <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-24 scroll-smooth">
+                <div className="max-w-2xl mx-auto bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-5 min-h-[400px] animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  {renderTabContent()}
+                </div>
+              </main>
+
+              <nav className="bg-white border-t border-slate-200 pb-safe pt-2 px-2 fixed bottom-0 w-full z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+                <div className="max-w-2xl mx-auto flex justify-around items-end pb-2">
+                  <NavButton active={currentTab === 'learn'} onClick={() => setCurrentTab('learn')} icon={<BookOpen size={22} />} label="學習" />
+                  <NavButton active={currentTab === 'practice_1'} onClick={() => setCurrentTab('practice_1')} icon={<Shapes size={22} />} label="分類工廠" />
+                  <NavButton active={currentTab === 'practice_2'} onClick={() => setCurrentTab('practice_2')} icon={<Search size={22} />} label="全等偵探" />
+                  <NavButton active={currentTab === 'quiz'} onClick={() => setCurrentTab('quiz')} icon={<CheckCircle size={22} />} label="測驗" />
+                </div>
+              </nav>
+            </div>
+          );
+        };
+
+        const NavButton = ({ active, onClick, icon, label }) => (
+          <button onClick={onClick} className={`flex flex-col items-center justify-center w-full py-2 px-1 transition-all duration-300 rounded-xl active:scale-95 touch-manipulation ${active ? 'text-indigo-600 -translate-y-2' : 'text-slate-400 hover:text-slate-600'}`}>
+            <div className={`p-1.5 rounded-full transition-all duration-300 ${active ? 'bg-indigo-100 shadow-sm' : ''}`}>{icon}</div>
+            <span className={`text-[10px] font-medium mt-1 ${active ? 'opacity-100' : 'opacity-70'}`}>{label}</span>
+            {active && <div className="w-1 h-1 bg-indigo-500 rounded-full mt-1"></div>}
+          </button>
+        );
+
+        // --- 1. Learning Section ---
+        const LearnSection = ({ onComplete }) => (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-800 flex items-center"><Play className="mr-2 text-indigo-500" style={{fill: 'currentColor'}} size={24} /> 觀念學習</h2>
+              <span className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded">四上 CH7 三角形</span>
+            </div>
+            
+            {/* Video Container */}
+            <div className="aspect-video w-full bg-slate-900 rounded-2xl overflow-hidden shadow-lg ring-4 ring-indigo-50 relative">
+              <iframe src="https://www.youtube.com/embed/DWwb8Z9mF8I" title="三角形與全等教學" className="absolute top-0 left-0 w-full h-full" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+            </div>
+
+            {/* Notes */}
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-5 rounded-2xl border border-indigo-100 mt-4 shadow-sm">
+              <h3 className="text-lg font-bold text-indigo-800 mb-3 flex items-center"><BookOpen className="w-5 h-5 mr-2" />重點筆記</h3>
+              <div className="space-y-4 text-base text-slate-700">
+                
+                <div className="bg-white p-3 rounded-xl shadow-sm border border-indigo-50">
+                  <h4 className="font-bold text-indigo-600 mb-1 flex items-center"><span className="bg-indigo-100 w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm">1</span>三角形的分類 (看角)</h4>
+                  <ul className="list-disc list-inside space-y-1 text-sm pl-2">
+                    <li><span className="font-bold text-slate-900">銳角三角形</span>：三個角都比直角小。</li>
+                    <li><span className="font-bold text-slate-900">直角三角形</span>：有一個角是直角 (90度)。</li>
+                    <li><span className="font-bold text-slate-900">鈍角三角形</span>：有一個角比直角大。</li>
+                  </ul>
+                </div>
+
+                <div className="bg-white p-3 rounded-xl shadow-sm border border-indigo-50">
+                   <h4 className="font-bold text-purple-600 mb-1 flex items-center"><span className="bg-purple-100 w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm">2</span>三角形的分類 (看邊)</h4>
+                   <div className="flex gap-2 text-sm">
+                        <div className="flex-1">
+                            <p className="font-bold">正三角形</p>
+                            <p className="text-xs text-slate-500">三條邊一樣長，三個角都是60度。</p>
+                        </div>
+                        <div className="flex-1 border-l pl-2">
+                            <p className="font-bold">等腰三角形</p>
+                            <p className="text-xs text-slate-500">有兩條邊一樣長，兩個底角一樣大。</p>
+                        </div>
+                   </div>
+                </div>
+
+                <div className="bg-white p-3 rounded-xl shadow-sm border border-indigo-50">
+                   <h4 className="font-bold text-pink-600 mb-1 flex items-center"><span className="bg-pink-100 w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm">3</span>全等圖形</h4>
+                   <p className="text-sm">形狀、大小都一樣，疊在一起可以完全重合的圖形。</p>
+                   <p className="text-xs text-slate-500 mt-1">翻轉、旋轉後還是一樣喔！</p>
+                </div>
+
+              </div>
+            </div>
+            <button onClick={onComplete} className="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center shadow-lg shadow-indigo-500/20 active:scale-95 transition-all">我學會了，開始挑戰！ <ArrowRight className="ml-2" /></button>
+          </div>
+        );
+
+        // --- 2. Practice 1: Triangle Classifier ---
+        const ClassifierGame = ({ score, setScore, onComplete }) => {
+            const [q, setQ] = useState(null);
+            const [feedback, setFeedback] = useState('');
+            const [progress, setProgress] = useState(0);
+            const totalQuestions = 6;
+
+            // Generate Questions
+            const generateQuestion = () => {
+                const types = [
+                    { type: 'right', label: '直角三角形', q: '這個三角形有一個直角，它是什麼三角形？' },
+                    { type: 'equilateral', label: '正三角形', q: '三條邊都一樣長，它是什麼三角形？' },
+                    { type: 'obtuse', label: '鈍角三角形', q: '這有一個大大的鈍角，它是什麼三角形？' },
+                    { type: 'isosceles', label: '等腰三角形', q: '有兩條邊一樣長，像一個尖尖的屋頂。' },
+                    { type: 'acute', label: '銳角三角形', q: '三個角都尖尖的(小於90度)。' },
+                    { type: 'right_isosceles', label: '等腰直角三角形', q: '既有直角，又有兩邊等長。' }
+                ];
+                
+                const target = types[Math.floor(Math.random() * types.length)];
+                
+                // Create options
+                let options = [target.label];
+                while(options.length < 3) {
+                    const randomType = types[Math.floor(Math.random() * types.length)].label;
+                    if(!options.includes(randomType) && randomType !== target.label) {
+                        // Avoid confusion between overlapping types (e.g. Isosceles vs Equilateral) for simplicity unless target is specific
+                        if (target.type === 'equilateral' && randomType === '等腰三角形') continue; // Skip to avoid "technically correct" confusion
+                        if (target.type === 'right_isosceles' && (randomType === '直角三角形' || randomType === '等腰三角形')) continue;
+                        
+                        options.push(randomType);
+                    }
+                }
+                
+                setQ({
+                    ...target,
+                    options: options.sort(() => Math.random() - 0.5),
+                    rotation: Math.floor(Math.random() * 360) // Random rotation to test concept
+                });
+                setFeedback('');
+            };
+
+            useEffect(() => {
+                if(progress < totalQuestions) generateQuestion();
+            }, [progress]);
+
+            const handleAnswer = (ans) => {
+                if (feedback) return;
+                if (ans === q.label) {
+                    setFeedback('correct');
+                    setScore(s => s + 10);
+                    setTimeout(() => setProgress(p => p + 1), 1000);
+                } else {
+                    setFeedback('incorrect');
+                    setTimeout(() => setFeedback(''), 1000);
+                }
+            };
+
+            if (progress >= totalQuestions) return (
+                <div className="text-center py-12 animate-in zoom-in">
+                    <div className="inline-block p-4 bg-yellow-100 rounded-full mb-4 ring-8 ring-yellow-50"><Trophy className="text-yellow-600" size={64} /></div>
+                    <h2 className="text-2xl font-bold mb-2 text-slate-800">分類專家！</h2>
+                    <p className="text-slate-600 mb-8">你對三角形非常了解喔</p>
+                    <button onClick={onComplete} className="w-full bg-indigo-500 text-white py-4 rounded-2xl font-bold text-xl shadow-xl active:scale-95 transition-all">前往下一關</button>
+                </div>
+            );
+
+            if (!q) return <div>Loading...</div>;
+
+            return (
+                <div className="text-center space-y-6">
+                    <div className="flex justify-between items-center border-b border-indigo-100 pb-4">
+                        <h2 className="text-lg font-bold text-slate-700 flex items-center"><span className="bg-indigo-100 text-indigo-600 w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm">1</span>形狀分類工廠</h2>
+                        <div className="flex space-x-1">{[...Array(totalQuestions)].map((_, i) => <div key={i} className={`w-2 h-2 rounded-full ${i < progress ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>)}</div>
+                    </div>
+
+                    <div className="flex flex-col items-center py-8 bg-white rounded-xl shadow-sm border border-slate-100 min-h-[200px] justify-center relative overflow-hidden">
+                        <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))]"></div>
+                        <TriangleShape type={q.type} rotation={q.rotation} scale={1.8} />
+                        <p className="mt-6 text-slate-600 font-medium px-4">{q.q}</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3">
+                        {q.options.map((opt, idx) => (
+                            <button key={idx} onClick={() => handleAnswer(opt)} disabled={!!feedback} 
+                                className={`py-4 rounded-xl text-xl font-bold border-2 transition-all active:scale-95 
+                                ${feedback === 'correct' && opt === q.label ? 'bg-indigo-100 border-indigo-500 text-indigo-700' : 
+                                  feedback === 'incorrect' && opt === q.label ? 'bg-indigo-100 border-indigo-500 text-indigo-700 opacity-50' : 
+                                  'bg-white border-slate-200 hover:border-indigo-300 text-slate-700'}`}>
+                                {opt}
+                            </button>
+                        ))}
+                    </div>
+                    
+                    <div className="h-6 flex justify-center">
+                        {feedback === 'correct' && <span className="text-indigo-600 font-bold flex items-center"><CheckCircle className="mr-1" size={20}/> 答對了！</span>}
+                        {feedback === 'incorrect' && <span className="text-red-500 font-bold">再想一想特徵喔！</span>}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 3. Practice 2: Congruence Detective ---
+        const CongruenceGame = ({ score, setScore, onComplete }) => {
+            const [target, setTarget] = useState(null);
+            const [choices, setChoices] = useState([]);
+            const [feedback, setFeedback] = useState('');
+            const [progress, setProgress] = useState(0);
+            const totalQuestions = 6;
+
+            useEffect(() => {
+                if (progress < totalQuestions) setupRound();
+            }, [progress]);
+
+            const setupRound = () => {
+                setFeedback('');
+                const types = ['right', 'obtuse', 'acute', 'equilateral'];
+                const selectedType = types[Math.floor(Math.random() * types.length)];
+                const baseRotation = Math.floor(Math.random() * 360);
+                
+                // The Target
+                setTarget({ type: selectedType, rotation: baseRotation });
+
+                // The Correct Answer (Congruent: Same shape/size, different rotation)
+                const correct = { 
+                    id: 'correct', 
+                    type: selectedType, 
+                    rotation: (baseRotation + 90 + Math.random() * 180) % 360, 
+                    scale: 1 
+                };
+
+                // Distractor 1 (Different Shape)
+                let wrongType = types[Math.floor(Math.random() * types.length)];
+                while(wrongType === selectedType) wrongType = types[Math.floor(Math.random() * types.length)];
+                
+                const distractor1 = {
+                    id: 'wrong1',
+                    type: wrongType,
+                    rotation: Math.random() * 360,
+                    scale: 1
+                };
+
+                // Distractor 2 (Same Shape, Different Size - Not Congruent)
+                const distractor2 = {
+                    id: 'wrong2',
+                    type: selectedType,
+                    rotation: Math.random() * 360,
+                    scale: 0.6 // Smaller
+                };
+
+                const roundChoices = [correct, distractor1, distractor2].sort(() => Math.random() - 0.5);
+                setChoices(roundChoices);
+            };
+
+            const handleChoice = (choice) => {
+                if (feedback) return;
+                if (choice.id === 'correct') {
+                    setFeedback('correct');
+                    setScore(s => s + 15);
+                    setTimeout(() => setProgress(p => p + 1), 1000);
+                } else {
+                    setFeedback('incorrect');
+                    setTimeout(() => setFeedback(''), 1000);
+                }
+            };
+
+            if (progress >= totalQuestions) return (
+                <div className="text-center py-12 animate-in zoom-in">
+                    <div className="inline-block p-4 bg-purple-100 rounded-full mb-4 ring-8 ring-purple-50"><Search className="text-purple-600" size={64} /></div>
+                    <h2 className="text-2xl font-bold mb-2 text-slate-800">全等偵探！</h2>
+                    <p className="text-slate-600 mb-8">你的眼力太厲害了</p>
+                    <button onClick={onComplete} className="w-full bg-indigo-500 text-white py-4 rounded-2xl font-bold text-xl shadow-xl active:scale-95 transition-all">挑戰最終測驗</button>
+                </div>
+            );
+
+            if (!target) return <div>Loading...</div>;
+
+            return (
+                 <div className="text-center space-y-6">
+                    <div className="flex justify-between items-center border-b border-indigo-100 pb-4">
+                        <h2 className="text-lg font-bold text-slate-700 flex items-center"><span className="bg-purple-100 text-purple-600 w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm">2</span>全等偵探</h2>
+                        <div className="flex space-x-1">{[...Array(totalQuestions)].map((_, i) => <div key={i} className={`w-2 h-2 rounded-full ${i < progress ? 'bg-purple-500' : 'bg-slate-200'}`}></div>)}</div>
+                    </div>
+                    
+                    <div className="bg-purple-50 p-4 rounded-2xl border-2 border-purple-100 relative">
+                        <p className="text-slate-500 text-sm mb-2 uppercase tracking-widest">尋找嫌疑犯</p>
+                        <div className="flex justify-center">
+                            <TriangleShape type={target.type} rotation={target.rotation} color="fill-purple-500" />
+                        </div>
+                        <p className="mt-2 font-bold text-purple-800">找出和它「全等」的圖形</p>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                        {choices.map((item, i) => (
+                            <button key={i} onClick={() => handleChoice(item)} disabled={!!feedback}
+                            className={`p-2 rounded-xl border-2 transition-all active:scale-95 flex items-center justify-center aspect-square
+                                ${feedback === 'correct' && item.id === 'correct' 
+                                    ? 'bg-green-100 border-green-500' 
+                                    : 'bg-white border-slate-200 hover:border-purple-300'}`}>
+                                <TriangleShape type={item.type} rotation={item.rotation} scale={item.scale} color={item.id === 'correct' && feedback === 'correct' ? "fill-green-500" : "fill-slate-400"} />
+                            </button>
+                        ))}
+                    </div>
+                    <div className="h-6">
+                        {feedback === 'incorrect' && <div className="text-red-500 font-bold animate-pulse">形狀和大小都要一樣才行喔！</div>}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 4. Quiz Mode ---
+        const QuizMode = ({ score, setScore, onRestart }) => {
+            const [idx, setIdx] = useState(0);
+            const [finished, setFinished] = useState(false);
+            const [feedback, setFeedback] = useState(null);
+            
+            // 8 Questions covering all sub-units
+            const questions = [
+                {
+                    q: "一個三角形如果有「直角」，我們叫它什麼？",
+                    options: ["銳角三角形", "直角三角形", "鈍角三角形"],
+                    ans: 1
+                },
+                {
+                    q: "正三角形的三個邊有什麼特徵？",
+                    options: ["三條邊都一樣長", "只有兩條邊一樣長", "三條邊都不一樣長"],
+                    ans: 0
+                },
+                {
+                    q: "等腰三角形一定有什麼特徵？",
+                    options: ["三個角都是60度", "有兩條邊一樣長", "一定有一個直角"],
+                    ans: 1
+                },
+                {
+                    q: "鈍角三角形裡面，最大的那個角是？",
+                    options: ["銳角 (小於90度)", "直角 (90度)", "鈍角 (大於90度)"],
+                    ans: 2
+                },
+                {
+                    q: "兩個圖形如果「全等」，代表什麼？",
+                    options: ["形狀一樣但大小不同", "面積一樣但形狀不同", "形狀和大小都完全一樣"],
+                    ans: 2
+                },
+                {
+                    q: "如果把一個全等的圖形「旋轉」之後，它還會全等嗎？",
+                    options: ["會，旋轉不會改變形狀大小", "不會，方向變了就不全等", "不一定"],
+                    ans: 0
+                },
+                {
+                    q: "銳角三角形的三個角是怎樣的？",
+                    options: ["有一個直角", "有一個鈍角", "三個都是銳角"],
+                    ans: 2
+                },
+                {
+                    q: "要畫出一個正三角形，我們通常需要用到什麼工具來測量邊長？",
+                    options: ["量角器", "直尺", "圓規或直尺"],
+                    ans: 2
+                }
+            ];
+
+            const handleAnswer = (optIdx) => {
+                if (feedback) return;
+                if (optIdx === questions[idx].ans) {
+                    setFeedback('correct');
+                    setScore(s => s + 20);
+                } else {
+                    setFeedback('incorrect');
+                }
+                setTimeout(() => {
+                    if (idx + 1 < questions.length) {
+                        setIdx(i => i + 1);
+                        setFeedback(null);
+                    } else {
+                        setFinished(true);
+                    }
+                }, 1500);
+            };
+
+            if (finished) return (
+                <div className="text-center py-10 space-y-6 animate-in slide-in-from-bottom">
+                    <div className="inline-block p-6 bg-yellow-100 rounded-full mb-4 shadow-inner"><Trophy size={80} className="text-yellow-600" /></div>
+                    <h2 className="text-4xl font-bold text-slate-800">恭喜畢業！</h2>
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <p className="text-sm text-slate-400 uppercase tracking-widest mb-2">總得分</p>
+                        <p className="text-6xl font-black text-indigo-500 mb-4">{score}</p>
+                        <p className="text-lg text-slate-600">你是小小幾何建築大師！</p>
+                    </div>
+                    <button onClick={onRestart} className="w-full bg-slate-800 text-white py-4 rounded-xl font-bold hover:bg-slate-700 flex items-center justify-center shadow-lg active:scale-95 transition-all"><RotateCcw className="mr-2" size={20} /> 再玩一次</button>
+                </div>
+            );
+
+            return (
+                <div className="py-2">
+                    <div className="mb-6 flex justify-between items-center text-sm font-medium text-slate-400"><span className="bg-slate-100 px-3 py-1 rounded-full">第 {idx + 1} / {questions.length} 題</span><span>分數: {score}</span></div>
+                    <h3 className="text-xl font-bold text-slate-800 mb-6 leading-relaxed">{questions[idx].q}</h3>
+                    <div className="space-y-3">
+                        {questions[idx].options.map((opt, i) => (
+                            <button key={i} onClick={() => handleAnswer(i)} disabled={!!feedback}
+                             className={`w-full text-left p-4 rounded-xl text-lg font-medium border-2 transition-all active:scale-98 
+                             ${feedback === 'correct' && i === questions[idx].ans ? 'bg-green-100 border-green-500 text-green-800' : 
+                               feedback === 'incorrect' && i !== questions[idx].ans && feedback ? 'bg-red-50 border-red-200 text-red-800 opacity-50' : 
+                               'bg-white border-slate-200 hover:border-indigo-400'}`}>
+                                <div className="flex items-center">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 text-sm font-bold ${feedback === 'correct' && i === questions[idx].ans ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{String.fromCharCode(65+i)}</div>
+                                    {opt}
+                                    {feedback === 'correct' && i === questions[idx].ans && <CheckCircle className="ml-auto text-green-600" />}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                    {feedback && <div className={`mt-6 text-center font-bold text-xl ${feedback === 'correct' ? 'text-green-500' : 'text-red-500'}`}>{feedback === 'correct' ? '正確！' : '答錯囉...'}</div>}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<GeometryApp />);
+    </script>
+</body>
+</html>
