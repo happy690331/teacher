@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>小小數據探險家：統計圖表</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body { touch-action: manipulation; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-5deg); }
+            75% { transform: rotate(5deg); }
+        }
+        .animate-wiggle { animation: wiggle 0.5s ease-in-out; }
+        .chart-bar { transition: height 0.5s ease-out; }
+    </style>
+</head>
+<body class="bg-blue-50 text-slate-800 select-none">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Icons ---
+        const IconWrapper = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        const BarChartIcon = (props) => <IconWrapper {...props}><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></IconWrapper>;
+        const LineChartIcon = (props) => <IconWrapper {...props}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></IconWrapper>;
+        const TableIcon = (props) => <IconWrapper {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="3" x2="21" y1="15" y2="15"/><line x1="9" x2="9" y1="3" y2="21"/><line x1="15" x2="15" y1="3" y2="21"/></IconWrapper>;
+        const Play = (props) => <IconWrapper {...props}><polygon points="5 3 19 12 5 21 5 3"/></IconWrapper>;
+        const BookOpen = (props) => <IconWrapper {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconWrapper>;
+        const CheckCircle = (props) => <IconWrapper {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconWrapper>;
+        const Trophy = (props) => <IconWrapper {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></IconWrapper>;
+        const ArrowRight = (props) => <IconWrapper {...props}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></IconWrapper>;
+        const RotateCcw = (props) => <IconWrapper {...props}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></IconWrapper>;
+
+        // --- Visual Components ---
+        
+        // Simple Bar Chart Component
+        const SimpleBarChart = ({ data }) => {
+            const maxValue = Math.max(...data.map(d => d.value));
+            return (
+                <div className="w-full h-64 bg-white rounded-xl p-4 border border-slate-200 flex items-end justify-around relative pt-8">
+                    {/* Grid lines */}
+                    <div className="absolute inset-0 p-4 flex flex-col justify-between pointer-events-none z-0 opacity-20">
+                         {[...Array(6)].map((_, i) => (
+                            <div key={i} className="w-full border-t border-slate-800 h-0 text-xs text-slate-400 relative">
+                                <span className="absolute -left-6 -top-2">{Math.round(maxValue - (maxValue * i / 5))}</span>
+                            </div>
+                         ))}
+                    </div>
+                    {data.map((item, idx) => (
+                        <div key={idx} className="flex flex-col items-center w-1/5 z-10 group">
+                            <div className="text-xs font-bold text-slate-600 mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{item.value}</div>
+                            <div 
+                                className="w-full max-w-[40px] bg-blue-400 rounded-t-md chart-bar hover:bg-blue-500 transition-colors shadow-sm"
+                                style={{ height: `${(item.value / maxValue) * 200}px` }}
+                            ></div>
+                            <div className="mt-2 text-xs md:text-sm font-bold text-slate-600">{item.label}</div>
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+
+        // Simple Line Chart Component
+        const SimpleLineChart = ({ data }) => {
+            const width = 300;
+            const height = 200;
+            const padding = 30;
+            const maxValue = Math.max(...data.map(d => d.value)) + 5;
+            const minValue = Math.min(...data.map(d => d.value)) - 5;
+            
+            const getX = (index) => padding + (index * (width - padding * 2) / (data.length - 1));
+            const getY = (value) => height - padding - ((value - minValue) * (height - padding * 2) / (maxValue - minValue));
+            
+            const points = data.map((d, i) => `${getX(i)},${getY(d.value)}`).join(' ');
+
+            return (
+                <div className="w-full flex justify-center bg-white rounded-xl p-2 border border-slate-200 overflow-hidden">
+                    <svg width="100%" height="250" viewBox={`0 0 ${width} ${height}`}>
+                         {/* Grid Lines Y */}
+                         {[0, 1, 2, 3, 4].map(i => {
+                             const y = padding + i * (height - 2*padding) / 4;
+                             return <line key={i} x1={padding} y1={y} x2={width-padding} y2={y} stroke="#e2e8f0" strokeWidth="1" />
+                         })}
+                        
+                        {/* The Line */}
+                        <polyline points={points} fill="none" stroke="#3b82f6" strokeWidth="3" />
+                        
+                        {/* Dots and Labels */}
+                        {data.map((d, i) => (
+                            <g key={i}>
+                                <circle cx={getX(i)} cy={getY(d.value)} r="4" fill="#2563eb" stroke="white" strokeWidth="2" />
+                                <text x={getX(i)} y={height - 10} textAnchor="middle" fontSize="10" fill="#64748b">{d.label}</text>
+                                <text x={getX(i)} y={getY(d.value) - 10} textAnchor="middle" fontSize="10" fontWeight="bold" fill="#334155">{d.value}</text>
+                            </g>
+                        ))}
+                    </svg>
+                </div>
+            );
+        };
+
+        // --- Main App Component ---
+        const StatsGame = () => {
+          const [currentTab, setCurrentTab] = useState('learn');
+          const [score, setScore] = useState(0);
+          const [animateScore, setAnimateScore] = useState(false);
+
+          useEffect(() => {
+            if (score > 0) {
+              setAnimateScore(true);
+              const timer = setTimeout(() => setAnimateScore(false), 300);
+              return () => clearTimeout(timer);
+            }
+          }, [score]);
+
+          const renderTabContent = () => {
+            switch (currentTab) {
+              case 'learn': return <LearnSection onComplete={() => setCurrentTab('practice_1')} />;
+              case 'practice_1': return <BarChartGame score={score} setScore={setScore} onComplete={() => setCurrentTab('practice_2')} />;
+              case 'practice_2': return <LineChartGame score={score} setScore={setScore} onComplete={() => setCurrentTab('quiz')} />;
+              case 'quiz': return <QuizMode score={score} setScore={setScore} onRestart={() => { setScore(0); setCurrentTab('learn'); }} />;
+              default: return <LearnSection />;
+            }
+          };
+
+          return (
+            <div className="h-screen flex flex-col bg-blue-50 font-sans text-slate-800 overflow-hidden select-none">
+              <header className="bg-white shadow-sm p-3 z-10 flex-none border-b border-blue-100">
+                <div className="max-w-2xl mx-auto flex justify-between items-center">
+                  <div className="flex items-center space-x-2">
+                    <div className="bg-blue-500 p-2 rounded-xl text-white shadow-sm"><BarChartIcon size={20} /></div>
+                    <h1 className="text-lg font-bold text-blue-700 tracking-wide">小小數據探險家</h1>
+                  </div>
+                  <div className={`flex items-center bg-yellow-100 px-3 py-1.5 rounded-full border border-yellow-300 transition-transform duration-200 ${animateScore ? 'scale-110 ring-4 ring-yellow-200' : ''}`}>
+                    <Trophy className={`text-yellow-600 mr-1.5 ${animateScore ? 'animate-spin' : ''}`} size={16} />
+                    <span className="font-bold text-yellow-700">{score} 分</span>
+                  </div>
+                </div>
+              </header>
+
+              <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-24 scroll-smooth">
+                <div className="max-w-2xl mx-auto bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-5 min-h-[400px] animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  {renderTabContent()}
+                </div>
+              </main>
+
+              <nav className="bg-white border-t border-slate-200 pb-safe pt-2 px-2 fixed bottom-0 w-full z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+                <div className="max-w-2xl mx-auto flex justify-around items-end pb-2">
+                  <NavButton active={currentTab === 'learn'} onClick={() => setCurrentTab('learn')} icon={<BookOpen size={22} />} label="學習" />
+                  <NavButton active={currentTab === 'practice_1'} onClick={() => setCurrentTab('practice_1')} icon={<BarChartIcon size={22} />} label="長條圖" />
+                  <NavButton active={currentTab === 'practice_2'} onClick={() => setCurrentTab('practice_2')} icon={<LineChartIcon size={22} />} label="折線圖" />
+                  <NavButton active={currentTab === 'quiz'} onClick={() => setCurrentTab('quiz')} icon={<TableIcon size={22} />} label="測驗" />
+                </div>
+              </nav>
+            </div>
+          );
+        };
+
+        const NavButton = ({ active, onClick, icon, label }) => (
+          <button onClick={onClick} className={`flex flex-col items-center justify-center w-full py-2 px-1 transition-all duration-300 rounded-xl active:scale-95 touch-manipulation ${active ? 'text-blue-600 -translate-y-2' : 'text-slate-400 hover:text-slate-600'}`}>
+            <div className={`p-1.5 rounded-full transition-all duration-300 ${active ? 'bg-blue-100 shadow-sm' : ''}`}>{icon}</div>
+            <span className={`text-[10px] font-medium mt-1 ${active ? 'opacity-100' : 'opacity-70'}`}>{label}</span>
+            {active && <div className="w-1 h-1 bg-blue-500 rounded-full mt-1"></div>}
+          </button>
+        );
+
+        // --- 1. Learning Section ---
+        const LearnSection = ({ onComplete }) => (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-800 flex items-center"><Play className="mr-2 text-blue-500" style={{fill: 'currentColor'}} size={24} /> 觀念學習</h2>
+              <span className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded">CH10 統計圖表</span>
+            </div>
+            
+            {/* Video Container (Using a placeholder educational math concept style since specific video URL wasn't provided, keeping layout) */}
+            <div className="aspect-video w-full bg-slate-900 rounded-2xl overflow-hidden shadow-lg ring-4 ring-blue-50" style={{position:'relative', paddingBottom: '56.25%', height: 0}}>
+              {/* Note: Embedding a relevant educational video for statistics */}
+              <iframe src="https://www.youtube.com/embed/videoseries?list=PLbJcI80b2dSUJq_k6EaW-oHkZ9Wq-r2O9" title="統計圖表教學" style={{position:'absolute', top:0, left:0, width:'100%', height:'100%'}} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                 <span className="text-white/50 text-sm">影片教學區</span>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-2xl border border-blue-100 mt-4 shadow-sm">
+              <h3 className="text-lg font-bold text-blue-800 mb-3 flex items-center"><BookOpen className="w-5 h-5 mr-2" />重點筆記</h3>
+              <div className="space-y-3 text-base text-slate-700">
+                <div className="flex bg-white p-3 rounded-xl shadow-sm border border-blue-50 items-center">
+                  <div className="bg-blue-100 text-blue-700 font-bold rounded-lg w-10 h-10 flex items-center justify-center mr-3 flex-shrink-0 text-xl">1</div>
+                  <div className="text-md"><strong>長條圖</strong>：長度代表數量，適合用來<span className="text-blue-600 font-bold">比較多寡</span>。</div>
+                </div>
+                <div className="flex bg-white p-3 rounded-xl shadow-sm border border-blue-50 items-center">
+                   <div className="bg-indigo-100 text-indigo-700 font-bold rounded-lg w-10 h-10 flex items-center justify-center mr-3 flex-shrink-0 text-xl">2</div>
+                   <div className="text-md"><strong>折線圖</strong>：線的起伏代表變化，適合看<span className="text-indigo-600 font-bold">趨勢變化</span>。</div>
+                </div>
+                <div className="flex bg-white p-3 rounded-xl shadow-sm border border-blue-50 items-center">
+                   <div className="bg-purple-100 text-purple-700 font-bold rounded-lg w-10 h-10 flex items-center justify-center mr-3 flex-shrink-0 text-xl">3</div>
+                   <div className="text-md"><strong>二維表格</strong>：從橫的和直的標題對照，找出<span className="text-purple-600 font-bold">交叉點</span>的資料。</div>
+                </div>
+              </div>
+            </div>
+            <button onClick={onComplete} className="w-full bg-blue-500 hover:bg-blue-600 text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center shadow-lg shadow-blue-500/20 active:scale-95 transition-all">我學會了，開始挑戰！ <ArrowRight className="ml-2" /></button>
+          </div>
+        );
+
+        // --- 2. Bar Chart Game ---
+        const BarChartGame = ({ score, setScore, onComplete }) => {
+            const [progress, setProgress] = useState(0);
+            const [feedback, setFeedback] = useState('');
+            
+            // Fixed Data for the game
+            const chartData = [
+                { label: '小明', value: 12 },
+                { label: '小華', value: 8 },
+                { label: '小美', value: 15 },
+                { label: '小強', value: 10 },
+                { label: '小麗', value: 6 },
+            ];
+
+            // 6 Questions requirement
+            const questions = [
+                { q: "誰得到的星星數量最多？", options: ["小明", "小華", "小美"], ans: "小美" },
+                { q: "小華得到了幾顆星星？", options: ["6顆", "8顆", "10顆"], ans: "8顆" },
+                { q: "誰得到的星星數量最少？", options: ["小強", "小麗", "小華"], ans: "小麗" },
+                { q: "小明和小強相差幾顆星星？", options: ["1顆", "2顆", "3顆"], ans: "2顆" },
+                { q: "得到超過 10 顆星星的人有幾位？", options: ["1位", "2位", "3位"], ans: "2位" }, // 小明, 小美
+                { q: "大家總共得到了幾顆星星？", options: ["45顆", "51顆", "55顆"], ans: "51顆" } // 12+8+15+10+6 = 51
+            ];
+
+            const handleAnswer = (opt) => {
+                if (feedback) return;
+                const correct = questions[progress].ans;
+                if (opt === correct) {
+                    setFeedback('correct');
+                    setScore(s => s + 10);
+                    setTimeout(() => {
+                        setFeedback('');
+                        setProgress(p => p + 1);
+                    }, 1000);
+                } else {
+                    setFeedback('incorrect');
+                    setTimeout(() => setFeedback(''), 1000);
+                }
+            };
+
+            if (progress >= questions.length) return (
+                <div className="text-center py-12 animate-in zoom-in">
+                    <div className="inline-block p-4 bg-yellow-100 rounded-full mb-4 ring-8 ring-yellow-50"><Trophy className="text-yellow-600" size={64} /></div>
+                    <h2 className="text-2xl font-bold mb-2 text-slate-800">火眼金睛！</h2>
+                    <p className="text-slate-600 mb-8">你完全看懂長條圖了</p>
+                    <button onClick={onComplete} className="w-full bg-blue-500 text-white py-4 rounded-2xl font-bold text-xl shadow-xl active:scale-95 transition-all">前往下一關</button>
+                </div>
+            );
+
+            return (
+                <div className="text-center space-y-6">
+                    <div className="flex justify-between items-center border-b border-blue-100 pb-4">
+                        <h2 className="text-lg font-bold text-slate-700 flex items-center"><span className="bg-blue-100 text-blue-600 w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm">1</span>長條圖挑戰</h2>
+                        <div className="flex space-x-1">{questions.map((_, i) => <div key={i} className={`w-2 h-2 rounded-full ${i < progress ? 'bg-blue-500' : 'bg-slate-200'}`}></div>)}</div>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-2">
+                        <h3 className="text-sm text-slate-500 mb-2">班級集點統計表</h3>
+                        <SimpleBarChart data={chartData} />
+                    </div>
+
+                    <div className="bg-blue-50 p-4 rounded-xl">
+                        <h3 className="text-lg font-bold text-slate-800 mb-4">{questions[progress].q}</h3>
+                        <div className="grid grid-cols-1 gap-3">
+                            {questions[progress].options.map((opt, idx) => (
+                                <button key={idx} onClick={() => handleAnswer(opt)} disabled={!!feedback} 
+                                    className={`py-3 rounded-xl text-lg font-bold border-2 transition-all active:scale-95 
+                                    ${feedback === 'correct' && opt === questions[progress].ans ? 'bg-green-100 border-green-500 text-green-700' : 
+                                      feedback === 'incorrect' && opt === questions[progress].ans ? 'bg-green-100 border-green-500 text-green-700 opacity-50' : 
+                                      'bg-white border-slate-200 hover:border-blue-300 text-slate-700'}`}>
+                                    {opt}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    <div className="h-6 flex justify-center">
+                        {feedback === 'correct' && <span className="text-green-600 font-bold flex items-center"><CheckCircle className="mr-1" size={20}/> 答對了！</span>}
+                        {feedback === 'incorrect' && <span className="text-red-500 font-bold">再看仔細一點喔！</span>}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 3. Line Chart Game ---
+        const LineChartGame = ({ score, setScore, onComplete }) => {
+            const [progress, setProgress] = useState(0);
+            const [feedback, setFeedback] = useState('');
+
+            // Data: Temperature over a week
+            const tempData = [
+                { label: '一', value: 24 },
+                { label: '二', value: 26 },
+                { label: '三', value: 22 },
+                { label: '四', value: 25 },
+                { label: '五', value: 28 },
+                { label: '六', value: 30 },
+                { label: '日', value: 29 },
+            ];
+
+            // 6 Questions requirement
+            const questions = [
+                { q: "星期幾的氣溫最高？", options: ["星期五", "星期六", "星期日"], ans: "星期六" },
+                { q: "星期三的氣溫是幾度？", options: ["22度", "24度", "26度"], ans: "22度" },
+                { q: "從星期二到星期三，氣溫是怎麼變化的？", options: ["變高", "變低", "沒變"], ans: "變低" },
+                { q: "最高溫和最低溫相差幾度？", options: ["6度", "8度", "10度"], ans: "8度" }, // 30-22=8
+                { q: "氣溫在星期幾開始連續兩天上升？", options: ["星期一", "星期三", "星期六"], ans: "星期三" }, // 三->四->五
+                { q: "這週有幾天的氣溫超過 25 度？", options: ["3天", "4天", "5天"], ans: "4天" } // 二,五,六,日
+            ];
+
+            const handleAnswer = (opt) => {
+                if (feedback) return;
+                const correct = questions[progress].ans;
+                if (opt === correct) {
+                    setFeedback('correct');
+                    setScore(s => s + 15);
+                    setTimeout(() => {
+                        setFeedback('');
+                        setProgress(p => p + 1);
+                    }, 1000);
+                } else {
+                    setFeedback('incorrect');
+                    setTimeout(() => setFeedback(''), 1000);
+                }
+            };
+
+            if (progress >= questions.length) return (
+                <div className="text-center py-12 animate-in zoom-in">
+                    <div className="inline-block p-4 bg-indigo-100 rounded-full mb-4 ring-8 ring-indigo-50"><Trophy className="text-indigo-600" size={64} /></div>
+                    <h2 className="text-2xl font-bold mb-2 text-slate-800">趨勢大師！</h2>
+                    <p className="text-slate-600 mb-8">你掌握了折線圖的變化</p>
+                    <button onClick={onComplete} className="w-full bg-blue-500 text-white py-4 rounded-2xl font-bold text-xl shadow-xl active:scale-95 transition-all">挑戰最終測驗</button>
+                </div>
+            );
+
+            return (
+                 <div className="text-center space-y-6">
+                    <div className="flex justify-between items-center border-b border-blue-100 pb-4">
+                        <h2 className="text-lg font-bold text-slate-700 flex items-center"><span className="bg-indigo-100 text-indigo-600 w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm">2</span>折線圖大師</h2>
+                        <div className="flex space-x-1">{questions.map((_, i) => <div key={i} className={`w-2 h-2 rounded-full ${i < progress ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>)}</div>
+                    </div>
+                    
+                    <div className="bg-white p-2 rounded-2xl border border-slate-200">
+                        <h3 className="text-sm text-slate-500 mb-2">一週氣溫變化圖</h3>
+                        <SimpleLineChart data={tempData} />
+                    </div>
+
+                    <div className="bg-indigo-50 p-4 rounded-xl">
+                        <h3 className="text-lg font-bold text-slate-800 mb-4">{questions[progress].q}</h3>
+                        <div className="space-y-3">
+                            {questions[progress].options.map((opt, i) => (
+                                <button key={i} onClick={() => handleAnswer(opt)} disabled={!!feedback}
+                                className={`w-full py-3 rounded-xl text-lg font-bold border-2 transition-all active:scale-95 flex items-center justify-center
+                                    ${feedback === 'correct' && opt === questions[progress].ans
+                                        ? 'bg-green-100 border-green-500 text-green-700' 
+                                        : 'bg-white border-slate-200 hover:border-indigo-300'}`}>
+                                    {opt}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    {feedback === 'incorrect' && <div className="text-red-500 font-bold animate-pulse">再看一次圖表上的點點喔！</div>}
+                </div>
+            );
+        };
+
+        // --- 4. Quiz Mode (Tables & General) ---
+        const QuizMode = ({ score, setScore, onRestart }) => {
+            const [idx, setIdx] = useState(0);
+            const [finished, setFinished] = useState(false);
+            const [feedback, setFeedback] = useState(null);
+            
+            // Complex Table Data (Visualized as HTML table in question)
+            // 6 Questions requirement (Mixed: Table reading & Concepts)
+            const questions = [
+                {
+                    type: "table",
+                    q: "這張火車時刻表，自強號 101 車次幾點到達台中？",
+                    tableData: [
+                        ["車次", "台北", "台中", "高雄"],
+                        ["自強 101", "09:00", "10:30", "12:00"],
+                        ["莒光 502", "09:30", "11:30", "13:30"]
+                    ],
+                    options: ["09:00", "10:30", "11:30"],
+                    ans: 1
+                },
+                {
+                    type: "table",
+                    q: "哪一班車從台北出發的時間比較晚？",
+                    tableData: [
+                        ["車次", "台北", "台中", "高雄"],
+                        ["自強 101", "09:00", "10:30", "12:00"],
+                        ["莒光 502", "09:30", "11:30", "13:30"]
+                    ],
+                    options: ["自強 101", "莒光 502", "一樣晚"],
+                    ans: 1
+                },
+                {
+                    type: "table",
+                    q: "從台北坐自強號 101 到高雄，總共要花多久時間？",
+                    tableData: [
+                        ["車次", "台北", "台中", "高雄"],
+                        ["自強 101", "09:00", "10:30", "12:00"],
+                        ["莒光 502", "09:30", "11:30", "13:30"]
+                    ],
+                    options: ["2小時", "2小時30分", "3小時"],
+                    ans: 2 // 09:00 to 12:00
+                },
+                {
+                    type: "concept",
+                    q: "如果要記錄這一個月每天的身高變化，用哪種圖最適合？",
+                    options: ["長條圖", "折線圖", "圓餅圖"],
+                    ans: 1
+                },
+                {
+                    type: "concept",
+                    q: "如果要比較班上每個人喜歡的水果數量多寡，用哪種圖最適合？",
+                    options: ["長條圖", "折線圖", "地圖"],
+                    ans: 0
+                },
+                {
+                    type: "concept",
+                    q: "在二維表格中，我們要怎麼找到資料？",
+                    options: ["只看橫的標題", "只看直的標題", "看橫的和直的標題交叉的地方"],
+                    ans: 2
+                }
+            ];
+
+            const handleAnswer = (optIdx) => {
+                if (feedback) return;
+                if (optIdx === questions[idx].ans) {
+                    setFeedback('correct');
+                    setScore(s => s + 20);
+                } else {
+                    setFeedback('incorrect');
+                }
+                setTimeout(() => {
+                    if (idx + 1 < questions.length) {
+                        setIdx(i => i + 1);
+                        setFeedback(null);
+                    } else {
+                        setFinished(true);
+                    }
+                }, 1500);
+            };
+
+            const renderQuestionContent = (q) => {
+                if(q.type === 'table') {
+                    return (
+                        <div className="overflow-x-auto mb-4 bg-white rounded-lg border border-slate-200">
+                            <table className="w-full text-sm text-left text-slate-500">
+                                <thead className="text-xs text-slate-700 uppercase bg-slate-100">
+                                    <tr>
+                                        {q.tableData[0].map((h, i) => <th key={i} className="px-3 py-2 border-b">{h}</th>)}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {q.tableData.slice(1).map((row, i) => (
+                                        <tr key={i} className="bg-white border-b">
+                                            {row.map((cell, j) => <td key={j} className="px-3 py-2 font-medium text-slate-900 border-r last:border-r-0">{cell}</td>)}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    );
+                }
+                return null;
+            };
+
+            if (finished) return (
+                <div className="text-center py-10 space-y-6 animate-in slide-in-from-bottom">
+                    <div className="inline-block p-6 bg-yellow-100 rounded-full mb-4 shadow-inner"><Trophy size={80} className="text-yellow-600" /></div>
+                    <h2 className="text-4xl font-bold text-slate-800">恭喜過關！</h2>
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <p className="text-sm text-slate-400 uppercase tracking-widest mb-2">總得分</p>
+                        <p className="text-6xl font-black text-blue-500 mb-4">{score}</p>
+                        <p className="text-lg text-slate-600">你是小小統計學家！</p>
+                    </div>
+                    <button onClick={onRestart} className="w-full bg-slate-800 text-white py-4 rounded-xl font-bold hover:bg-slate-700 flex items-center justify-center shadow-lg active:scale-95 transition-all"><RotateCcw className="mr-2" size={20} /> 再玩一次</button>
+                </div>
+            );
+
+            return (
+                <div className="py-2">
+                    <div className="mb-6 flex justify-between items-center text-sm font-medium text-slate-400"><span className="bg-slate-100 px-3 py-1 rounded-full">第 {idx + 1} / {questions.length} 題</span><span>分數: {score}</span></div>
+                    
+                    {renderQuestionContent(questions[idx])}
+
+                    <h3 className="text-xl font-bold text-slate-800 mb-6 leading-relaxed">{questions[idx].q}</h3>
+                    <div className="space-y-3">
+                        {questions[idx].options.map((opt, i) => (
+                            <button key={i} onClick={() => handleAnswer(i)} disabled={!!feedback}
+                             className={`w-full text-left p-4 rounded-xl text-lg font-medium border-2 transition-all active:scale-98 
+                             ${feedback === 'correct' && i === questions[idx].ans ? 'bg-green-100 border-green-500 text-green-800' : 
+                               feedback === 'incorrect' && i !== questions[idx].ans && feedback ? 'bg-red-50 border-red-200 text-red-800 opacity-50' : 
+                               'bg-white border-slate-200 hover:border-blue-400'}`}>
+                                <div className="flex items-center">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 text-sm font-bold ${feedback === 'correct' && i === questions[idx].ans ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{String.fromCharCode(65+i)}</div>
+                                    {opt}
+                                    {feedback === 'correct' && i === questions[idx].ans && <CheckCircle className="ml-auto text-green-600" />}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                    {feedback && <div className={`mt-6 text-center font-bold text-xl ${feedback === 'correct' ? 'text-green-500' : 'text-red-500'}`}>{feedback === 'correct' ? '正確！' : '答錯囉...'}</div>}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<StatsGame />);
+    </script>
+</body>
+</html>
