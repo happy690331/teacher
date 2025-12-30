@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>康軒國語六上7-12課小朋友下樓梯</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px 10px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+
+        /* 介面容器 */
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #ffffff;
+            border: 8px solid #334155;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            width: 100%;
+            max-width: 480px;
+            box-sizing: border-box;
+            position: relative;
+            margin-bottom: 50px;
+        }
+
+        h1 {
+            color: #1e293b;
+            margin-bottom: 8px;
+            font-size: 1.2rem;
+            text-shadow: 1px 1px 0 #94a3b8;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        /* 共用的磚牆樣式 */
+        .brick-bg {
+            background-color: #8b4513;
+            background-image: 
+                linear-gradient(335deg, #a0522d 23px, transparent 23px),
+                linear-gradient(155deg, #a0522d 23px, transparent 23px),
+                linear-gradient(335deg, #a0522d 23px, transparent 23px),
+                linear-gradient(155deg, #a0522d 23px, transparent 23px);
+            background-size: 58px 58px;
+            /* 初始背景位置，JS 會動態修改這個值來製造移動效果 */
+            background-position: 0px 2px, 4px 35px, 29px 31px, 34px 6px;
+            border: 4px solid #1e293b;
+            border-radius: 8px;
+        }
+
+        /* 課程選擇畫面 */
+        #setupView {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            padding: 20px;
+            box-sizing: border-box;
+            color: white; /* 在磚牆上文字改為白色 */
+        }
+
+        .lesson-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            width: 100%;
+        }
+
+        .lesson-item {
+            background: rgba(255, 255, 255, 0.9); /* 半透明白底，讓文字清楚 */
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            color: #334155;
+        }
+
+        .lesson-item:hover {
+            border-color: #4f46e5;
+            background: #ffffff;
+        }
+
+        /* 遊戲畫面 */
+        #gameView {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
+        #gameCanvas {
+            margin: 5px 0;
+            touch-action: none;
+            width: 100%;
+            max-width: 380px;
+            height: 500px;
+            /* background-image 由 .brick-bg 提供 */
+        }
+
+        .score-panel {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0 5px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 5px;
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 5px;
+        }
+
+        button {
+            background-color: #4f46e5;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.1s;
+        }
+
+        button:active { transform: translateY(2px); }
+        button:disabled { background-color: #94a3b8; cursor: not-allowed; }
+
+        .btn-green { background-color: #10b981; }
+        .btn-orange { background-color: #f59e0b; }
+
+        /* 平板專用底部按鈕 */
+        .tablet-controls {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 20px;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+
+        .control-btn {
+            width: 100px;
+            height: 80px;
+            background-color: #334155;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            color: white;
+            box-shadow: 0 6px #1e293b;
+            user-select: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .control-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px #1e293b;
+            background-color: #1e293b;
+        }
+
+        /* 訊息覆蓋層 */
+        .message-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+            border-radius: 16px;
+        }
+
+        .message-box {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            width: 90%; /* 稍微加寬以容納橫向按鈕 */
+            max-width: 450px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 修改：選項容器改為橫向排列 */
+        #quizOptions {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            gap: 8px;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        /* 修改：按鈕樣式調整為適合橫排 */
+        .quiz-btn {
+            background-color: #f1f5f9;
+            color: #1e293b;
+            padding: 8px 4px; /* 減少內邊距 */
+            border: 2px solid #cbd5e1;
+            font-size: 0.95rem; /* 字體稍微調小以適應窄寬度 */
+            flex: 1; /* 平均分配寬度 */
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 50px; /* 確保點擊高度 */
+            word-break: break-all; /* 防止長詞撐破 */
+            line-height: 1.2;
+        }
+        
+        .quiz-btn:hover { background-color: #e2e8f0; }
+
+        .quiz-question-text {
+            font-size: 1.1rem;
+            color: #4f46e5;
+            font-weight: 700;
+            margin: 10px 0;
+            line-height: 1.5;
+            text-align: left;
+            background: #f1f5f9;
+            padding: 12px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <h1>康軒國語六上7-12課小朋友下樓梯</h1>
+
+        <!-- 畫面一：設定 (套用磚牆背景樣式) -->
+        <div id="setupView" class="brick-bg">
+            <p style="color: #ffffff; font-weight: bold; text-shadow: 1px 1px 2px black;">請勾選練習課次：</p>
+            <div class="lesson-grid">
+                <label class="lesson-item"><input type="checkbox" value="7" checked> 第七課</label>
+                <label class="lesson-item"><input type="checkbox" value="8"> 第八課</label>
+                <label class="lesson-item"><input type="checkbox" value="9"> 第九課</label>
+                <label class="lesson-item"><input type="checkbox" value="10"> 第十課</label>
+                <label class="lesson-item"><input type="checkbox" value="11"> 第十一課</label>
+                <label class="lesson-item"><input type="checkbox" value="12"> 第十二課</label>
+            </div>
+            <button id="entryButton" class="btn-green" style="width: 100%; padding: 15px; font-size: 1.2rem; margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">進入遊戲</button>
+        </div>
+
+        <!-- 畫面二：遊戲 -->
+        <div id="gameView">
+            <div class="score-panel">
+                <span>得分: <span id="scoreDisplay">0</span></span>
+                <span style="color: #ef4444;">❤️: <span id="livesDisplay">3</span></span>
+                <span>最高: <span id="highScoreDisplay">0</span></span>
+            </div>
+            <!-- Canvas 也套用磚牆樣式 -->
+            <canvas id="gameCanvas" class="brick-bg" width="380" height="500"></canvas>
+            
+            <div class="action-buttons">
+                <button id="startButton">開始 / 重新</button>
+                <button id="pauseButton" class="btn-orange" disabled>暫停</button>
+                <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                <button id="uploadButton" class="btn-green">角色照片</button>
+            </div>
+
+            <!-- 平板專用底部按鈕 -->
+            <div class="tablet-controls">
+                <div class="control-btn" id="leftBtn">◀</div>
+                <div class="control-btn" id="rightBtn">▶</div>
+            </div>
+        </div>
+
+        <!-- 訊息彈窗 -->
+        <div class="message-overlay" id="messageOverlay">
+            <div class="message-box">
+                <h2 id="messageTitle">提示</h2>
+                <p id="messageText"></p>
+                <button id="closeMessageButton">確定</button>
+            </div>
+        </div>
+
+        <!-- 選擇題彈窗 -->
+        <div class="message-overlay" id="quizOverlay">
+            <div class="message-box">
+                <h3 style="margin:0;">請根據解釋選出語詞：</h3>
+                <div id="quizQuestion" class="quiz-question-text"></div>
+                <!-- 選項容器 -->
+                <div id="quizOptions"></div>
+                <div id="feedbackText" style="margin-top:10px; font-weight:bold;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- 題庫 ---
+        const VOCAB_DATA = {
+            7: [{ word: "仰光", def: "城市名。位於伊洛瓦底江三角洲東側。為緬甸最大和最重要的工商業城市。" }, { word: "緬甸", def: "國名。位於亞洲東南部。" }, { word: "腳踝", def: "小腿與腳掌間，腳骨兩旁凸起的部位。" }, { word: "呢絨", def: "用獸毛或人造毛等製成的毛織品的統稱。" }, { word: "下襬", def: "上衣、長袍和裙子等的下緣部分。" }, { word: "恣意", def: "放任而不加以約束。" }, { word: "批判", def: "評論判斷。" }, { word: "行徑", def: "行為、舉動。" }, { word: "謹記", def: "恭謹牢記。或恭敬慎重的寫下。" }, { word: "恰恰", def: "恰巧、剛好。" }, { word: "乏人問津", def: "沒有人洽詢或探問。" }, { word: "放之四海而皆準", def: "用到任何地方任何方面都可作為準則。" }, { word: "嗤之以鼻", def: "從鼻子裡發出冷笑。表示不屑或鄙視。" }],
+            8: [{ word: "縫隙", def: "空隙。" }, { word: "旨意", def: "帝王的命令。或主旨目的。" }, { word: "悠閒", def: "閒適自得而無所牽掛。" }, { word: "寓言", def: "以淺近假託的故事或自然物的擬人手法，表達哲理的文體。" }, { word: "鷸蚌相爭", def: "比喻兩相爭執造成兩敗俱傷，讓第三者獲利的局面。" }, { word: "狡兔三窟", def: "比喻人有多處藏身的地方或多種避禍的準備。" }, { word: "狡猾", def: "詭變多詐。" }, { word: "招搖撞騙", def: "假借他人的名義或聲勢而到處詐騙。" }, { word: "偽裝", def: "假裝，改裝掩飾真正的面目或身分。" }, { word: "誇大", def: "言語超過原有的事實。" }, { word: "分辨", def: "辨別。" }, { word: "謊言", def: "不實在的話。" }, { word: "諷刺", def: "以隱微的方式嘲諷譏刺。" }, { word: "警惕", def: "對可能發生的情況，心生警覺而加以戒備。" }, { word: "觀察", def: "仔細察看。" }, { word: "蒙蔽", def: "欺騙、隱瞞事實的真相。" }, { word: "虛張聲勢", def: "誇大聲威氣勢，用以嚇阻或欺騙他人。" }],
+            9: [{ word: "街亭", def: "三國時期諸葛亮北伐的一場戰事地點，也是一場決定性戰役。" }, { word: "誘敵", def: "引誘敵人。" }, { word: "旗幟", def: "泛稱旌旗。或比喻名義、藉口。" }, { word: "崗位", def: "職責、本分。或軍警執勤的處所。" }, { word: "百姓", def: "泛指一般平民、國民。" }, { word: "倘若", def: "表示假設語氣的連接詞，即如果、假使。" }, { word: "書僮", def: "舊時在富人家中侍候主人或其弟子讀書的未成年僮僕。" }, { word: "撤退", def: "放棄陣地或遷離已占領的地區。" }, { word: "謹慎", def: "仔細慎重。" }, { word: "丞相", def: "古時輔佐天子處理國事的最高行政官員。" }],
+            10: [{ word: "耶誕節", def: "紀念耶穌誕生的節日，十二月二十五日。" }, { word: "郊外", def: "環繞城市外面的地方。" }, { word: "慈祥", def: "慈善祥和。" }, { word: "劈啪", def: "狀聲詞。形容燃燒時爆裂或撞擊拍打的聲音。" }, { word: "零用錢", def: "零碎花用的錢。" }, { word: "厭倦", def: "不再喜歡或提不起興趣。" }, { word: "辯護", def: "提出理由來加以袒護。或法律上的防禦辯白。" }, { word: "自私自利", def: "只圖自己的私利，而不顧及一切。" }, { word: "貧窮", def: "缺少錢財，生活拮据困乏。" }, { word: "關係", def: "對相關事物的影響、牽涉。或人事物間的關連情形。" }, { word: "稍微", def: "程度或分量上極少的。" }, { word: "暖烘烘", def: "溫暖的樣子。" }, { word: "衷心", def: "出自內心。" }, { word: "鋼琴", def: "樂器名。屬鍵盤樂器。" }],
+            11: [{ word: "恢復", def: "回復到原來的樣子。或收復失去的。" }, { word: "活潑", def: "生動而不呆板。" }, { word: "草莓", def: "植物名。肉質多汁，味道酸甜。" }, { word: "客廳", def: "用來接待賓客的場所。" }, { word: "前額", def: "額頭。" }, { word: "灌醉", def: "勉強別人喝酒以致於酒醉。" }, { word: "原諒", def: "寬恕諒解。" }, { word: "雙脣", def: "上、下嘴脣。" }, { word: "乞求", def: "懇求、請求。" }, { word: "神采煥發", def: "精神充足，光采照人。" }, { word: "雪橇", def: "利用長條形平滑板塊在雪地上滑行的無輪交通工具。" }, { word: "迴盪", def: "迴旋飄浮。" }],
+            12: [{ word: "訝異", def: "覺得意外，難以相信。" }, { word: "臉頰", def: "臉的兩邊。" }, { word: "蓬勃", def: "茂盛繁榮的樣子。" }, { word: "家庭醫師", def: "照顧家庭各成員健康的第一線醫師。" }, { word: "嚴肅", def: "態度嚴正莊重。或嚴格、認真。" }, { word: "薔薇", def: "植物名。枝幹多刺，花朵富有香氣。" }, { word: "瀰漫", def: "遍布、滿布。" }, { word: "包括", def: "包含、涵蓋。" }, { word: "螞蟻", def: "蟻科昆蟲的總稱。喜於地下築巢群居。" }, { word: "儘管", def: "即使、雖然。或不顧節制隨意去做。" }]
+        };
+
+        const setupView = document.getElementById('setupView');
+        const gameView = document.getElementById('gameView');
+        const entryButton = document.getElementById('entryButton');
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startButton = document.getElementById('startButton');
+        const pauseButton = document.getElementById('pauseButton');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const livesDisplay = document.getElementById('livesDisplay');
+        const highScoreDisplay = document.getElementById('highScoreDisplay');
+        const quizOverlay = document.getElementById('quizOverlay');
+        const quizQuestion = document.getElementById('quizQuestion');
+        const quizOptions = document.getElementById('quizOptions');
+        const feedbackText = document.getElementById('feedbackText');
+
+        const PLAYER_SIZE = 40;
+        const PLAYER_SPEED = 6;
+        const GRAVITY = 0.8;
+        const STAIR_SPEED = 1.3; // 速度減慢
+
+        let gameState = {
+            isRunning: false,
+            isPaused: false,
+            isQuizActive: false,
+            score: 0,
+            highScore: 0,
+            lives: 3,
+            invincible: 0,
+            player: { x: 170, y: 300, dx: 0, dy: 0 },
+            obstacles: [],
+            vocabPool: [],
+            history: new Set(),
+            playerImg: new Image(),
+            imgLoaded: false,
+            rowsHandled: new Set(),
+            bgY: 0
+        };
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'mandarin-stairs-pro-v2';
+        const fbCfg = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const authTok = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        let db, auth;
+
+        if (fbCfg) {
+            const app = initializeApp(fbCfg);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            const initA = async () => { if(authTok) await signInWithCustomToken(auth, authTok); else await signInAnonymously(auth); };
+            initA();
+            onAuthStateChanged(auth, (u) => {
+                if(u) onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'scores', 'global'), (ds) => {
+                    if(ds.exists()) { gameState.highScore = ds.data().score || 0; highScoreDisplay.textContent = gameState.highScore; }
+                });
+            });
+        }
+
+        entryButton.addEventListener('click', () => {
+            const sels = Array.from(document.querySelectorAll('.lesson-grid input:checked')).map(i => i.value);
+            if(sels.length === 0) {
+                // 使用自定義彈窗取代 alert
+                document.getElementById('messageTitle').textContent = "提示";
+                document.getElementById('messageText').textContent = "請勾選課次！";
+                document.getElementById('messageOverlay').style.display = 'flex';
+                return;
+            }
+            gameState.vocabPool = sels.flatMap(n => VOCAB_DATA[n]);
+            setupView.style.display = 'none';
+            gameView.style.display = 'flex';
+        });
+
+        function startGame() {
+            gameState.score = 0;
+            gameState.lives = 3;
+            gameState.history.clear();
+            gameState.obstacles = [];
+            gameState.rowsHandled.clear();
+            
+            // --- 初始生成邏輯：確保第一層是安全平台但有缺口 ---
+            const startY = 380; // 玩家腳下的初始位置
+            
+            // 產生一個隨機缺口，讓玩家可以往下跳
+            const gapWidth = 90; 
+            const gapX = Math.random() * (canvas.width - gapWidth);
+
+            // 左側地板
+            if (gapX > 0) {
+                gameState.obstacles.push({
+                    x: 0, y: startY, w: gapX, h: 20, rid: 'start-L', node: null
+                });
+            }
+            // 右側地板
+            if (gapX + gapWidth < canvas.width) {
+                gameState.obstacles.push({
+                    x: gapX + gapWidth, y: startY, w: canvas.width - (gapX + gapWidth), h: 20, rid: 'start-R', node: null
+                });
+            }
+            
+            // 玩家初始位置：站在較寬的那一側平台上，避免直接掉下去
+            if (gapX > (canvas.width - gapWidth) / 2) {
+                // 左邊較寬，站左邊
+                gameState.player.x = gapX / 2 - PLAYER_SIZE / 2;
+            } else {
+                // 右邊較寬，站右邊
+                const segStart = gapX + gapWidth;
+                const segWidth = canvas.width - segStart;
+                gameState.player.x = segStart + segWidth / 2 - PLAYER_SIZE / 2;
+            }
+            gameState.player.y = startY - PLAYER_SIZE;
+            gameState.player.dy = 0;
+            
+            // 生成其他平台（上方和下方）
+            // 向上生成（視覺上是上方，Y值較小）
+            for(let y = startY - 120; y > -50; y -= 120) createRow(y);
+            // 向下生成（視覺上是下方，Y值較大，作為後續樓層）
+            createRow(startY + 120);
+
+            gameState.isRunning = true;
+            gameState.isPaused = false;
+            gameState.isQuizActive = false;
+            gameState.bgY = 0;
+            scoreDisplay.textContent = '0';
+            livesDisplay.textContent = '3';
+            startButton.disabled = true;
+            pauseButton.disabled = false;
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        function createRow(y) {
+            const rid = crypto.randomUUID();
+            const gaps = Math.floor(Math.random() * 2) + 1;
+            const gw = 65;
+            let segs = [{x: 0, w: canvas.width}];
+            for(let i=0; i<gaps; i++) {
+                let idx = segs.findIndex(s => s.w > gw + 40);
+                if(idx === -1) break;
+                let s = segs.splice(idx, 1)[0];
+                let gx = s.x + 20 + Math.random() * (s.w - gw - 40);
+                segs.push({x: s.x, w: gx - s.x}, {x: gx + gw, w: (s.x+s.w) - (gx+gw)});
+            }
+            segs.forEach(seg => {
+                if(seg.w < 5) return;
+                let o = { x: seg.x, y: y, w: seg.w, h: 18, rid: rid, node: null };
+                let pool = gameState.vocabPool.filter(v => !gameState.history.has(v.word));
+                if(pool.length > 0 && Math.random() < 0.25) {
+                    let item = pool[Math.floor(Math.random()*pool.length)];
+                    let nx;
+                    if(seg.x === 0) nx = seg.w - 20; 
+                    else if(seg.x + seg.w >= canvas.width) nx = seg.x + 20; 
+                    else nx = seg.x + seg.w/2;
+                    o.node = { x: nx, item: item };
+                }
+                gameState.obstacles.push(o);
+            });
+        }
+
+        function triggerQuiz(node) {
+            gameState.isPaused = true;
+            gameState.isQuizActive = true;
+            feedbackText.textContent = "";
+            quizQuestion.textContent = node.item.def;
+            let opts = [node.item];
+            let others = gameState.vocabPool.filter(v => v.word !== node.item.word);
+            while(opts.length < 4 && others.length > 0) {
+                let r = Math.floor(Math.random()*others.length);
+                let p = others.splice(r, 1)[0];
+                if(!opts.find(o => o.word === p.word)) opts.push(p);
+            }
+            opts.sort(() => Math.random() - 0.5);
+            quizOptions.innerHTML = '';
+            opts.forEach(o => {
+                let b = document.createElement('button');
+                b.className = 'quiz-btn';
+                b.textContent = o.word;
+                b.onclick = () => {
+                    if(o.word === node.item.word) {
+                        gameState.score += 5;
+                        feedbackText.style.color = "#10b981";
+                        feedbackText.textContent = "正確！+5分";
+                        gameState.history.add(node.item.word);
+                    } else {
+                        gameState.score -= 3;
+                        feedbackText.style.color = "#ef4444";
+                        feedbackText.textContent = `答錯！正解是：${node.item.word}。-3分`;
+                    }
+                    scoreDisplay.textContent = gameState.score;
+                    setTimeout(() => {
+                        gameState.isPaused = false;
+                        gameState.isQuizActive = false;
+                        quizOverlay.style.display = 'none';
+                        requestAnimationFrame(gameLoop);
+                    }, 1200);
+                };
+                quizOptions.appendChild(b);
+            });
+            quizOverlay.style.display = 'flex';
+        }
+
+        function update() {
+            if(!gameState.isRunning || gameState.isPaused || gameState.isQuizActive) return;
+            if(gameState.invincible > 0) gameState.invincible--;
+            
+            gameState.bgY -= STAIR_SPEED;
+            canvas.style.backgroundPosition = `
+                0px ${2 + gameState.bgY}px, 
+                4px ${35 + gameState.bgY}px, 
+                29px ${31 + gameState.bgY}px, 
+                34px ${6 + gameState.bgY}px
+            `;
+
+            gameState.player.dy += GRAVITY;
+            gameState.player.y += gameState.player.dy;
+            gameState.player.x += gameState.player.dx;
+            if(gameState.player.x < 0) gameState.player.x = 0;
+            if(gameState.player.x + PLAYER_SIZE > canvas.width) gameState.player.x = canvas.width - PLAYER_SIZE;
+
+            let onS = false;
+            // 摔死檢查
+            if(gameState.player.y > canvas.height) {
+                if(gameState.invincible <= 0) {
+                    gameState.lives--; livesDisplay.textContent = gameState.lives;
+                    if(gameState.lives <= 0) endG(); 
+                    else { 
+                        gameState.player.y = 100; 
+                        gameState.player.dy = 0; 
+                        gameState.invincible = 100; 
+                    }
+                } else {
+                    gameState.player.y = 100;
+                    gameState.player.dy = 0;
+                }
+            }
+
+            gameState.obstacles.forEach(o => {
+                o.y -= STAIR_SPEED;
+                if(gameState.player.dy >= 0 && gameState.player.x < o.x + o.w && gameState.player.x + PLAYER_SIZE > o.x && gameState.player.y + PLAYER_SIZE >= o.y && gameState.player.y + PLAYER_SIZE <= o.y + o.h) {
+                    gameState.player.y = o.y - PLAYER_SIZE;
+                    gameState.player.dy = 0;
+                    onS = true;
+                }
+                if(o.node) {
+                    let d = Math.sqrt(Math.pow((gameState.player.x + PLAYER_SIZE/2) - o.node.x, 2) + Math.pow((gameState.player.y + PLAYER_SIZE/2) - (o.y + 10), 2));
+                    if(d < 35) { let it = o.node.item; o.node = null; triggerQuiz({item: it}); }
+                }
+            });
+
+            gameState.obstacles.forEach(o => {
+                if(o.y + 18 < gameState.player.y && !gameState.rowsHandled.has(o.rid)) {
+                    gameState.score++; scoreDisplay.textContent = gameState.score; gameState.rowsHandled.add(o.rid);
+                }
+            });
+
+            gameState.obstacles = gameState.obstacles.filter(o => o.y > -50);
+            let low = gameState.obstacles.reduce((max, o) => Math.max(max, o.y), -Infinity);
+            if(gameState.obstacles.length === 0 || canvas.height - low >= 115) createRow(canvas.height);
+
+            if(gameState.player.y < 0) {
+                if(gameState.invincible <= 0) {
+                    gameState.lives--; livesDisplay.textContent = gameState.lives;
+                    if(gameState.lives <= 0) endG(); else { gameState.player.y = canvas.height/2; gameState.player.dy = 0; gameState.invincible = 100; }
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#2d3748';
+            gameState.obstacles.forEach(o => {
+                ctx.fillRect(o.x, o.y, o.w, o.h);
+                if(o.node) {
+                    ctx.beginPath(); ctx.arc(o.node.x, o.y + 9, 10, 0, Math.PI*2);
+                    ctx.fillStyle = '#fbbf24'; ctx.fill();
+                    ctx.fillStyle = '#000'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.fillText('?', o.node.x, o.y + 13);
+                }
+            });
+            if(gameState.invincible % 10 < 5) {
+                if(gameState.imgLoaded) ctx.drawImage(gameState.playerImg, gameState.player.x, gameState.player.y, PLAYER_SIZE, PLAYER_SIZE);
+                else { ctx.fillStyle = '#ef4444'; ctx.fillRect(gameState.player.x, gameState.player.y, PLAYER_SIZE, PLAYER_SIZE); ctx.font = '30px Arial'; ctx.textAlign = 'center'; ctx.fillText('🏃', gameState.player.x + PLAYER_SIZE/2, gameState.player.y + 30); }
+            }
+        }
+
+        function gameLoop() { if(!gameState.isRunning) return; update(); draw(); if(!gameState.isPaused && !gameState.isQuizActive) requestAnimationFrame(gameLoop); }
+
+        function endG() {
+            gameState.isRunning = false; startButton.disabled = false; pauseButton.disabled = true;
+            if(db && auth && auth.currentUser && gameState.score > gameState.highScore) setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'scores', 'global'), { score: gameState.score, ts: Date.now() }, {merge: true});
+            document.getElementById('messageTitle').textContent = "遊戲結束";
+            document.getElementById('messageText').textContent = "生命耗盡！得分：" + gameState.score;
+            document.getElementById('messageOverlay').style.display = 'flex';
+        }
+
+        startButton.onclick = startGame;
+        pauseButton.onclick = () => { if(!gameState.isRunning) return; gameState.isPaused = !gameState.isPaused; pauseButton.textContent = gameState.isPaused ? "繼續" : "暫停"; if(!gameState.isPaused) requestAnimationFrame(gameLoop); };
+        document.getElementById('closeMessageButton').onclick = () => document.getElementById('messageOverlay').style.display = 'none';
+        document.getElementById('uploadButton').onclick = () => document.getElementById('imageInput').click();
+        document.getElementById('imageInput').onchange = (e) => {
+            const f = e.target.files[0];
+            if(f) {
+                const r = new FileReader();
+                r.onload = (ev) => { gameState.playerImg.src = ev.target.result; gameState.playerImg.onload = () => { gameState.imgLoaded = true; draw(); }; };
+                r.readAsDataURL(f);
+            }
+        };
+
+        const setD = (d) => { if(!gameState.isRunning || gameState.isPaused || gameState.isQuizActive) return; gameState.player.dx = d * PLAYER_SPEED; };
+        window.onkeydown = (e) => { if(e.key === 'ArrowLeft') setD(-1); if(e.key === 'ArrowRight') setD(1); };
+        window.onkeyup = (e) => { if(e.key === 'ArrowLeft' || e.key === 'ArrowRight') setD(0); };
+        const lB = document.getElementById('leftBtn'), rB = document.getElementById('rightBtn');
+        const bind = (b, d) => {
+            b.addEventListener('touchstart', (e) => { e.preventDefault(); setD(d); });
+            b.addEventListener('touchend', (e) => { e.preventDefault(); setD(0); });
+            b.addEventListener('mousedown', () => setD(d));
+            b.addEventListener('mouseup', () => setD(0));
+            b.addEventListener('mouseleave', () => setD(0));
+        };
+        bind(lB, -1); bind(rB, 1);
+    </script>
+</body>
+</html>
