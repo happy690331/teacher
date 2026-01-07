@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大考考試提醒 - 黑板風格</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入可愛的圓體字型 -->
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* 全局字型與背景 */
+        body {
+            font-family: 'Zen Maru Gothic', sans-serif;
+            background-color: #111;
+            margin: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* 16:9 容器 */
+        .ratio-wrapper {
+            width: 100%;
+            max-width: 100%;
+            aspect-ratio: 16 / 9;
+            max-height: 100vh;
+            display: flex;
+            position: relative;
+        }
+
+        /* 黑板質感背景 */
+        .blackboard {
+            flex: 1;
+            background-color: #1a472a;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(255,255,255,0.05) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(255,255,255,0.05) 0%, transparent 20%);
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5), 0 0 20px rgba(0,0,0,0.3);
+            border: 1.5vh solid #8B4513;
+            border-radius: 10px;
+            color: #eee;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 1.5vh;
+            gap: 1.5vh;
+        }
+
+        /* 粉筆線條邊框 */
+        .chalk-border {
+            border: 3px solid rgba(255, 255, 255, 0.7);
+            border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            background: rgba(255, 255, 255, 0.05);
+            height: 100%; 
+            box-sizing: border-box;
+            min-width: 0; 
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .highlight-text {
+            color: #ffeb3b;
+            text-shadow: 0 0 8px rgba(255, 235, 59, 0.6);
+        }
+
+        /* 設定頁面樣式 */
+        .setup-card {
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            position: absolute;
+            z-index: 50;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 600px;
+        }
+
+        /* 自訂選取框樣式 */
+        .order-box {
+            width: 2rem;
+            height: 2rem;
+            border: 2px solid #cbd5e1;
+            border-radius: 0.375rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 1.1rem;
+            transition: all 0.2s;
+            background-color: white;
+            color: transparent;
+        }
+        
+        /* 選中狀態 */
+        .order-box.active {
+            background-color: #15803d; /* green-700 */
+            border-color: #15803d;
+            color: white;
+        }
+
+        /* 烏龜動畫容器 */
+        .turtle-wrapper {
+            position: absolute;
+            bottom: -8px; 
+            transform: translateX(-50%);
+            transition: left 1s linear;
+            width: 90px;
+            height: 70px;
+            z-index: 10;
+        }
+        
+        .cheering svg {
+            animation: bounce 0.6s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        /* 隱藏/顯示控制 */
+        .hidden { display: none !important; }
+        .flex { display: flex; }
+
+        /* --- 佈局系統 (Rows) --- */
+        .row-container {
+            display: flex;
+            width: 100%;
+            gap: 1.5vh;
+        }
+
+        /* 上層 (A+B) */
+        .row-top { height: 35%; }
+        .area-a { width: 40%; }
+        .area-b { width: 60%; }
+
+        /* 中層 (C+D) */
+        .row-middle { height: 47%; }
+        .area-c { width: 55%; }
+        .area-d { width: 45%; }
+
+        /* 下層 (E) */
+        .row-bottom { height: 18%; }
+        .area-e { width: 100%; }
+
+
+        /* --- 字體與樣式調整 --- */
+        
+        /* A區: 今日考程 (單科顯示) */
+        #schedule-single-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .current-subject {
+            font-size: 10vh; /* 放大顯示科目 */
+            font-weight: 900;
+            line-height: 1.1;
+            color: #ffeb3b;
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.5);
+        }
+        
+        .current-time {
+            font-size: 5vh; /* 放大顯示時間 */
+            font-family: monospace;
+            opacity: 0.9;
+            margin-top: 1vh;
+        }
+
+        /* B區: 現在時間 (放大) */
+        #digital-clock { 
+            font-size: 14vh; /* 維持放大 */
+            line-height: 1;
+        }
+        
+        /* C區: 人數 (文字在上，數字在下) */
+        .stat-group {
+            display: flex;
+            flex-direction: column; /* 垂直排列 */
+            height: 100%;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .stat-number { 
+            font-size: 11vh; 
+            line-height: 1;
+            order: 2; /* 數字在下 */
+        } 
+        
+        .stat-label { 
+            font-size: 4.5vh; 
+            font-weight: bold;
+            opacity: 0.9;
+            margin-bottom: 0.5vh;
+            order: 1; /* 文字在上 */
+        }
+        
+        /* D區: 考生注意 (維持放大，並支援長文字) */
+        #reminder-text { 
+            font-size: 6vh; 
+            line-height: 1.3;
+            white-space: pre-wrap;
+            font-weight: 700;
+        } 
+        
+        /* 滾動條美化 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
+    </style>
+</head>
+<body>
+
+    <!-- 16:9 外框容器 -->
+    <div class="ratio-wrapper">
+
+        <!-- 第一頁：設定畫面 -->
+        <div id="setup-screen" class="setup-card p-8 text-gray-800">
+            <h1 class="text-3xl font-bold text-center mb-6 text-green-700">📝 大考監控設定</h1>
+            
+            <form id="exam-form" class="space-y-4">
+                <!-- 1. 選擇科目 (依照點擊順序) -->
+                <div>
+                    <label class="block text-lg font-bold mb-2">1. 選擇考試科目 (數字代表考試順序)</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <!-- 選項 1: 國語 -->
+                        <label class="flex items-center space-x-2 cursor-pointer p-2 border rounded hover:bg-gray-50 select-none">
+                            <input type="checkbox" name="subject" value="國語" class="hidden">
+                            <div class="order-box"></div>
+                            <span class="text-xl">國語</span>
+                        </label>
+                        <!-- 選項 2: 數學 -->
+                        <label class="flex items-center space-x-2 cursor-pointer p-2 border rounded hover:bg-gray-50 select-none">
+                            <input type="checkbox" name="subject" value="數學" class="hidden">
+                            <div class="order-box"></div>
+                            <span class="text-xl">數學</span>
+                        </label>
+                        <!-- 選項 3: 自然 -->
+                        <label class="flex items-center space-x-2 cursor-pointer p-2 border rounded hover:bg-gray-50 select-none">
+                            <input type="checkbox" name="subject" value="自然" class="hidden">
+                            <div class="order-box"></div>
+                            <span class="text-xl">自然</span>
+                        </label>
+                        <!-- 選項 4: 社會 -->
+                        <label class="flex items-center space-x-2 cursor-pointer p-2 border rounded hover:bg-gray-50 select-none">
+                            <input type="checkbox" name="subject" value="社會" class="hidden">
+                            <div class="order-box"></div>
+                            <span class="text-xl">社會</span>
+                        </label>
+                        <!-- 選項 5: 英文 -->
+                        <label class="flex items-center space-x-2 cursor-pointer p-2 border rounded hover:bg-gray-50 select-none">
+                            <input type="checkbox" name="subject" value="英文" class="hidden">
+                            <div class="order-box"></div>
+                            <span class="text-xl">英文</span>
+                        </label>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-2">提示：點擊的順序即為考試順序 (1, 2, 3...)</p>
+                </div>
+
+                <!-- 2. 人數設定 -->
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-lg font-bold mb-2">2. 應到人數</label>
+                        <select id="expected-count" class="w-full p-2 border rounded text-lg">
+                            <!-- JS 生成 1-10 -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-lg font-bold mb-2">3. 實到人數</label>
+                        <select id="actual-count" class="w-full p-2 border rounded text-lg">
+                            <!-- JS 生成 1-10 -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 預覽缺考 -->
+                <div class="bg-gray-100 p-3 rounded text-center">
+                    <span class="text-lg">缺考人數將自動計算： <span id="absent-preview" class="font-bold text-red-600">0</span> 人</span>
+                </div>
+
+                <button type="submit" class="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 px-4 rounded-lg text-xl transition transform hover:scale-105">
+                    開始考試監控 <i class="fas fa-play ml-2"></i>
+                </button>
+            </form>
+        </div>
+
+        <!-- 第二頁：黑板儀表板 (初始隱藏) -->
+        <div id="monitor-screen" class="blackboard hidden">
+            
+            <!-- 第一列：考程 + 時間 (高35%) -->
+            <div class="row-container row-top">
+                <!-- A區：考試科目與時間 (窄 40%) -->
+                <div class="area-a chalk-border p-4">
+                    <div id="schedule-single-container">
+                        <div id="sched-subject" class="current-subject">準備中</div>
+                        <div id="sched-time" class="current-time">--:--</div>
+                    </div>
+                </div>
+
+                <!-- B區：現在時間 (寬 60%) -->
+                <div class="area-b chalk-border p-2 items-center justify-center">
+                    <div style="font-size: 2.5vh" class="mb-0 opacity-80">現在時間</div>
+                    <div id="digital-clock" class="font-bold tracking-widest highlight-text" style="font-family: monospace;">
+                        00:00:00
+                    </div>
+                </div>
+            </div>
+
+            <!-- 第二列：人數 + 注意事項 (高47%) -->
+            <div class="row-container row-middle">
+                <!-- C區：人數統計 (寬 55%) -->
+                <div class="area-c chalk-border p-2 justify-center">
+                    <h2 class="font-bold border-b-2 border-dashed border-white/30 pb-1 mb-2">
+                        <i class="fas fa-users mr-2"></i>人數統計
+                    </h2>
+                    <div class="grid grid-cols-3 gap-2 text-center h-full items-center pb-2">
+                        <!-- 應到 -->
+                        <div class="stat-group">
+                            <span class="stat-label">應到</span>
+                            <span class="stat-number font-black text-white" id="disp-expected">?</span>
+                        </div>
+                        <!-- 實到 -->
+                        <div class="stat-group border-l border-r border-white/20">
+                            <span class="stat-label">實到</span>
+                            <span class="stat-number font-black text-yellow-300" id="disp-actual">?</span>
+                        </div>
+                        <!-- 缺考 -->
+                        <div class="stat-group">
+                            <span class="stat-label">缺考</span>
+                            <span class="stat-number font-black text-pink-400" id="disp-absent">?</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- D區：提醒事項 (寬 45%) -->
+                <div class="area-d chalk-border p-2 relative">
+                    <h2 class="font-bold border-b-2 border-dashed border-white/30 pb-1 mb-2 text-pink-300">
+                        <i class="fas fa-bullhorn mr-2"></i>考生注意
+                    </h2>
+                    <div class="flex-1 flex items-center justify-center text-center px-4 w-full overflow-hidden">
+                        <p id="reminder-text" class="font-bold transition-opacity duration-500 opacity-100 w-full break-words">
+                            準備考試...
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 第三列：烏龜 (高18%) -->
+            <div class="row-container row-bottom">
+                <div class="area-e chalk-border px-8 py-1 relative flex flex-col justify-center">
+                    <!-- 標題 -->
+                    <div class="absolute top-1 left-4 text-white/70" style="font-size: 2vh;">
+                        <i class="fas fa-stopwatch mr-2"></i>
+                        <span id="current-exam-status" class="ml-2 text-yellow-300">休息時間</span>
+                    </div>
+
+                    <!-- 賽道容器 -->
+                    <div class="relative w-full h-10 mt-4">
+                        <!-- 起點線 -->
+                        <div class="absolute left-0 top-0 bottom-0 w-1 bg-white/50 flex flex-col items-center justify-end">
+                            <span class="text-xs mb-[-18px]">Start</span>
+                        </div>
+                        
+                        <!-- 跑道線 -->
+                        <div class="absolute top-3/4 left-0 right-0 border-b-4 border-dashed border-white/40"></div>
+
+                        <!-- 終點線與旗子 -->
+                        <div class="absolute right-0 top-0 bottom-0 w-1 bg-white/50 flex flex-col items-center justify-end">
+                            <i class="fas fa-flag text-red-500 text-2xl absolute -top-5 animate-pulse"></i>
+                            <span class="text-xs mb-[-18px]">Finish</span>
+                        </div>
+
+                        <!-- 烏龜 (SVG) -->
+                        <div id="turtle" class="turtle-wrapper" style="left: 0%;">
+                            <svg viewBox="0 0 100 80" width="100%" height="100%" style="filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.4));">
+                                <!-- 身體/腳 -->
+                                <circle cx="30" cy="65" r="8" fill="#8BC34A" />
+                                <circle cx="70" cy="65" r="8" fill="#8BC34A" />
+                                <ellipse cx="50" cy="60" rx="35" ry="12" fill="#8BC34A" />
+                                <!-- 尾巴 -->
+                                <path d="M15,55 Q5,60 15,65" fill="#8BC34A" stroke="#558B2F" stroke-width="2" />
+                                <!-- 龜殼 -->
+                                <path d="M20,55 Q20,15 50,15 Q80,15 80,55 Z" fill="#66BB6A" stroke="#33691E" stroke-width="3"/>
+                                <!-- 龜殼花紋 -->
+                                <circle cx="50" cy="35" r="8" fill="#4CAF50" opacity="0.6"/>
+                                <circle cx="35" cy="48" r="6" fill="#4CAF50" opacity="0.6"/>
+                                <circle cx="65" cy="48" r="6" fill="#4CAF50" opacity="0.6"/>
+                                <!-- 頭部 -->
+                                <circle cx="88" cy="40" r="14" fill="#8BC34A" stroke="#33691E" stroke-width="2"/>
+                                <!-- 眼睛 -->
+                                <ellipse cx="90" cy="36" rx="3" ry="4" fill="black"/>
+                                <circle cx="91" cy="35" r="1" fill="white"/>
+                                <!-- 腮紅 -->
+                                <circle cx="82" cy="42" r="2.5" fill="#F48FB1" opacity="0.6"/>
+                                <!-- 嘴巴 -->
+                                <path d="M92,45 Q88,48 84,44" fill="none" stroke="#33691E" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- 資料與狀態 ---
+        const setupScreen = document.getElementById('setup-screen');
+        const monitorScreen = document.getElementById('monitor-screen');
+        const form = document.getElementById('exam-form');
+        const expectedSel = document.getElementById('expected-count');
+        const actualSel = document.getElementById('actual-count');
+        const absentPrev = document.getElementById('absent-preview');
+        
+        // 考程顯示元素
+        const schedSubjectEl = document.getElementById('sched-subject');
+        const schedTimeEl = document.getElementById('sched-time');
+
+        // 固定時段 (格式: HH:mm)
+        const TIME_SLOTS = [
+            { start: "08:40", end: "09:20" }, 
+            { start: "09:35", end: "10:15" }, 
+            { start: "10:30", end: "11:00" }, 
+            { start: "11:20", end: "12:00" }, 
+            { start: "13:30", end: "14:10" }  
+        ];
+
+        // 提醒事項
+        const REMINDERS = [
+            "拿到考卷先寫名字 ✍️",
+            "桌上只有鉛筆、橡皮擦、考卷 ✏️",
+            "不會的題目先跳過 🤔",
+            "寫完一定要再檢查一遍看看有無沒寫 👀",
+            "有問題請舉手 🙋‍♂️",
+            "不要看別人，不要唱歌和製造聲音 🤫"
+        ];
+
+        let examConfig = {
+            subjects: [],
+            schedule: [],
+            expected: 0,
+            actual: 0,
+            absent: 0
+        };
+
+        // --- 選擇順序邏輯 ---
+        // 儲存已選科目的陣列，依序放入
+        let selectedSubjectsOrder = [];
+
+        // 綁定 checkbox 事件
+        const subjectInputs = document.querySelectorAll('input[name="subject"]');
+        subjectInputs.forEach(input => {
+            input.addEventListener('change', function(e) {
+                const val = e.target.value;
+                if(e.target.checked) {
+                    // 新增選擇
+                    selectedSubjectsOrder.push(val);
+                } else {
+                    // 取消選擇 (過濾掉該值)
+                    selectedSubjectsOrder = selectedSubjectsOrder.filter(item => item !== val);
+                }
+                updateSubjectUI();
+            });
+        });
+
+        // 更新選擇框 UI (顯示 1, 2, 3...)
+        function updateSubjectUI() {
+            subjectInputs.forEach(input => {
+                const val = input.value;
+                const orderIndex = selectedSubjectsOrder.indexOf(val);
+                const orderBox = input.nextElementSibling; // div.order-box
+                
+                if (orderIndex > -1) {
+                    // 已選取，顯示序號 (index + 1)
+                    orderBox.textContent = orderIndex + 1;
+                    orderBox.classList.add('active');
+                    // 確保 input 是 checked (防呆)
+                    input.checked = true; 
+                } else {
+                    // 未選取
+                    orderBox.textContent = '';
+                    orderBox.classList.remove('active');
+                    input.checked = false;
+                }
+            });
+        }
+
+        // --- 初始化設定頁面 ---
+        function initSetup() {
+            for(let i=1; i<=10; i++) {
+                let opt1 = new Option(i + " 人", i);
+                let opt2 = new Option(i + " 人", i);
+                expectedSel.add(opt1);
+                actualSel.add(opt2);
+            }
+            expectedSel.value = 10;
+            actualSel.value = 10;
+            updateAbsent();
+        }
+
+        function updateAbsent() {
+            let exp = parseInt(expectedSel.value);
+            let act = parseInt(actualSel.value);
+            
+            if(act > exp) {
+                actualSel.value = exp;
+                act = exp;
+            }
+
+            let abs = exp - act;
+            absentPrev.innerText = abs;
+            return { exp, act, abs };
+        }
+
+        expectedSel.addEventListener('change', updateAbsent);
+        actualSel.addEventListener('change', updateAbsent);
+
+        // --- 表單提交 ---
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            // 使用 selectedSubjectsOrder (點擊順序) 來排考程
+            if (selectedSubjectsOrder.length === 0) {
+                alert("請至少選擇一個考試科目！");
+                return;
+            }
+
+            examConfig.subjects = [];
+            examConfig.schedule = [];
+            
+            // 依序將科目填入時間表
+            selectedSubjectsOrder.forEach((subjectName, index) => {
+                if (index < TIME_SLOTS.length) {
+                    examConfig.subjects.push(subjectName);
+                    examConfig.schedule.push({
+                        subject: subjectName,
+                        start: TIME_SLOTS[index].start,
+                        end: TIME_SLOTS[index].end
+                    });
+                }
+            });
+
+            const counts = updateAbsent();
+            examConfig.expected = counts.exp;
+            examConfig.actual = counts.act;
+            examConfig.absent = counts.abs;
+
+            setupScreen.classList.add('hidden');
+            monitorScreen.classList.remove('hidden');
+            monitorScreen.classList.add('flex');
+
+            startMonitor();
+        });
+
+        initSetup();
+
+
+        // --- 儀表板邏輯 ---
+
+        function startMonitor() {
+            renderStaticInfo(); // 填入靜態資料(人數)
+            updateClock(); 
+            setInterval(updateClock, 1000);
+            startReminderRotation();
+            checkExamStatus();
+            setInterval(checkExamStatus, 1000);
+        }
+
+        function renderStaticInfo() {
+            document.getElementById('disp-expected').innerText = examConfig.expected;
+            document.getElementById('disp-actual').innerText = examConfig.actual;
+            document.getElementById('disp-absent').innerText = examConfig.absent;
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-GB', { hour12: false });
+            document.getElementById('digital-clock').innerText = timeStr;
+        }
+
+        let reminderIndex = 0;
+        function startReminderRotation() {
+            const textEl = document.getElementById('reminder-text');
+            
+            const showReminder = () => {
+                textEl.style.opacity = 0;
+                setTimeout(() => {
+                    textEl.innerText = REMINDERS[reminderIndex];
+                    reminderIndex = (reminderIndex + 1) % REMINDERS.length;
+                    textEl.style.opacity = 1;
+                }, 500);
+            };
+
+            showReminder();
+            setInterval(showReminder, 20000);
+        }
+
+        // --- 核心邏輯: 烏龜 + 考程顯示更新 ---
+        function checkExamStatus() {
+            const now = new Date();
+            // 測試用：解除註解可測試特定時間
+            // now.setHours(16, 0, 0); 
+
+            const currentTimeVal = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+
+            let activeExamIndex = -1;
+            let percent = 0;
+            let statusMsg = "休息時間";
+            
+            // 找出要顯示的科目 (當前 或 下一節)
+            let displaySubject = "";
+            let displayTime = "";
+            let foundDisplay = false;
+
+            // 1. 先找正在進行的
+            for(let i=0; i<examConfig.schedule.length; i++) {
+                const slot = examConfig.schedule[i];
+                const startParts = slot.start.split(':').map(Number);
+                const endParts = slot.end.split(':').map(Number);
+                const startSec = startParts[0] * 3600 + startParts[1] * 60;
+                const endSec = endParts[0] * 3600 + endParts[1] * 60;
+
+                // 判斷是否為考試期間
+                if (currentTimeVal >= startSec && currentTimeVal <= endSec) {
+                    activeExamIndex = i;
+                    
+                    // 計算烏龜進度
+                    const duration = endSec - startSec;
+                    const elapsed = currentTimeVal - startSec;
+                    percent = (elapsed / duration) * 100;
+                    statusMsg = `正在考試：${slot.subject}`;
+                    
+                    // 顯示設定
+                    displaySubject = slot.subject;
+                    displayTime = `${slot.start} - ${slot.end}`;
+                    foundDisplay = true;
+                    break;
+                }
+            }
+
+            // 2. 如果沒有正在進行的，找下一節還沒開始的 (當日)
+            if (!foundDisplay) {
+                for(let i=0; i<examConfig.schedule.length; i++) {
+                    const slot = examConfig.schedule[i];
+                    const startParts = slot.start.split(':').map(Number);
+                    const startSec = startParts[0] * 3600 + startParts[1] * 60;
+                    
+                    // 找到第一個時間還沒到的考試
+                    if (currentTimeVal < startSec) {
+                        displaySubject = slot.subject;
+                        displayTime = `${slot.start} - ${slot.end}`;
+                        statusMsg = `下節考試：${slot.subject}`;
+                        foundDisplay = true;
+                        break;
+                    }
+                }
+            }
+
+            // 3. (新增) 如果當天所有考試都結束，顯示第一科 (循環/隔天)
+            if (!foundDisplay && examConfig.schedule.length > 0) {
+                const nextSlot = examConfig.schedule[0];
+                displaySubject = nextSlot.subject;
+                displayTime = `${nextSlot.start} - ${nextSlot.end}`;
+                statusMsg = `下節考試：${nextSlot.subject}`;
+                foundDisplay = true;
+            }
+
+            // 更新 A區 考程顯示
+            schedSubjectEl.innerText = displaySubject;
+            schedTimeEl.innerText = displayTime;
+            
+            // 更新 E區 狀態文字
+            document.getElementById('current-exam-status').innerText = statusMsg;
+
+            // 更新烏龜
+            const turtle = document.getElementById('turtle');
+            
+            if (activeExamIndex !== -1) {
+                // 考試中
+                if(percent > 100) percent = 100;
+                if(percent < 0) percent = 0;
+                
+                turtle.style.left = `${percent}%`;
+                
+                if (percent >= 99.5) {
+                    turtle.classList.add('cheering');
+                } else {
+                    turtle.classList.remove('cheering');
+                }
+            } else {
+                // 非考試時間，烏龜回起點
+                turtle.style.left = '0%';
+                turtle.classList.remove('cheering');
+            }
+        }
+    </script>
+</body>
+</html>
