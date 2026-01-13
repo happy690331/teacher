@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>數學基礎計算打磚塊</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Press+Start+2P&display=swap');
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            touch-action: none;
+            background-color: #111827;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .retro-font {
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        .neon-text {
+            text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #ff00de, 0 0 30px #ff00de;
+        }
+        
+        canvas {
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+            background: radial-gradient(circle at center, #1a1a2e 0%, #000000 100%);
+        }
+
+        .modal-enter {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        .modal-enter-active {
+            opacity: 1;
+            transform: scale(1);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        
+        .settings-scroll::-webkit-scrollbar { width: 8px; }
+        .settings-scroll::-webkit-scrollbar-track { background: #1f2937; border-radius: 4px; }
+        .settings-scroll::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+
+        button {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+        }
+
+        /* Power-up visual indicators */
+        .powerup-icon {
+            animation: bounce 1s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex items-center justify-center text-white">
+
+    <!-- Game Container -->
+    <div class="relative w-full max-w-4xl h-full md:h-auto md:aspect-[4/3] bg-gray-900 rounded-xl overflow-hidden shadow-2xl border-4 border-gray-700 flex flex-col">
+        
+        <!-- HEADER / SCOREBOARD -->
+        <div class="h-12 bg-gray-800 flex justify-between items-center px-4 z-10 border-b border-gray-600 shrink-0">
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-heart text-red-500"></i>
+                    <span id="livesDisplay" class="retro-font text-yellow-400 text-sm">3</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-blue-300">LEVEL</span>
+                    <span id="levelDisplay" class="retro-font text-blue-400 text-sm">1</span>
+                </div>
+            </div>
+            
+            <div class="retro-font text-cyan-400 text-sm tracking-wider hidden sm:block">MATH BREAKOUT</div>
+            
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-400">SCORE</span>
+                <span id="scoreDisplay" class="retro-font text-green-400 text-sm">000</span>
+            </div>
+        </div>
+
+        <!-- CANVAS LAYER -->
+        <div class="relative flex-1 w-full bg-black overflow-hidden">
+            <canvas id="gameCanvas" class="block w-full h-full"></canvas>
+            
+            <!-- Message Overlay (Level Up / Penalty) -->
+            <div id="msgOverlay" class="hidden absolute top-10 left-1/2 transform -translate-x-1/2 bg-black/70 px-6 py-2 rounded-full border border-white/20 z-20 pointer-events-none">
+                <span id="msgText" class="retro-font text-yellow-400 text-sm">LEVEL UP!</span>
+            </div>
+
+            <!-- START MENU SCREEN -->
+            <div id="startScreen" class="absolute inset-0 bg-gray-900/95 z-30 flex flex-col items-center justify-center p-4 space-y-4">
+                <h1 class="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 retro-font text-center leading-relaxed mb-2">
+                    數學基礎計算<br>打磚塊
+                </h1>
+                
+                <div class="bg-gray-800 p-4 rounded-lg border border-gray-600 w-full max-w-2xl shadow-lg flex flex-col max-h-[60vh] overflow-hidden">
+                    <h2 class="text-lg font-bold text-cyan-300 mb-2 border-b border-gray-700 pb-2 flex justify-between items-center shrink-0">
+                        <span><i class="fas fa-calculator mr-2"></i>題型選擇 (點選啟用)</span>
+                        <button id="selectAllBtn" class="text-xs bg-gray-700 px-3 py-1 rounded hover:bg-gray-600 text-white border border-gray-500 transition-colors">切換全選</button>
+                    </h2>
+                    
+                    <div class="overflow-y-auto settings-scroll pr-2">
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2 w-full">
+                            
+                            <!-- Option 1 -->
+                            <label class="cursor-pointer relative group">
+                                <input type="checkbox" name="mathType" value="add_1_1" checked class="peer sr-only">
+                                <div class="w-full p-3 text-sm rounded border border-gray-600 bg-gray-700 text-gray-300 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-400 transition-all text-center flex items-center justify-center shadow-sm hover:bg-gray-600 font-bold">
+                                    一位數 + 一位數
+                                </div>
+                            </label>
+
+                            <!-- Option 2 -->
+                            <label class="cursor-pointer relative group">
+                                <input type="checkbox" name="mathType" value="add_2_1" checked class="peer sr-only">
+                                <div class="w-full p-3 text-sm rounded border border-gray-600 bg-gray-700 text-gray-300 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-400 transition-all text-center flex items-center justify-center shadow-sm hover:bg-gray-600 font-bold">
+                                    二位數 + 一位數
+                                </div>
+                            </label>
+
+                            <!-- Option 3 -->
+                            <label class="cursor-pointer relative group">
+                                <input type="checkbox" name="mathType" value="sub_1_1" checked class="peer sr-only">
+                                <div class="w-full p-3 text-sm rounded border border-gray-600 bg-gray-700 text-gray-300 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-400 transition-all text-center flex items-center justify-center shadow-sm hover:bg-gray-600 font-bold">
+                                    一位數 - 一位數
+                                </div>
+                            </label>
+
+                            <!-- Option 4 -->
+                            <label class="cursor-pointer relative group">
+                                <input type="checkbox" name="mathType" value="sub_2_1" checked class="peer sr-only">
+                                <div class="w-full p-3 text-sm rounded border border-gray-600 bg-gray-700 text-gray-300 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-400 transition-all text-center flex items-center justify-center shadow-sm hover:bg-gray-600 font-bold">
+                                    二位數 - 一位數
+                                </div>
+                            </label>
+
+                            <!-- Option 5 -->
+                            <label class="cursor-pointer relative group">
+                                <input type="checkbox" name="mathType" value="mul_9_9" checked class="peer sr-only">
+                                <div class="w-full p-3 text-sm rounded border border-gray-600 bg-gray-700 text-gray-300 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-400 transition-all text-center flex items-center justify-center shadow-sm hover:bg-gray-600 font-bold">
+                                    九九乘法
+                                </div>
+                            </label>
+
+                             <!-- Option 6 -->
+                             <label class="cursor-pointer relative group">
+                                <input type="checkbox" name="mathType" value="div_2_1" checked class="peer sr-only">
+                                <div class="w-full p-3 text-sm rounded border border-gray-600 bg-gray-700 text-gray-300 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-400 transition-all text-center flex items-center justify-center shadow-sm hover:bg-gray-600 font-bold">
+                                    二位數 ÷ 一位數<br><span class="text-xs font-normal opacity-80">(整除)</span>
+                                </div>
+                            </label>
+
+                        </div>
+                    </div>
+                    
+                    <div id="errorMsg" class="text-red-400 text-xs text-center mt-3 hidden bg-red-900/50 p-1 rounded">請至少選擇一種題型</div>
+                </div>
+
+                <button id="startBtn" class="group relative px-10 py-3 bg-purple-600 hover:bg-purple-500 rounded-full font-bold text-lg shadow-[0_0_15px_rgba(168,85,247,0.5)] transition-all transform hover:scale-105 active:scale-95 shrink-0 mt-2">
+                    <span class="retro-font">開始遊戲</span>
+                    <div class="absolute inset-0 rounded-full bg-white opacity-0 group-hover:opacity-20 transition-opacity"></div>
+                </button>
+            </div>
+
+            <!-- MATH QUESTION MODAL -->
+            <div id="mathModal" class="hidden absolute inset-0 bg-black/85 z-40 flex items-center justify-center p-4 backdrop-blur-sm">
+                <div class="bg-gray-800 border-2 border-yellow-500 rounded-xl p-6 w-full max-w-sm shadow-2xl transform transition-all scale-100 relative">
+                    <div class="absolute -top-3 -left-3 bg-yellow-500 text-black font-bold p-1 px-3 rounded shadow-lg text-sm transform -rotate-6">知識節點!</div>
+                    
+                    <div class="text-center space-y-4">
+                        <p class="text-gray-400 text-sm">回答正確: +5分 & 消磚<br>回答錯誤: <span class="text-red-400">-3分 & 磚塊+5</span></p>
+                        
+                        <div class="bg-gray-900 p-6 rounded-lg border border-gray-700 shadow-inner">
+                            <span id="questionText" class="text-3xl md:text-4xl font-bold text-white font-mono tracking-widest">
+                                15 + 8 = ?
+                            </span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 mt-4" id="answerOptions">
+                            <!-- Options generated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GAME OVER / WIN MODAL -->
+            <div id="endScreen" class="hidden absolute inset-0 bg-black/90 z-50 flex flex-col items-center justify-center text-center p-6">
+                <h2 id="endTitle" class="text-4xl font-bold retro-font mb-4 text-red-500 neon-text">GAME OVER</h2>
+                <p class="text-gray-300 mb-6 text-xl">最終得分: <span id="finalScore" class="text-yellow-400 font-bold">0</span></p>
+                <button id="restartBtn" class="px-6 py-2 bg-white text-black font-bold rounded hover:bg-gray-200 transition retro-font">回主選單</button>
+            </div>
+            
+             <!-- PAUSE OVERLAY -->
+            <div id="pauseOverlay" class="hidden absolute inset-0 bg-black/60 z-35 flex items-center justify-center backdrop-blur-sm">
+                <h2 class="text-4xl font-bold retro-font text-white tracking-widest animate-pulse">PAUSED</h2>
+            </div>
+        </div>
+
+        <!-- FOOTER CONTROLS -->
+        <div id="gameFooter" class="hidden h-24 bg-gray-800 border-t border-gray-600 shrink-0 flex items-center justify-between px-3 py-2 z-10 gap-3">
+            <button id="btnLeft" class="h-full flex-1 bg-gray-700/80 hover:bg-gray-600 active:bg-purple-600 rounded-xl border-2 border-gray-600 shadow-lg active:shadow-inner transition-all flex items-center justify-center group touch-manipulation">
+                <i class="fas fa-arrow-left text-3xl text-cyan-400 group-active:text-white pointer-events-none"></i>
+            </button>
+            <div class="flex flex-col h-full gap-2 w-20 shrink-0">
+                <button id="pauseBtn" class="flex-1 bg-yellow-900/40 border border-yellow-600/50 hover:bg-yellow-900/60 rounded-lg flex items-center justify-center active:scale-95 transition">
+                    <i id="pauseIcon" class="fas fa-pause text-yellow-400 text-lg"></i>
+                </button>
+                <button id="menuBtn" class="flex-1 bg-red-900/40 border border-red-600/50 hover:bg-red-900/60 rounded-lg flex items-center justify-center active:scale-95 transition">
+                    <i class="fas fa-home text-red-400 text-lg"></i>
+                </button>
+            </div>
+            <button id="btnRight" class="h-full flex-1 bg-gray-700/80 hover:bg-gray-600 active:bg-purple-600 rounded-xl border-2 border-gray-600 shadow-lg active:shadow-inner transition-all flex items-center justify-center group touch-manipulation">
+                <i class="fas fa-arrow-right text-3xl text-cyan-400 group-active:text-white pointer-events-none"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /** STATE & CONFIG */
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // DOM Elements
+        const screens = {
+            start: document.getElementById('startScreen'),
+            gameFooter: document.getElementById('gameFooter'),
+            end: document.getElementById('endScreen'),
+            modal: document.getElementById('mathModal'),
+            pause: document.getElementById('pauseOverlay'),
+            overlay: document.getElementById('msgOverlay')
+        };
+        const display = {
+            score: document.getElementById('scoreDisplay'),
+            lives: document.getElementById('livesDisplay'),
+            level: document.getElementById('levelDisplay'),
+            question: document.getElementById('questionText'),
+            options: document.getElementById('answerOptions'),
+            msg: document.getElementById('msgText'),
+            error: document.getElementById('errorMsg')
+        };
+
+        let isGameRunning = false;
+        let isPaused = false;
+        
+        // Game Progression
+        let score = 0;
+        let lives = 3;
+        let level = 1;
+        let selectedTypes = [];
+        
+        // Game Entities
+        let balls = [];
+        let bricks = [];
+        let paddle = { x: 0, width: 0, height: 15, baseWidth: 0 };
+        
+        // Power-up Timers (frames)
+        let paddleTimer = 0;
+        let bigBallTimer = 0;
+
+        // Constants
+        const BASE_BALL_SPEED = 4;
+        const BASE_BALL_RADIUS = 5;
+        const BIG_BALL_RADIUS = 10;
+        const BRICK_ROW_COUNT = 6;
+        const BRICK_COLUMN_COUNT = 14; 
+        const BRICK_PADDING = 4;
+        const BRICK_OFFSET_TOP = 50;
+        const BRICK_OFFSET_LEFT = 10;
+        const POWERUP_DURATION = 600; 
+
+        // Control Flags
+        let rightPressed = false;
+        let leftPressed = false;
+
+        // Question State
+        let currentQuestion = null;
+        let targetBrick = null;
+
+        /** INITIALIZATION */
+        function initGame(resetLevel = true) {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            
+            if (resetLevel) {
+                score = 0;
+                lives = 3;
+                level = 1;
+                selectedTypes = getSelectedTypes();
+                if(selectedTypes.length === 0) selectedTypes = ['add_1_1']; // Safety
+            }
+            
+            paddle.baseWidth = canvas.width * 0.2;
+            paddle.width = paddle.baseWidth;
+            paddle.x = (canvas.width - paddle.width) / 2;
+            
+            resetBalls();
+            initBricks();
+            updateUI();
+            
+            isPaused = false;
+            paddleTimer = 0;
+            bigBallTimer = 0;
+        }
+
+        function getSelectedTypes() {
+            const checkboxes = document.querySelectorAll('input[name="mathType"]:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        function resetBalls() {
+            balls = [{
+                x: canvas.width / 2,
+                y: canvas.height - 40,
+                dx: (Math.random() * 4 - 2) * 1.2 || 2,
+                dy: -BASE_BALL_SPEED,
+                radius: BASE_BALL_RADIUS
+            }];
+        }
+
+        function initBricks() {
+            bricks = [];
+            const brickWidth = (canvas.width - (BRICK_OFFSET_LEFT * 2) - (BRICK_PADDING * (BRICK_COLUMN_COUNT - 1))) / BRICK_COLUMN_COUNT;
+            const brickHeight = 18;
+
+            let totalBricks = BRICK_ROW_COUNT * BRICK_COLUMN_COUNT;
+            let indices = Array.from({length: totalBricks}, (_, i) => i);
+            
+            // Shuffle
+            for (let i = indices.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [indices[i], indices[j]] = [indices[j], indices[i]];
+            }
+
+            // Determine Count based on Level
+            const knowledgeCount = 6 + (level - 1) * 5;
+            const powerUpCount = 6; 
+
+            const knowledgeIndices = new Set(indices.slice(0, knowledgeCount));
+            const powerUpIndices = new Set(indices.slice(knowledgeCount, knowledgeCount + powerUpCount));
+            
+            // Assign specific powerups
+            let pUpTypes = ['multiball', 'multiball', 'longpaddle', 'longpaddle', 'bigball', 'bigball'];
+            let pUpMap = {};
+            let pIdx = 0;
+            indices.slice(knowledgeCount, knowledgeCount + powerUpCount).forEach(idx => {
+                pUpMap[idx] = pUpTypes[pIdx++];
+            });
+
+            let count = 0;
+            for(let c=0; c<BRICK_COLUMN_COUNT; c++) {
+                bricks[c] = [];
+                for(let r=0; r<BRICK_ROW_COUNT; r++) {
+                    const isKnowledge = knowledgeIndices.has(count);
+                    const powerUpType = powerUpIndices.has(count) ? pUpMap[count] : null;
+                    
+                    // Colors
+                    let color = `hsl(${r * 40}, 70%, 50%)`;
+                    if(isKnowledge) color = "#FFD700"; // Gold
+                    else if(powerUpType === 'multiball') color = "#FF00FF"; // Magenta
+                    else if(powerUpType === 'longpaddle') color = "#00FFFF"; // Cyan
+                    else if(powerUpType === 'bigball') color = "#FFA500"; // Orange
+
+                    bricks[c][r] = { 
+                        x: 0, y: 0, 
+                        status: 1, 
+                        isKnowledge: isKnowledge,
+                        powerUp: powerUpType,
+                        color: color,
+                        width: brickWidth,
+                        height: brickHeight
+                    };
+                    count++;
+                }
+            }
+        }
+
+        /** LOGIC & PHYSICS */
+        function update() {
+            if(!isGameRunning) return;
+            if(isPaused) { requestAnimationFrame(update); return; }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Powerup Timers
+            if(paddleTimer > 0) {
+                paddleTimer--;
+                if(paddleTimer === 0) paddle.width = paddle.baseWidth;
+            }
+            if(bigBallTimer > 0) {
+                bigBallTimer--;
+                if(bigBallTimer === 0) balls.forEach(b => b.radius = BASE_BALL_RADIUS);
+            }
+
+            drawBricks();
+            drawPaddle();
+            drawBalls();
+            drawParticles();
+            
+            movePaddle();
+            moveBalls();
+            collisionDetection();
+
+            requestAnimationFrame(update);
+        }
+
+        function movePaddle() {
+            if(rightPressed && paddle.x < canvas.width - paddle.width) paddle.x += 8;
+            else if(leftPressed && paddle.x > 0) paddle.x -= 8;
+        }
+
+        function moveBalls() {
+            for(let i = balls.length - 1; i >= 0; i--) {
+                let b = balls[i];
+                b.x += b.dx;
+                b.y += b.dy;
+
+                // Wall Collision
+                if(b.x + b.dx > canvas.width - b.radius || b.x + b.dx < b.radius) b.dx = -b.dx;
+                if(b.y + b.dy < b.radius) b.dy = -b.dy;
+                
+                // Paddle Collision
+                else if(b.y + b.dy > canvas.height - b.radius - paddle.height + 5) {
+                    if(b.x > paddle.x && b.x < paddle.x + paddle.width) {
+                        b.dy = -Math.abs(b.dy); // Force up
+                        let hitPoint = b.x - (paddle.x + paddle.width/2);
+                        b.dx = hitPoint * 0.15; 
+                    } else if(b.y + b.dy > canvas.height) {
+                        // Ball lost
+                        balls.splice(i, 1);
+                    }
+                }
+            }
+
+            if(balls.length === 0) {
+                lives--;
+                updateUI();
+                if(lives <= 0) gameOver(false);
+                else {
+                    resetBalls();
+                    paddleTimer = 0; 
+                    bigBallTimer = 0;
+                    paddle.width = paddle.baseWidth;
+                }
+            }
+        }
+
+        function collisionDetection() {
+            for(let c=0; c<BRICK_COLUMN_COUNT; c++) {
+                for(let r=0; r<BRICK_ROW_COUNT; r++) {
+                    let b = bricks[c][r];
+                    if(b.status === 1) {
+                        balls.forEach(ball => {
+                            if(ball.x > b.x && ball.x < b.x + b.width && ball.y > b.y && ball.y < b.y + b.height) {
+                                ball.dy = -ball.dy;
+                                
+                                if(b.isKnowledge) {
+                                    triggerQuestion(b);
+                                } else {
+                                    b.status = 0;
+                                    score++;
+                                    createParticles(b.x + b.width/2, b.y + b.height/2, b.color);
+                                    
+                                    if(b.powerUp) activatePowerUp(b.powerUp);
+                                    updateUI();
+                                    checkWin();
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
+        function activatePowerUp(type) {
+            let msg = "";
+            if(type === 'multiball') {
+                msg = "三球模式!";
+                if(balls.length < 10) {
+                    let base = balls[0];
+                    balls.push({ ...base, dx: -2, dy: -4 });
+                    balls.push({ ...base, dx: 2, dy: -4 });
+                }
+            } else if(type === 'longpaddle') {
+                msg = "擋板延長!";
+                paddle.width = paddle.baseWidth * 2;
+                paddleTimer = POWERUP_DURATION;
+            } else if(type === 'bigball') {
+                msg = "巨球模式!";
+                balls.forEach(b => b.radius = BIG_BALL_RADIUS);
+                bigBallTimer = POWERUP_DURATION;
+            }
+            showMsg(msg, "#fff");
+        }
+
+        function checkWin() {
+            let activeBricks = 0;
+            bricks.forEach(col => col.forEach(b => { if(b.status === 1) activeBricks++; }));
+            if(activeBricks === 0) {
+                if(level >= 3) {
+                    gameOver(true);
+                } else {
+                    level++;
+                    showMsg("下一關!", "#FFD700");
+                    updateUI();
+                    setTimeout(() => {
+                        initGame(false); 
+                    }, 1000);
+                }
+            }
+        }
+
+        function addPenaltyBricks() {
+            let restored = 0;
+            let candidates = [];
+            for(let c=0; c<BRICK_COLUMN_COUNT; c++) {
+                for(let r=0; r<BRICK_ROW_COUNT; r++) {
+                    if(bricks[c][r].status === 0) candidates.push(bricks[c][r]);
+                }
+            }
+            
+            for (let i = candidates.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+            }
+            
+            candidates.slice(0, 5).forEach(b => {
+                b.status = 1;
+                b.isKnowledge = false;
+                b.powerUp = null;
+                b.color = "#666"; 
+                createParticles(b.x + b.width/2, b.y + b.height/2, "#fff"); 
+            });
+        }
+
+        /** MATH SYSTEM */
+        function triggerQuestion(brick) {
+            isPaused = true;
+            targetBrick = brick;
+            generateAndShowQuestion();
+        }
+
+        function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+        function generateMathProblem() {
+            const type = selectedTypes[Math.floor(Math.random() * selectedTypes.length)];
+            let num1, num2, answer, text;
+            const generateValid = (fn) => { let res; do { res = fn(); } while(!res); return res; };
+
+            switch(type) {
+                case 'add_1_1': 
+                    num1=getRandomInt(1,9); num2=getRandomInt(1,9); 
+                    text=`${num1} + ${num2} = ?`; answer=num1+num2; 
+                    break;
+                case 'add_2_1': 
+                    num1=getRandomInt(10,99); num2=getRandomInt(1,9); 
+                    text=`${num1} + ${num2} = ?`; answer=num1+num2; 
+                    break;
+                case 'sub_1_1': 
+                    num1=getRandomInt(1,9); num2=getRandomInt(1,num1); 
+                    text=`${num1} - ${num2} = ?`; answer=num1-num2; 
+                    break;
+                case 'sub_2_1': 
+                    // 2-digit minus 1-digit, can be anything
+                    num1=getRandomInt(10,99); num2=getRandomInt(1,9);
+                    text=`${num1} - ${num2} = ?`; answer=num1-num2; 
+                    break;
+                case 'mul_9_9': 
+                    num1=getRandomInt(1,9); num2=getRandomInt(1,9); 
+                    text=`${num1} × ${num2} = ?`; answer=num1*num2; 
+                    break;
+                case 'div_2_1': 
+                    // No remainder
+                    var r=generateValid(()=>{
+                        let d=getRandomInt(2,9); // divisor
+                        let q=getRandomInt(2,49); // quotient (keep result sensible)
+                        let div=d*q; 
+                        return (div>=10&&div<=99)?{div,d,q}:null;
+                    });
+                    num1=r.div; num2=r.d; answer=r.q; 
+                    text=`${num1} ÷ ${num2} = ?`; 
+                    break;
+                default: 
+                    num1=getRandomInt(1,9); num2=getRandomInt(1,9); 
+                    text=`${num1} + ${num2} = ?`; answer=num1+num2;
+            }
+            return { text, answer };
+        }
+
+        function generateOptions(ans) {
+            let s = new Set([ans]);
+            while(s.size < 4) {
+                let off = Math.floor(Math.random()*10)-5 || 1;
+                let w = ans + off;
+                if(w >= 0 && w !== ans) s.add(w);
+            }
+            return Array.from(s).sort(()=>Math.random()-0.5);
+        }
+
+        function generateAndShowQuestion() {
+            currentQuestion = generateMathProblem();
+            display.question.textContent = currentQuestion.text;
+            display.options.innerHTML = '';
+            
+            const options = generateOptions(currentQuestion.answer);
+            
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "bg-gray-700 hover:bg-purple-600 text-white font-bold py-3 px-2 rounded transition border border-gray-600 text-xl flex items-center justify-center h-16 w-full shadow-md active:scale-95";
+                btn.textContent = opt;
+                btn.onclick = () => handleAnswer(opt);
+                display.options.appendChild(btn);
+            });
+
+            screens.modal.classList.remove('hidden');
+            screens.modal.querySelector('div').classList.add('modal-enter');
+            setTimeout(() => screens.modal.querySelector('div').classList.add('modal-enter-active'), 10);
+        }
+
+        function handleAnswer(selected) {
+            if(selected === currentQuestion.answer) {
+                // Correct
+                score += 5;
+                targetBrick.status = 0;
+                createParticles(targetBrick.x + targetBrick.width/2, targetBrick.y + targetBrick.height/2, "#FFD700");
+                screens.modal.classList.add('hidden');
+                isPaused = false;
+                targetBrick = null;
+                updateUI();
+            } else {
+                // Incorrect
+                score = Math.max(0, score - 3);
+                showMsg("答錯! -3分", "#EF4444");
+                addPenaltyBricks();
+                updateUI();
+                generateAndShowQuestion();
+            }
+        }
+
+        /** RENDERING */
+        function drawBalls() {
+            balls.forEach(b => {
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI*2);
+                ctx.fillStyle = "#fff";
+                ctx.fill();
+                ctx.shadowBlur = 10; ctx.shadowColor = "#fff";
+                ctx.closePath();
+                ctx.shadowBlur = 0;
+            });
+        }
+        function drawPaddle() {
+            ctx.beginPath();
+            ctx.rect(paddle.x, canvas.height - paddle.height - 5, paddle.width, paddle.height);
+            ctx.fillStyle = "#00FFFF";
+            ctx.shadowBlur = 10; ctx.shadowColor = "#00FFFF";
+            ctx.fill();
+            ctx.closePath();
+            ctx.shadowBlur = 0;
+        }
+        function drawBricks() {
+            for(let c=0; c<BRICK_COLUMN_COUNT; c++) {
+                for(let r=0; r<BRICK_ROW_COUNT; r++) {
+                    let b = bricks[c][r];
+                    if(b.status === 1) {
+                        let bx = (c * (b.width + BRICK_PADDING)) + BRICK_OFFSET_LEFT;
+                        let by = (r * (b.height + BRICK_PADDING)) + BRICK_OFFSET_TOP;
+                        b.x = bx; b.y = by;
+                        
+                        ctx.beginPath();
+                        ctx.rect(bx, by, b.width, b.height);
+                        ctx.fillStyle = b.color;
+                        ctx.fill();
+                        
+                        // Indicators
+                        ctx.fillStyle = "#000";
+                        ctx.font = "bold 10px sans-serif";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        if(b.isKnowledge) ctx.fillText("?", bx + b.width/2, by + b.height/2);
+                        else if(b.powerUp === 'multiball') ctx.fillText("x3", bx + b.width/2, by + b.height/2);
+                        else if(b.powerUp === 'longpaddle') ctx.fillText("↔", bx + b.width/2, by + b.height/2);
+                        else if(b.powerUp === 'bigball') ctx.fillText("O", bx + b.width/2, by + b.height/2);
+                        
+                        ctx.closePath();
+                    }
+                }
+            }
+        }
+        
+        /** UI & UTILS */
+        function updateUI() {
+            display.score.textContent = score.toString().padStart(3, '0');
+            display.lives.textContent = lives;
+            display.level.textContent = level;
+        }
+        
+        function showMsg(text, color) {
+            display.msg.textContent = text;
+            display.msg.style.color = color;
+            screens.overlay.classList.remove('hidden');
+            screens.overlay.classList.add('animate-bounce');
+            setTimeout(() => screens.overlay.classList.add('hidden'), 2000);
+        }
+
+        function gameOver(win) {
+            isGameRunning = false;
+            const title = document.getElementById('endTitle');
+            if (win) {
+                title.textContent = "全數通關！";
+                title.className = "text-4xl font-bold retro-font mb-4 text-green-500 neon-text";
+            } else {
+                title.textContent = "GAME OVER";
+                title.className = "text-4xl font-bold retro-font mb-4 text-red-500 neon-text";
+            }
+            document.getElementById('finalScore').textContent = score;
+            screens.end.classList.remove('hidden');
+        }
+
+        /** INPUTS */
+        const handleBtn = (dir, press) => { if(dir==='left') leftPressed=press; if(dir==='right') rightPressed=press; };
+        document.addEventListener("keydown", e => {
+            if(e.key==="Right"||e.key==="ArrowRight") rightPressed=true;
+            if(e.key==="Left"||e.key==="ArrowLeft") leftPressed=true;
+            if(e.key.toLowerCase()==="p") togglePause();
+        });
+        document.addEventListener("keyup", e => {
+            if(e.key==="Right"||e.key==="ArrowRight") rightPressed=false;
+            if(e.key==="Left"||e.key==="ArrowLeft") leftPressed=false;
+        });
+        
+        ['btnLeft', 'btnRight'].forEach(id => {
+            let el = document.getElementById(id);
+            let dir = id === 'btnLeft' ? 'left' : 'right';
+            el.addEventListener('mousedown', ()=>handleBtn(dir,true));
+            el.addEventListener('mouseup', ()=>handleBtn(dir,false));
+            el.addEventListener('touchstart', (e)=>{e.preventDefault();handleBtn(dir,true)});
+            el.addEventListener('touchend', (e)=>{e.preventDefault();handleBtn(dir,false)});
+        });
+
+        // Menu Logic
+        document.getElementById('startBtn').addEventListener('click', () => {
+            if(!document.querySelector('input[name="mathType"]:checked')) {
+                display.error.classList.remove('hidden'); return;
+            }
+            screens.start.classList.add('hidden');
+            screens.gameFooter.classList.remove('hidden');
+            setTimeout(() => { initGame(true); isGameRunning = true; update(); }, 50);
+        });
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            screens.end.classList.add('hidden');
+            screens.start.classList.remove('hidden');
+            screens.gameFooter.classList.add('hidden');
+        });
+        document.getElementById('selectAllBtn').addEventListener('click', () => {
+             const cbs = document.querySelectorAll('input[name="mathType"]');
+             const all = Array.from(cbs).every(c => c.checked);
+             cbs.forEach(c => c.checked = !all);
+        });
+        document.getElementById('pauseBtn').addEventListener('click', togglePause);
+        document.getElementById('menuBtn').addEventListener('click', () => {
+            if(confirm("回主選單? 進度將消失")) {
+                isGameRunning = false; isPaused = false;
+                screens.start.classList.remove('hidden');
+                screens.gameFooter.classList.add('hidden');
+                screens.modal.classList.add('hidden');
+                screens.pause.classList.add('hidden');
+            }
+        });
+
+        function togglePause() {
+            if(!isGameRunning) return;
+            isPaused = !isPaused;
+            screens.pause.classList.toggle('hidden', !isPaused);
+            document.getElementById('pauseIcon').className = isPaused ? "fas fa-play text-lg" : "fas fa-pause text-lg";
+        }
+
+        // Particles
+        let particles = [];
+        function createParticles(x, y, color) {
+            for(let i=0; i<8; i++) particles.push({x, y, dx:(Math.random()-.5)*4, dy:(Math.random()-.5)*4, life:1, color});
+        }
+        function drawParticles() {
+            for(let i=0; i<particles.length; i++) {
+                let p = particles[i];
+                ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
+                p.x += p.dx; p.y += p.dy; p.life -= 0.05;
+            }
+            ctx.globalAlpha = 1; particles = particles.filter(p => p.life > 0);
+        }
+
+        window.addEventListener('resize', () => {
+            if(!isGameRunning) return;
+            let oldW = canvas.width;
+            canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight;
+            paddle.x = (paddle.x / oldW) * canvas.width;
+            paddle.baseWidth = canvas.width * 0.2;
+        });
+
+    </script>
+</body>
+</html>
