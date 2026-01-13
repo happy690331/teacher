@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雙人直式除法競賽</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 使用 Inter 和 Noto Sans TC 作為主要字體 */
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #f0f4f8; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            user-select: none; 
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px; 
+            margin: 2rem auto;
+            padding: 1.5rem;
+            background-color: #ffffff;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e2e8f0;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 1.75rem; 
+            font-weight: 700;
+            color: #1e293b;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        /* 頂部計時器和統計區域佈局 */
+        .top-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .timer-control-area {
+            text-align: center;
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            border-radius: 0.75rem;
+            background-color: #f1f5f9;
+        }
+        
+        /* 計時器按鈕群組 */
+        .timer-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        /* 暫停按鈕樣式 */
+        .btn-pause {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            background-color: #f59e0b; /* 橙色 */
+            color: white;
+        }
+        .btn-pause:hover {
+            background-color: #d97706;
+            transform: translateY(-1px);
+        }
+
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            gap: 40px; 
+        }
+
+        .stat-box {
+            background-color: #e2e8f0;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #334155;
+            text-align: center;
+            flex: 1;
+        }
+
+        .stat-box.player-a-stats { border: 2px solid #3b82f6; } /* 藍色邊框 */
+        .stat-box.player-b-stats { border: 2px solid #ef4444; } /* 紅色邊框 */
+
+        .stat-box span { display: block; }
+        .stat-box .stat-value { font-size: 1.25rem; color: #1e293b; }
+
+
+        /* 雙人遊戲區 */
+        .game-area {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+        }
+
+        .player-area {
+            width: 50%; 
+            min-width: 250px; 
+            padding: 1rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            background-color: #ffffff;
+            position: relative; /* 關鍵：讓數字鍵盤相對此區塊定位 */
+        }
+
+        .player-area h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        #player-a h2 { color: #3b82f6; }
+        #player-b h2 { color: #ef4444; }
+
+
+        /* 除法結構 (保持緊湊) */
+        .division-problem {
+            display: grid;
+            grid-template-columns: 0.7fr 0.15fr 0.8fr 0.8fr; 
+            grid-template-rows: repeat(7, auto); 
+            font-size: 1.75rem; 
+            font-weight: 700;
+            color: #334155;
+            margin: 0.5rem auto 1rem;
+            width: 90%;
+            position: relative;
+            line-height: 1.2;
+        }
+
+        /* "ㄏ" 除法符號 */
+        .division-symbol {
+            position: absolute;
+            top: calc((100% / 7) * 1 + 5px); 
+            left: 25%; 
+            width: 70%; 
+            height: calc(100% / 7); 
+            border-left: 3px solid #334155;
+            border-top: 3px solid #334155;
+            border-top-left-radius: 0.5rem;
+            z-index: 0;
+        }
+
+        .cell {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+            padding: 0.125rem; 
+            min-height: 3.0rem; 
+        }
+
+        /* 數字框和橫線樣式 (保持不變) */
+        .box {
+            width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;
+            border: 2px dashed #94a3b8; border-radius: 0.375rem; cursor: pointer;
+            font-weight: 700; color: #94a3b8; transition: all 0.2s ease-in-out;
+        }
+        .static-num { font-weight: 700; color: #1e293b; }
+        .box.selected { border-color: #3b82f6; background-color: #bfdbfe; color: #1d4ed8; }
+        .box.incorrect { border-style: solid; border-color: #ef4444; background-color: #fee2e2; color: #b91c1c; }
+        .box.correct { border-style: solid; border-color: #22c55e; background-color: #dcfce7; color: #15803d; }
+        .line { grid-column: 3 / span 2; border-bottom: 3px solid #334155; margin: 0.25rem 0; z-index: 1; height: 1px; min-height: auto; }
+
+
+        /* --- 數字彈窗 (小型、相對定位) --- */
+        .popup-number-pad {
+            display: none; 
+            position: absolute; /* 相對於 .player-area 定位 */
+            /* 讓鍵盤不要超出邊界，設置 max-width/width */
+            width: 150px; 
+            background-color: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.75rem; 
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 0.4rem;
+            z-index: 60; /* 確保浮在上層 */
+        }
+
+        .popup-number-pad .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 調整為 3 欄佈局更緊湊 */
+            gap: 0.3rem; /* 縮小間隙 */
+        }
+        .num-btn {
+            padding: 0.5rem; /* 縮小按鈕高度 */
+            font-size: 1rem; /* 縮小字體 */
+            font-weight: 700; color: #334155;
+            background-color: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 0.5rem;
+            cursor: pointer; transition: all 0.2s ease-in-out;
+        }
+        .num-btn:hover { background-color: #e2e8f0; transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05); }
+
+        /* 控制按鈕 */
+        .controls {
+            display: flex;
+            flex-direction: column; 
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .btn {
+            padding: 0.6rem 1rem; font-size: 0.9rem; font-weight: 700; border-radius: 0.5rem;
+            cursor: pointer; transition: all 0.2s ease-in-out; border: none; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        .btn-check { background-color: #3b82f6; color: white; }
+        .btn-next { background-color: #6366f1; color: white; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+        
+        #message {
+            text-align: center; font-size: 1rem; font-weight: 700; margin-top: 1rem; height: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>二位數除以一位數直式除法競賽</h1>
+
+        <div class="top-area">
+            <!-- 倒數計時設定 (中央上方) -->
+            <div class="timer-control-area">
+                <label for="countdown-minutes" class="text-sm font-medium text-gray-700">設定時間 (分鐘):</label>
+                <input type="number" id="countdown-minutes" value="5" min="1" max="60" class="w-16 p-1 border border-gray-300 rounded-md text-center focus:ring-blue-500 focus:border-blue-500">
+                <div class="timer-buttons">
+                    <button id="start-timer-btn" class="text-sm px-3 py-1 bg-green-500 text-white font-bold rounded-md hover:bg-green-600 transition shadow-md">開始</button>
+                    <button id="pause-timer-btn" class="btn-pause" disabled>暫停</button>
+                </div>
+                <div class="mt-2 text-2xl font-extrabold text-gray-800" id="central-timer">05:00</div>
+            </div>
+
+            <!-- 獨立完成題數統計 (左右) -->
+            <div class="stats-row">
+                <div class="stat-box player-a-stats">
+                    <span>Player A 完成題數</span>
+                    <span class="stat-value" id="completed-count-a">0</span>
+                </div>
+                <div class="stat-box player-b-stats">
+                    <span>Player B 完成題數</span>
+                    <span class="stat-value" id="completed-count-b">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 遊戲區 - 左右並排 -->
+        <div class="game-area">
+            
+            <!-- Player A 區域 -->
+            <div class="player-area" id="player-a">
+                <h2>Player A</h2>
+                <div class="division-problem" id="problem-a">
+                    <div class="division-symbol"></div>
+                    <!-- Row 1: 商 -->
+                    <div class="cell" style="grid-row: 1; grid-column: 2;"></div>
+                    <div class="cell" style="grid-row: 1; grid-column: 3;"><div class="box" id="q1-a">?</div></div>
+                    <div class="cell" style="grid-row: 1; grid-column: 4;"><div class="box" id="q2-a">?</div></div>
+                    <!-- Row 2: 題目 -->
+                    <div class="cell static-num" style="grid-row: 2; grid-column: 1;" id="divisor-a"></div>
+                    <div class="cell" style="grid-row: 2; grid-column: 2;"></div>
+                    <div class="cell static-num" style="grid-row: 2; grid-column: 3;" id="d1-a"></div>
+                    <div class="cell static-num" style="grid-row: 2; grid-column: 4;" id="d2-a"></div>
+                    <!-- Row 3: 乘積 1 -->
+                    <div class="cell" style="grid-row: 3; grid-column: 2;"></div>
+                    <div class="cell" style="grid-row: 3; grid-column: 3;"><div class="box" id="s1_1-a">?</div></div>
+                    <div class="cell" style="grid-row: 3; grid-column: 4;"><div class="box" id="s1_2-a">?</div></div>
+                    <!-- Row 4: 餘數/帶下來 -->
+                    <div class="cell" style="grid-row: 4; grid-column: 2;"></div>
+                    <div class="cell" style="grid-row: 4; grid-column: 3;"><div class="box" id="s2_1-a">?</div></div>
+                    <div class="cell" style="grid-row: 4; grid-column: 4;"><div class="box" id="s2_2-a">?</div></div>
+                    <!-- Row 5: 乘積 2 -->
+                    <div class="cell" style="grid-row: 5; grid-column: 2;"></div>
+                    <div class="cell" style="grid-row: 5; grid-column: 3;"><div class="box" id="s3_1-a">?</div></div>
+                    <div class="cell" style="grid-row: 5; grid-column: 4;"><div class="box" id="s3_2-a">?</div></div>
+                    <!-- Row 6: 減法線 -->
+                    <div class="cell line" style="grid-row: 6; grid-column: 3 / span 2;"></div>
+                    <!-- Row 7: 餘數 -->
+                    <div class="cell" style="grid-row: 7; grid-column: 2;"></div>
+                    <div class="cell" style="grid-row: 7; grid-column: 3;"></div>
+                    <div class="cell" style="grid-row: 7; grid-column: 4;"><div class="box" id="rem-a">?</div></div>
+                </div>
+                <!-- Player A 數字彈窗 -->
+                <div class="popup-number-pad" id="popup-number-pad-a">
+                    <div class="grid">
+                        <button class="num-btn">1</button>
+                        <button class="num-btn">2</button>
+                        <button class="num-btn">3</button>
+                        <button class="num-btn">4</button>
+                        <button class="num-btn">5</button>
+                        <button class="num-btn">6</button>
+                        <button class="num-btn">7</button>
+                        <button class="num-btn">8</button>
+                        <button class="num-btn">9</button>
+                        <button class="num-btn">0</button>
+                    </div>
+                </div>
+                <div class="controls">
+                    <button class="btn btn-check" id="check-btn-a">核對答案 A</button>
+                    <button class="btn btn-next" id="next-btn-a">下一題 A</button>
+                </div>
+            </div>
+
+            <!-- Player B 區域 -->
+            <div class="player-area" id="player-b">
+                <h2>Player B</h2>
+                <div class="division-problem" id="problem-b">
+                    <div class="division-symbol"></div>
+                    <!-- Row 1: 商 -->
+                    <div class="cell" style="grid-row: 1; grid-column: 2;"></div>
+                    <div class="cell" style="grid-row: 1; grid-column: 3;"><div class="box" id="q1-b">?</div></div>
+                    <div class="cell" style="grid-row: 1; grid-column: 4;"><div class="box" id="q2-b">?</div></div>
+                    <!-- Row 2: 題目 -->
+                    <div class="cell static-num" style="grid-row: 2; grid-column: 1;" id="divisor-b"></div>
+                    <div class="cell" style="grid-row: 2; grid-column: 2;"></div>
+                    <div class="cell static-num" style="grid-row: 2; grid-column: 3;" id="d1-b"></div>
+                    <div class="cell static-num" style="grid-row: 2; grid-column: 4;" id="d2-b"></div>
+                    <!-- Row 3: 乘積 1 -->
+                    <div class="cell" style="grid-row: 3; grid-column: 2;"></div>
+                    <div class="cell" style="grid-row: 3; grid-column: 3;"><div class="box" id="s1_1-b">?</div></div>
+                    <div class="cell" style="grid-row: 3; grid-column: 4;"><div class="box" id="s1_2-b">?</div></div>
+                    <!-- Row 4: 餘數/帶下來 -->
+                    <div class="cell" style="grid-row: 4; grid-column: 2;"></div>
+                    <div class="cell" style="grid-row: 4; grid-column: 3;"><div class="box" id="s2_1-b">?</div></div>
+                    <div class="cell" style="grid-row: 4; grid-column: 4;"><div class="box" id="s2_2-b">?</div></div>
+                    <!-- Row 5: 乘積 2 -->
+                    <div class="cell" style="grid-row: 5; grid-column: 2;"></div>
+                    <div class="cell" style="grid-row: 5; grid-column: 3;"><div class="box" id="s3_1-b">?</div></div>
+                    <div class="cell" style="grid-row: 5; grid-column: 4;"><div class="box" id="s3_2-b">?</div></div>
+                    <!-- Row 6: 減法線 -->
+                    <div class="cell line" style="grid-row: 6; grid-column: 3 / span 2;"></div>
+                    <!-- Row 7: 餘數 -->
+                    <div class="cell" style="grid-row: 7; grid-column: 2;"></div>
+                    <div class="cell" style="grid-row: 7; grid-column: 3;"></div>
+                    <div class="cell" style="grid-row: 7; grid-column: 4;"><div class="box" id="rem-b">?</div></div>
+                </div>
+                <!-- Player B 數字彈窗 -->
+                <div class="popup-number-pad" id="popup-number-pad-b">
+                    <div class="grid">
+                        <button class="num-btn">1</button>
+                        <button class="num-btn">2</button>
+                        <button class="num-btn">3</button>
+                        <button class="num-btn">4</button>
+                        <button class="num-btn">5</button>
+                        <button class="num-btn">6</button>
+                        <button class="num-btn">7</button>
+                        <button class="num-btn">8</button>
+                        <button class="num-btn">9</button>
+                        <button class="num-btn">0</button>
+                    </div>
+                </div>
+                <div class="controls">
+                    <button class="btn btn-check" id="check-btn-b">核對答案 B</button>
+                    <button class="btn btn-next" id="next-btn-b">下一題 B</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 訊息區域 -->
+        <div id="message"></div>
+    </div>
+
+    <script>
+        // --- DOM 元素獲取 ---
+        const container = document.querySelector('.container');
+        const numberPadA = document.getElementById('popup-number-pad-a');
+        const numberPadB = document.getElementById('popup-number-pad-b');
+        const messageEl = document.getElementById('message');
+        
+        // 計時器/控制
+        const centralTimerEl = document.getElementById('central-timer');
+        const countdownMinutesInput = document.getElementById('countdown-minutes');
+        const startTimerBtn = document.getElementById('start-timer-btn');
+        const pauseTimerBtn = document.getElementById('pause-timer-btn'); // 新增暫停按鈕
+        
+        // 玩家特定元素映射
+        const players = {
+            a: {
+                id: 'a',
+                problem: {},
+                userAnswers: {},
+                completedCount: 0,
+                countEl: document.getElementById('completed-count-a'),
+                checkBtn: document.getElementById('check-btn-a'),
+                nextBtn: document.getElementById('next-btn-a'),
+                problemArea: document.getElementById('problem-a'),
+                h2: document.querySelector('#player-a h2'),
+                pads: numberPadA,
+                boxes: document.querySelectorAll('#problem-a .box'),
+                divisorEl: document.getElementById('divisor-a'),
+                d1El: document.getElementById('d1-a'),
+                d2El: document.getElementById('d2-a'),
+            },
+            b: {
+                id: 'b',
+                problem: {},
+                userAnswers: {},
+                completedCount: 0,
+                countEl: document.getElementById('completed-count-b'),
+                checkBtn: document.getElementById('check-btn-b'),
+                nextBtn: document.getElementById('next-btn-b'),
+                problemArea: document.getElementById('problem-b'),
+                h2: document.querySelector('#player-b h2'),
+                pads: numberPadB,
+                boxes: document.querySelectorAll('#problem-b .box'),
+                divisorEl: document.getElementById('divisor-b'),
+                d1El: document.getElementById('d1-b'),
+                d2El: document.getElementById('d2-b'),
+            }
+        };
+
+        // --- 遊戲狀態 ---
+        let selectedBoxId = null; 
+        let selectedPlayerId = null;
+        let timerInterval = null;
+        let remainingSeconds = 300; 
+        let isGameActive = false; 
+        let isPaused = false; // 新增暫停狀態
+
+        // --- 計時器邏輯 ---
+
+        function initializeTimer(minutes) {
+            clearInterval(timerInterval);
+            isPaused = false;
+            
+            const min = parseInt(minutes, 10);
+            if (isNaN(min) || min <= 0) {
+                messageEl.textContent = '請輸入有效的倒數分鐘數 (至少 1 分鐘)。';
+                messageEl.style.color = '#b91c1c';
+                return;
+            }
+            
+            remainingSeconds = min * 60;
+            updateTimerDisplay();
+            
+            // 啟用遊戲狀態和 UI
+            isGameActive = true;
+            startTimerBtn.textContent = '計時中...';
+            startTimerBtn.disabled = true;
+            pauseTimerBtn.disabled = false; // 啟用暫停按鈕
+            pauseTimerBtn.textContent = '暫停';
+            countdownMinutesInput.disabled = true;
+            
+            // 啟用所有作答按鈕
+            players.a.checkBtn.disabled = false;
+            players.a.nextBtn.disabled = false;
+            players.b.checkBtn.disabled = false;
+            players.b.nextBtn.disabled = false;
+
+            // 重置背景色
+            players.a.h2.style.backgroundColor = 'transparent'; 
+            players.b.h2.style.backgroundColor = 'transparent';
+            
+            timerInterval = setInterval(updateTimer, 1000);
+            messageEl.textContent = '競賽開始！';
+            messageEl.style.color = '#3b82f6';
+
+            generateProblem('a');
+            generateProblem('b');
+        }
+
+        function handlePauseClick() {
+            if (!isGameActive) return; // 只有遊戲進行中才能暫停/恢復
+
+            if (isPaused) {
+                // 恢復
+                isPaused = false;
+                timerInterval = setInterval(updateTimer, 1000);
+                pauseTimerBtn.textContent = '暫停';
+                messageEl.textContent = '恢復計時，請繼續作答！';
+                messageEl.style.color = '#3b82f6';
+                
+                // 恢復按鈕
+                players.a.checkBtn.disabled = false;
+                players.a.nextBtn.disabled = false;
+                players.b.checkBtn.disabled = false;
+                players.b.nextBtn.disabled = false;
+
+            } else {
+                // 暫停
+                isPaused = true;
+                clearInterval(timerInterval);
+                pauseTimerBtn.textContent = '恢復';
+                messageEl.textContent = '計時暫停中...';
+                messageEl.style.color = '#f59e0b';
+                
+                // 隱藏數字鍵盤
+                numberPadA.style.display = 'none';
+                numberPadB.style.display = 'none';
+                selectedBoxId = null;
+                selectedPlayerId = null;
+
+                // 禁用按鈕
+                players.a.checkBtn.disabled = true;
+                players.a.nextBtn.disabled = true;
+                players.b.checkBtn.disabled = true;
+                players.b.nextBtn.disabled = true;
+            }
+        }
+
+
+        function updateTimer() {
+            if (remainingSeconds <= 0) {
+                clearInterval(timerInterval);
+                isGameActive = false;
+                pauseTimerBtn.disabled = true; // 禁用暫停按鈕
+                centralTimerEl.textContent = '00:00';
+                declareWinner();
+                return;
+            }
+            
+            remainingSeconds--;
+            updateTimerDisplay();
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(remainingSeconds / 60);
+            const seconds = remainingSeconds % 60;
+            centralTimerEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+        
+        function declareWinner() {
+            // 鎖定所有輸入
+            document.querySelectorAll('.btn').forEach(btn => btn.disabled = true);
+            // 移除所有 box 的點擊事件
+            document.querySelectorAll('.box').forEach(box => {
+                box.classList.remove('selected');
+                box.removeEventListener('click', handleBoxClick);
+            });
+            numberPadA.style.display = 'none';
+            numberPadB.style.display = 'none';
+
+            const countA = players.a.completedCount;
+            const countB = players.b.completedCount;
+            let resultMessage = '';
+
+            if (countA > countB) {
+                resultMessage = `時間到！Player A 獲勝 (${countA} 題)！`;
+                players.a.h2.style.backgroundColor = '#dcfce7'; 
+            } else if (countB > countA) {
+                resultMessage = `時間到！Player B 獲勝 (${countB} 題)！`;
+                players.b.h2.style.backgroundColor = '#fee2e2'; 
+            } else {
+                resultMessage = `時間到！平手 (${countA} 題)。`;
+            }
+
+            messageEl.textContent = resultMessage;
+            messageEl.style.color = '#1e293b';
+            
+            startTimerBtn.textContent = '重新開始';
+            startTimerBtn.disabled = false;
+            countdownMinutesInput.disabled = false;
+        }
+
+        // --- 核心遊戲邏輯 (generateProblem, setupUI, checkAnswers 保持不變) ---
+
+        function generateProblem(playerId) {
+            const player = players[playerId];
+            
+            const divisor = Math.floor(Math.random() * 8) + 2;
+            let dividend;
+            let d1, d2;
+
+            do {
+                dividend = Math.floor(Math.random() * 90) + 10;
+                d1 = Math.floor(dividend / 10);
+                d2 = dividend % 10;
+            } while (dividend < divisor); 
+
+            // 計算步驟 (略)
+            const q1 = Math.floor(d1 / divisor);
+            const s1_total = q1 * divisor * 10;
+            const s1_1 = Math.floor(s1_total / 10);
+            const s1_2 = s1_total % 10;
+            const sub1 = d1 - (q1 * divisor);
+
+            const d_step2 = sub1 * 10 + d2;
+            const q2 = Math.floor(d_step2 / divisor);
+            const s3_total = q2 * divisor;
+            const s3_1 = Math.floor(s3_total / 10);
+            const s3_2 = s3_total % 10;
+            const rem = d_step2 - s3_total;
+
+            let problemData;
+            
+            if (q1 === 0) {
+                const final_q2 = Math.floor(dividend / divisor);
+                const s_final_total = final_q2 * divisor;
+                const s_final_1 = Math.floor(s_final_total / 10);
+                const s_final_2 = s_final_total % 10;
+                const rem_final = dividend - s_final_total;
+
+                problemData = {
+                    divisor: divisor, d1: d1, d2: d2, show_s1: false,
+                    solution: {
+                        q1: 0, q2: final_q2,
+                        s1_1: 0, s1_2: 0, s2_1: d1, s2_2: d2, 
+                        s3_1: s_final_1, s3_2: s_final_2, rem: rem_final
+                    }
+                };
+            } else {
+                problemData = {
+                    divisor: divisor, d1: d1, d2: d2, show_s1: true,
+                    solution: {
+                        q1: q1, q2: q2,
+                        s1_1: s1_1, s1_2: s1_2, s2_1: sub1, s2_2: d2, 
+                        s3_1: s3_1, s3_2: s3_2, rem: rem
+                    }
+                };
+            }
+            
+            player.problem = problemData;
+            setupUI(playerId);
+        }
+
+        function setupUI(playerId) {
+            const player = players[playerId];
+            const currentProblem = player.problem;
+            
+            player.divisorEl.textContent = currentProblem.divisor;
+            player.d1El.textContent = currentProblem.d1;
+            player.d2El.textContent = currentProblem.d2;
+
+            const showS1 = currentProblem.show_s1;
+            
+            const getEl = (id) => player.problemArea.querySelector(`#${id}-${playerId}`).parentNode;
+            const line = player.problemArea.querySelector('.cell.line'); 
+
+            const s1_1_box = getEl('s1_1'); const s1_2_box = getEl('s1_2');
+            const s2_1_box = getEl('s2_1'); const s2_2_box = getEl('s2_2');
+            const s3_1_box = getEl('s3_1'); const s3_2_box = getEl('s3_2');
+            const rem_box = getEl('rem');
+
+            // 重置所有方框
+            player.boxes.forEach(box => {
+                box.textContent = '?';
+                box.classList.remove('selected', 'correct', 'incorrect', 'static-num');
+                box.addEventListener('click', handleBoxClick); 
+            });
+            player.userAnswers = {};
+            player.problemSolved = false;
+
+            
+            // 處理排版
+            if (showS1) {
+                [s1_1_box, s1_2_box, s2_1_box, s2_2_box, s3_1_box, s3_2_box, line, rem_box].forEach(el => el.style.visibility = 'visible');
+                
+                s1_1_box.style.gridRow = '3'; s1_2_box.style.gridRow = '3';
+                s2_1_box.style.gridRow = '4'; s2_2_box.style.gridRow = '4';
+                s3_1_box.style.gridRow = '5'; s3_2_box.style.gridRow = '5';
+                line.style.gridRow = '6';
+                rem_box.style.gridRow = '7';
+                
+                if (currentProblem.solution.q1 === 0) {
+                     document.getElementById(`q1-${playerId}`).textContent = '0';
+                     document.getElementById(`q1-${playerId}`).classList.add('static-num');
+                } else {
+                     document.getElementById(`q1-${playerId}`).classList.remove('static-num');
+                     document.getElementById(`q1-${playerId}`).textContent = '?';
+                }
+            } else {
+                [s1_1_box, s1_2_box, s2_1_box, s2_2_box].forEach(el => el.style.visibility = 'hidden');
+                
+                document.getElementById(`q1-${playerId}`).textContent = '0';
+                document.getElementById(`q1-${playerId}`).classList.add('static-num');
+
+                s3_1_box.style.gridRow = '3'; s3_2_box.style.gridRow = '3';
+                s3_1_box.style.visibility = 'visible'; s3_2_box.style.visibility = 'visible';
+                
+                line.style.gridRow = '4';
+                line.style.visibility = 'visible';
+                
+                rem_box.style.gridRow = '5';
+                rem_box.style.visibility = 'visible';
+            }
+        }
+
+
+        function checkAnswers(playerId) {
+            if (!isGameActive || isPaused) {
+                messageEl.textContent = isPaused ? '請先點擊「恢復」繼續作答。' : '請先點擊「開始」！';
+                messageEl.style.color = '#f97316';
+                return;
+            }
+
+            const player = players[playerId];
+            const solution = player.problem.solution;
+            let allCorrect = true;
+
+            // 隱藏鍵盤
+            numberPadA.style.display = 'none';
+            numberPadB.style.display = 'none';
+
+            if (selectedBoxId) {
+                document.getElementById(selectedBoxId)?.classList.remove('selected');
+                selectedBoxId = null;
+                selectedPlayerId = null;
+            }
+
+            player.boxes.forEach(box => {
+                const id = box.id.split('-')[0]; 
+                
+                if (box.classList.contains('static-num')) return;
+
+                const correctAns = solution[id];
+                const userAns = player.userAnswers[id];
+
+                box.classList.remove('correct', 'incorrect');
+                
+                const parentDiv = box.parentNode;
+                if (parentDiv && parentDiv.style.visibility === 'hidden') return;
+
+                if (userAns === undefined || userAns === null) {
+                    box.classList.add('incorrect');
+                    allCorrect = false;
+                } else if (userAns === correctAns) {
+                    box.classList.add('correct');
+                } else {
+                    box.classList.add('incorrect');
+                    allCorrect = false;
+                }
+            });
+
+            if (allCorrect) {
+                messageEl.textContent = `Player ${playerId.toUpperCase()} 恭喜！全部答對了！`;
+                messageEl.style.color = '#15803d'; 
+                
+                if (!player.problemSolved) {
+                    player.problemSolved = true;
+                    player.completedCount++;
+                    player.countEl.textContent = player.completedCount;
+                }
+
+            } else {
+                messageEl.textContent = `Player ${playerId.toUpperCase()} 有錯誤喔！請修改紅色方框的數字。`;
+                messageEl.style.color = '#b91c1c'; 
+            }
+        }
+
+
+        // --- 事件處理程序 ---
+
+        function handleBoxClick(e) {
+            e.stopPropagation();
+            if (!isGameActive || remainingSeconds <= 0) {
+                 messageEl.textContent = '時間已結束或尚未開始！';
+                 messageEl.style.color = '#f97316';
+                 return;
+            }
+            
+            // 遊戲暫停時不允許點擊作答
+            if (isPaused) {
+                messageEl.textContent = '請先點擊「恢復」繼續作答。';
+                messageEl.style.color = '#f97316';
+                return;
+            }
+
+            const clickedBox = e.target;
+            
+            if (clickedBox.classList.contains('static-num')) return;
+
+            // 判斷是哪個玩家的盒子
+            const playerIdMatch = clickedBox.id.match(/-(a|b)$/);
+            if (!playerIdMatch) return; 
+            const playerId = playerIdMatch[1];
+            const player = players[playerId];
+            
+            // 隱藏另一個玩家的鍵盤
+            const otherPad = (playerId === 'a' ? numberPadB : numberPadA);
+            otherPad.style.display = 'none';
+            
+            // 清除所有選中狀態
+            document.querySelectorAll('.box').forEach(box => box.classList.remove('selected'));
+
+            if (selectedBoxId === clickedBox.id) {
+                selectedBoxId = null;
+                selectedPlayerId = null;
+                player.pads.style.display = 'none';
+            } else {
+                // 1. 設置選中狀態
+                selectedBoxId = clickedBox.id;
+                selectedPlayerId = playerId;
+                clickedBox.classList.add('selected');
+                
+                // 2. 計算位置並顯示鍵盤 (相對於 player-area)
+                const boxRect = clickedBox.getBoundingClientRect();
+                const playerAreaRect = player.pads.parentNode.getBoundingClientRect();
+
+                // 相對位置計算
+                let top = boxRect.top - playerAreaRect.top + boxRect.height + 5; // 點擊框的底部 + 5px 偏移
+                let left = boxRect.left - playerAreaRect.left;
+                
+                // 確保鍵盤不會超出右邊界
+                if (left + player.pads.offsetWidth > playerAreaRect.width) {
+                    left = playerAreaRect.width - player.pads.offsetWidth - 10; // 靠右邊界
+                }
+                
+                player.pads.style.top = `${top}px`;
+                player.pads.style.left = `${left}px`;
+                player.pads.style.display = 'block';
+            }
+        }
+
+        function handleNumClick(e) {
+            e.stopPropagation();
+            
+            if (isPaused) return; // 暫停中不處理數字輸入
+
+            // 確保點擊來自有效激活的鍵盤按鈕 (因為我們在下面綁定到了父元素)
+            const numBtn = e.target.closest('.num-btn');
+            if (!numBtn) return;
+
+            if (selectedBoxId && selectedPlayerId) {
+                const player = players[selectedPlayerId];
+                const selectedBox = document.getElementById(selectedBoxId);
+                const num = numBtn.textContent;
+                const id = selectedBoxId.split('-')[0];
+                
+                selectedBox.textContent = num;
+                player.userAnswers[id] = Number(num);
+                
+                // 3. 選完後立即消失 (重點)
+                selectedBox.classList.remove('selected');
+                player.pads.style.display = 'none';
+                
+                selectedBoxId = null;
+                selectedPlayerId = null;
+            }
+        }
+
+        // --- 綁定事件 ---
+        
+        // 為兩個鍵盤的父元素綁定單一事件監聽器 (事件委派)
+        numberPadA.addEventListener('click', handleNumClick);
+        numberPadB.addEventListener('click', handleNumClick);
+        
+        startTimerBtn.addEventListener('click', () => {
+            initializeTimer(countdownMinutesInput.value);
+        });
+        
+        pauseTimerBtn.addEventListener('click', handlePauseClick); // 暫停按鈕事件
+
+        // 綁定 check/next 按鈕
+        players.a.checkBtn.addEventListener('click', () => checkAnswers('a'));
+        players.a.nextBtn.addEventListener('click', () => generateProblem('a'));
+        players.b.checkBtn.addEventListener('click', () => checkAnswers('b'));
+        players.b.nextBtn.addEventListener('click', () => generateProblem('b'));
+
+        // 點擊頁面其他地方隱藏彈窗
+        document.addEventListener('click', (e) => {
+            const isClickInsidePadA = e.target.closest('#popup-number-pad-a');
+            const isClickInsidePadB = e.target.closest('#popup-number-pad-b');
+            const isClickInsideBox = e.target.closest('.box');
+            const isClickInsideControl = e.target.closest('.controls');
+            const isClickInsideTimerControl = e.target.closest('.timer-control-area');
+
+            if (!isClickInsideBox && !isClickInsidePadA && !isClickInsidePadB && !isClickInsideControl && !isClickInsideTimerControl) {
+                if (selectedBoxId) {
+                    document.getElementById(selectedBoxId)?.classList.remove('selected');
+                }
+                selectedBoxId = null;
+                selectedPlayerId = null;
+                numberPadA.style.display = 'none';
+                numberPadB.style.display = 'none';
+            }
+        });
+
+        // 初始化
+        updateTimerDisplay();
+        generateProblem('a'); 
+        generateProblem('b');
+        
+        // 頁面載入時，將計時器停止，等待用戶點擊「開始」
+        clearInterval(timerInterval); 
+        isGameActive = false;
+        isPaused = false;
+        startTimerBtn.disabled = false;
+        countdownMinutesInput.disabled = false;
+        pauseTimerBtn.disabled = true; // 預設禁用暫停
+        document.querySelectorAll('.btn').forEach(btn => btn.disabled = true);
+        messageEl.textContent = '請設定時間並點擊「開始」進行競賽！';
+
+
+    </script>
+</body>
+</html>

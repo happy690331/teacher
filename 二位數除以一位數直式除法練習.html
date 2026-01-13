@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>直式除法教學練習</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #f8fafc; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: row;
+            gap: 3rem;
+            width: 100%;
+            max-width: 950px;
+            background-color: #ffffff;
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        /* 左側：垂直乘法表 */
+        .helper-sidebar {
+            flex: 0 0 160px;
+            background-color: #f1f5f9;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .helper-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 1rem;
+            text-align: center;
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 0.5rem;
+        }
+
+        .mult-item {
+            font-size: 1.25rem;
+            color: #334155;
+            margin-bottom: 0.5rem;
+            font-family: 'Courier New', Courier, monospace;
+            white-space: nowrap;
+            text-align: center;
+        }
+
+        /* 遊戲主區域 */
+        .game-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 放大標題 */
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 800;
+            color: #1e293b;
+            margin-bottom: 2.5rem;
+            letter-spacing: -0.025em;
+        }
+
+        /* 除法直式結構 */
+        .division-grid {
+            display: grid;
+            grid-template-columns: 0.8fr 0.2fr 1fr 1fr; 
+            grid-template-rows: repeat(7, auto); 
+            font-size: 2.5rem; 
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 2rem;
+            position: relative;
+            line-height: 1.2;
+            width: 320px;
+        }
+
+        .division-symbol {
+            position: absolute;
+            top: calc((100% / 7) * 1 + 8px); 
+            left: 25%; 
+            width: 70%; 
+            height: calc(100% / 7); 
+            border-left: 4px solid #334155;
+            border-top: 4px solid #334155;
+            border-top-left-radius: 0.5rem;
+            z-index: 0;
+        }
+
+        .cell {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+            min-height: 4.2rem; 
+        }
+
+        /* 讓商的格子往上移 */
+        .quotient-cell .box {
+            transform: translateY(-10px);
+        }
+
+        .box {
+            width: 85%; height: 85%; display: flex; justify-content: center; align-items: center;
+            border: 2px dashed #94a3b8; border-radius: 0.5rem; cursor: pointer;
+            font-weight: 700; color: #94a3b8; transition: all 0.2s;
+            background-color: #fff;
+        }
+        .static-num { font-weight: 700; color: #1e293b; border: none; cursor: default; }
+        .box.auto-filled { border-style: solid; border-color: #94a3b8; background-color: #f8fafc; color: #475569; }
+        .box.selected { border-color: #3b82f6; background-color: #dbeafe; color: #2563eb; }
+        .box.incorrect { border-style: solid; border-color: #ef4444; background-color: #fee2e2; color: #dc2626; }
+        .box.correct { border-style: solid; border-color: #22c55e; background-color: #dcfce7; color: #16a34a; }
+        .line { grid-column: 3 / span 2; border-bottom: 4px solid #334155; margin: 0.25rem 0; z-index: 1; height: 1px; }
+
+        /* 彈窗鍵盤 */
+        .popup-pad {
+            display: none; 
+            position: absolute;
+            width: 180px; 
+            background-color: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 1rem; 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            padding: 0.6rem;
+            z-index: 100;
+        }
+
+        .pad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+        }
+        .num-btn {
+            padding: 0.8rem;
+            font-size: 1.4rem;
+            font-weight: 700;
+            background-color: #f1f5f9;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .num-btn:hover { background-color: #e2e8f0; transform: scale(1.05); }
+
+        /* 控制按鈕 */
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .btn {
+            padding: 0.8rem 2.2rem; font-size: 1.15rem; font-weight: 700; border-radius: 0.75rem;
+            cursor: pointer; transition: all 0.2s; border: none;
+        }
+        .btn-check { background-color: #3b82f6; color: white; box-shadow: 0 4px 0 #2563eb; }
+        .btn-check:hover { background-color: #2563eb; }
+        .btn-next { background-color: #10b981; color: white; box-shadow: 0 4px 0 #059669; }
+        .btn-next:hover { background-color: #059669; }
+        
+        #message {
+            margin-top: 2rem; font-size: 1.2rem; font-weight: 700; height: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .main-container { flex-direction: column; align-items: center; gap: 1.5rem; }
+            .helper-sidebar { width: 100%; flex: none; flex-direction: row; flex-wrap: wrap; justify-content: center; }
+            .mult-item { margin: 0.25rem 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <!-- 左側：垂直乘法表 -->
+        <div class="helper-sidebar">
+            <div class="helper-title" id="helper-title">輔助表</div>
+            <div id="mult-list">
+                <!-- JS 動態生成 -->
+            </div>
+        </div>
+
+        <!-- 右側：教學練習區 -->
+        <div class="game-content">
+            <h1>直式除法教學引導</h1>
+
+            <div class="division-grid" id="problem-grid">
+                <div class="division-symbol"></div>
+                
+                <!-- Row 1: 商 (加上 quotient-cell 類別以控制位移) -->
+                <div class="cell quotient-cell" style="grid-row: 1; grid-column: 3;"><div class="box" id="q1">?</div></div>
+                <div class="cell quotient-cell" style="grid-row: 1; grid-column: 4;"><div class="box" id="q2">?</div></div>
+                
+                <!-- Row 2: 題目 -->
+                <div class="cell static-num" style="grid-row: 2; grid-column: 1;" id="divisor"></div>
+                <div class="cell static-num" style="grid-row: 2; grid-column: 3;" id="d1"></div>
+                <div class="cell static-num" style="grid-row: 2; grid-column: 4;" id="d2"></div>
+                
+                <!-- Row 3: 乘積 1 (自動填寫) -->
+                <div class="cell" style="grid-row: 3; grid-column: 3;"><div class="box" id="s1_1">?</div></div>
+                <div class="cell" style="grid-row: 3; grid-column: 4;"><div class="box" id="s1_2">?</div></div>
+                
+                <!-- Row 4: 餘數/帶下來 -->
+                <div class="cell" style="grid-row: 4; grid-column: 3;"><div class="box" id="s2_1">?</div></div>
+                <div class="cell" style="grid-row: 4; grid-column: 4;"><div class="box" id="s2_2">?</div></div>
+                
+                <!-- Row 5: 乘積 2 (自動填寫) -->
+                <div class="cell" style="grid-row: 5; grid-column: 3;"><div class="box" id="s3_1">?</div></div>
+                <div class="cell" style="grid-row: 5; grid-column: 4;"><div class="box" id="s3_2">?</div></div>
+                
+                <!-- Row 6: 橫線 -->
+                <div class="cell line" id="final-line"></div>
+                
+                <!-- Row 7: 最後餘數 -->
+                <div class="cell" style="grid-row: 7; grid-column: 4;"><div class="box" id="rem">?</div></div>
+            </div>
+
+            <!-- 浮動鍵盤 -->
+            <div class="popup-pad" id="number-pad">
+                <div class="pad-grid">
+                    <button class="num-btn">1</button>
+                    <button class="num-btn">2</button>
+                    <button class="num-btn">3</button>
+                    <button class="num-btn">4</button>
+                    <button class="num-btn">5</button>
+                    <button class="num-btn">6</button>
+                    <button class="num-btn">7</button>
+                    <button class="num-btn">8</button>
+                    <button class="num-btn">9</button>
+                    <button class="num-btn">0</button>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="btn btn-check" id="check-btn">檢查答案</button>
+                <button class="btn btn-next" id="next-btn">下一題</button>
+            </div>
+            
+            <div id="message"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentProblem = {};
+        let userAnswers = {};
+        let selectedBoxId = null;
+
+        const problemGrid = document.getElementById('problem-grid');
+        const numberPad = document.getElementById('number-pad');
+        const messageEl = document.getElementById('message');
+        const multListEl = document.getElementById('mult-list');
+        const helperTitle = document.getElementById('helper-title');
+
+        function generateProblem() {
+            messageEl.textContent = '';
+            const divisor = Math.floor(Math.random() * 8) + 2; 
+            let dividend = Math.floor(Math.random() * 90) + 10; 
+            
+            if (dividend < divisor) dividend += divisor;
+
+            const d1 = Math.floor(dividend / 10);
+            const d2 = dividend % 10;
+
+            const q1 = Math.floor(d1 / divisor);
+            const prod1 = q1 * divisor;
+            const sub1 = d1 - prod1;
+            const dropDown = sub1 * 10 + d2;
+            const q2 = Math.floor(dropDown / divisor);
+            const prod2 = q2 * divisor;
+            const rem = dropDown - prod2;
+
+            currentProblem = {
+                divisor, d1, d2,
+                showStep1: q1 > 0,
+                solution: {
+                    q1, q2,
+                    s1_1: prod1, 
+                    s1_2: 0,
+                    s2_1: sub1,
+                    s2_2: d2,
+                    s3_1: Math.floor(prod2 / 10),
+                    s3_2: prod2 % 10,
+                    rem: rem
+                }
+            };
+
+            updateHelperTable(divisor);
+            renderUI();
+        }
+
+        function updateHelperTable(n) {
+            helperTitle.textContent = `${n} 的乘法表`;
+            multListEl.innerHTML = '';
+            for (let i = 1; i <= 9; i++) {
+                const item = document.createElement('div');
+                item.className = 'mult-item';
+                item.textContent = `${n} × ${i} = ${n * i}`;
+                multListEl.appendChild(item);
+            }
+        }
+
+        function renderUI() {
+            document.getElementById('divisor').textContent = currentProblem.divisor;
+            document.getElementById('d1').textContent = currentProblem.d1;
+            document.getElementById('d2').textContent = currentProblem.d2;
+
+            document.querySelectorAll('.box').forEach(box => {
+                box.textContent = '?';
+                box.className = 'box';
+                // 恢復商的特殊類別，以免被 className = 'box' 蓋掉樣式
+                if (box.id === 'q1' || box.id === 'q2') {
+                    // 這裡其實只要 box 類別即可，位移是由父元素 .quotient-cell 控制
+                }
+                box.parentNode.style.visibility = 'visible';
+            });
+            
+            const line = document.getElementById('final-line');
+            userAnswers = {};
+
+            if (!currentProblem.showStep1) {
+                document.getElementById('q1').textContent = '0';
+                document.getElementById('q1').classList.add('static-num');
+                
+                ['s1_1', 's1_2', 's2_1', 's2_2'].forEach(id => {
+                    document.getElementById(id).parentNode.style.visibility = 'hidden';
+                });
+
+                document.getElementById('s3_1').parentNode.style.gridRow = '3';
+                document.getElementById('s3_2').parentNode.style.gridRow = '3';
+                line.style.gridRow = '4';
+                document.getElementById('rem').parentNode.style.gridRow = '5';
+            } else {
+                document.getElementById('q1').classList.remove('static-num');
+                document.getElementById('s3_1').parentNode.style.gridRow = '5';
+                document.getElementById('s3_2').parentNode.style.gridRow = '5';
+                line.style.gridRow = '6';
+                document.getElementById('rem').parentNode.style.gridRow = '7';
+            }
+        }
+
+        function onBoxClick(e) {
+            const box = e.target.closest('.box');
+            if (!box || box.classList.contains('static-num')) return;
+
+            document.querySelectorAll('.box').forEach(b => b.classList.remove('selected'));
+            box.classList.add('selected');
+            selectedBoxId = box.id;
+
+            const rect = box.getBoundingClientRect();
+            const gridRect = problemGrid.getBoundingClientRect();
+            
+            numberPad.style.display = 'block';
+            numberPad.style.top = `${rect.bottom - gridRect.top + 10}px`;
+            numberPad.style.left = `${rect.left - gridRect.left}px`;
+        }
+
+        function onNumClick(e) {
+            const btn = e.target.closest('.num-btn');
+            if (!btn || !selectedBoxId) return;
+
+            const val = parseInt(btn.textContent);
+            const box = document.getElementById(selectedBoxId);
+            box.textContent = val;
+            box.classList.remove('selected');
+            userAnswers[selectedBoxId] = val;
+            
+            autoFillLogic(selectedBoxId, val);
+
+            numberPad.style.display = 'none';
+            selectedBoxId = null;
+        }
+
+        function autoFillLogic(id, val) {
+            const divisor = currentProblem.divisor;
+            
+            if (id === 'q1') {
+                const prod = val * divisor;
+                const s1_1_box = document.getElementById('s1_1');
+                const s1_2_box = document.getElementById('s1_2');
+                
+                s1_1_box.textContent = prod;
+                s1_1_box.classList.add('auto-filled');
+                userAnswers['s1_1'] = prod;
+                
+                s1_2_box.textContent = '0';
+                s1_2_box.classList.add('auto-filled');
+                userAnswers['s1_2'] = 0;
+            } else if (id === 'q2') {
+                const prod = val * divisor;
+                const s3_1 = Math.floor(prod / 10);
+                const s3_2 = prod % 10;
+                
+                const s3_1_box = document.getElementById('s3_1');
+                const s3_2_box = document.getElementById('s3_2');
+                
+                s3_1_box.textContent = s3_1;
+                s3_1_box.classList.add('auto-filled');
+                userAnswers['s3_1'] = s3_1;
+                
+                s3_2_box.textContent = s3_2;
+                s3_2_box.classList.add('auto-filled');
+                userAnswers['s3_2'] = s3_2;
+            }
+        }
+
+        function checkAnswers() {
+            let isAllCorrect = true;
+            const solution = currentProblem.solution;
+
+            document.querySelectorAll('.box').forEach(box => {
+                if (box.classList.contains('static-num') || box.parentNode.style.visibility === 'hidden') return;
+
+                const userVal = userAnswers[box.id];
+                const correctVal = solution[box.id];
+
+                box.classList.remove('correct', 'incorrect');
+                if (userVal === correctVal) {
+                    box.classList.add('correct');
+                } else {
+                    box.classList.add('incorrect');
+                    isAllCorrect = false;
+                }
+            });
+
+            if (isAllCorrect) {
+                messageEl.textContent = '答對了！你太棒了！';
+                messageEl.style.color = '#16a34a';
+            } else {
+                messageEl.textContent = '還有數字填錯囉，再看看輔助表檢查一下。';
+                messageEl.style.color = '#dc2626';
+            }
+        }
+
+        problemGrid.addEventListener('click', onBoxClick);
+        numberPad.addEventListener('click', onNumClick);
+        document.getElementById('check-btn').addEventListener('click', checkAnswers);
+        document.getElementById('next-btn').addEventListener('click', generateProblem);
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.box') && !e.target.closest('.num-btn')) {
+                numberPad.style.display = 'none';
+                if(selectedBoxId) document.getElementById(selectedBoxId).classList.remove('selected');
+                selectedBoxId = null;
+            }
+        });
+
+        generateProblem();
+    </script>
+</body>
+</html>
