@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大家來找碴 - 記憶挑戰賽</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .card-container {
+            perspective: 1000px;
+        }
+        .card-inner {
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        .card-flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            backface-visibility: hidden;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 0.75rem;
+        }
+        .card-back {
+            background-color: #3b82f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            transform: rotateY(180deg);
+        }
+        .result-overlay {
+            pointer-events: none;
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen font-sans">
+
+<div id="app" class="max-w-4xl mx-auto p-4 md:p-8">
+    <!-- 第一頁：上傳介面 -->
+    <div id="upload-view" class="bg-white rounded-2xl shadow-xl p-8">
+        <h1 class="text-3xl font-bold text-slate-800 mb-2 text-center">大家來找碴：圖片挑戰</h1>
+        <p class="text-slate-500 text-center mb-6">規則：檔名前兩個字相同即為一組（最少 2 組即可開始）</p>
+        
+        <div class="mb-8 p-10 border-4 border-dashed border-slate-200 rounded-xl hover:border-blue-400 transition-colors cursor-pointer text-center" id="drop-zone">
+            <input type="file" id="file-input" multiple accept="image/*" class="hidden">
+            <div class="space-y-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p class="text-xl text-slate-600 font-medium">點擊或拖放圖片至此</p>
+                <p class="text-sm text-slate-400">目前偵測機制：取檔名前 2 個字進行配對</p>
+            </div>
+        </div>
+
+        <!-- 配對結果預覽區域 -->
+        <div id="file-status" class="hidden space-y-4">
+            <div class="bg-blue-50 p-4 rounded-lg">
+                <p class="text-blue-800 font-bold mb-2" id="status-summary"></p>
+                <div id="pair-list" class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-blue-700">
+                    <!-- 配對清單會顯示在這裡 -->
+                </div>
+            </div>
+            
+            <div id="error-list" class="text-sm text-red-500 italic"></div>
+
+            <div class="text-center pt-4">
+                <button id="start-game-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-12 py-4 rounded-full font-bold shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                    開始遊戲
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 第二頁：遊戲介面 -->
+    <div id="game-view" class="hidden space-y-6">
+        <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-md">
+            <div>
+                <span class="text-slate-500">進度:</span>
+                <span id="progress-text" class="text-xl font-bold text-blue-600 ml-2">1 / 4</span>
+            </div>
+            <h2 id="game-instruction" class="text-lg font-medium text-slate-700">請記住這些卡片...</h2>
+            <div></div>
+        </div>
+
+        <!-- 卡片網格：這裏的 class 會由 JS 動態調整 -->
+        <div id="card-grid" class="grid gap-4 min-h-[400px]">
+            <!-- 卡片會動態生成於此 -->
+        </div>
+
+        <div class="flex justify-center space-x-4">
+            <button id="memorize-btn" class="bg-amber-500 hover:bg-amber-600 text-white px-10 py-4 rounded-xl font-bold shadow-lg transition-all">
+                記住了！
+            </button>
+            <button id="start-search-btn" class="hidden bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-xl font-bold shadow-lg transition-all">
+                開始找
+            </button>
+            <button id="next-round-btn" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-4 rounded-xl font-bold shadow-lg transition-all">
+                換下一題
+            </button>
+        </div>
+    </div>
+
+    <!-- 結算頁面 -->
+    <div id="result-view" class="hidden bg-white rounded-2xl shadow-xl p-12 text-center">
+        <h1 class="text-4xl font-bold text-slate-800 mb-4">挑戰結束！</h1>
+        <p class="text-xl text-slate-600 mb-8">太棒了！你已經辨識完所有更換過的卡片。</p>
+        <button onclick="location.reload()" class="bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-xl font-bold shadow-lg">
+            重新玩
+        </button>
+    </div>
+</div>
+
+<script>
+    const state = {
+        allPairs: {}, 
+        currentSet: [], 
+        gridCards: [], 
+        targetIndex: -1, 
+        usedTargetIds: new Set(), 
+        stage: 'upload', 
+        round: 0,
+        maxRounds: 0
+    };
+
+    const uploadView = document.getElementById('upload-view');
+    const gameView = document.getElementById('game-view');
+    const resultView = document.getElementById('result-view');
+    const fileInput = document.getElementById('file-input');
+    const dropZone = document.getElementById('drop-zone');
+    const startBtn = document.getElementById('start-game-btn');
+    const cardGrid = document.getElementById('card-grid');
+    const memorizeBtn = document.getElementById('memorize-btn');
+    const startSearchBtn = document.getElementById('start-search-btn');
+    const nextBtn = document.getElementById('next-round-btn');
+    const instruction = document.getElementById('game-instruction');
+    const progressText = document.getElementById('progress-text');
+    const pairListContainer = document.getElementById('pair-list');
+    const errorListContainer = document.getElementById('error-list');
+    const statusSummary = document.getElementById('status-summary');
+
+    dropZone.onclick = () => fileInput.click();
+    fileInput.onchange = handleFiles;
+
+    startBtn.onclick = () => {
+        if (Object.keys(state.allPairs).length < 2) return;
+        initGame();
+        showView('game');
+    };
+
+    memorizeBtn.onclick = () => startHiding();
+    startSearchBtn.onclick = () => startSearching();
+    nextBtn.onclick = () => setupRound();
+
+    function handleFiles(e) {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        const tempMap = {};
+        
+        files.forEach(file => {
+            // 規則更新：直接抓檔名前兩個字作為語詞關鍵字
+            const baseName = file.name.substring(0, 2);
+            
+            if (!tempMap[baseName]) tempMap[baseName] = [];
+            tempMap[baseName].push(URL.createObjectURL(file));
+        });
+
+        const validPairs = {};
+        const singles = [];
+        let pairCount = 0;
+
+        pairListContainer.innerHTML = '';
+        errorListContainer.innerHTML = '';
+
+        for (const word in tempMap) {
+            if (tempMap[word].length >= 2) {
+                validPairs[word] = [tempMap[word][0], tempMap[word][1]];
+                pairCount++;
+                
+                const item = document.createElement('div');
+                item.innerHTML = `✅ ${word}... (2張)`;
+                pairListContainer.appendChild(item);
+            } else {
+                singles.push(word);
+            }
+        }
+
+        state.allPairs = validPairs;
+        document.getElementById('file-status').classList.remove('hidden');
+        
+        if (singles.length > 0) {
+            errorListContainer.innerText = `注意：以下開頭的檔案只有 1 張，無法成對：${singles.join(', ')}`;
+        }
+
+        if (pairCount >= 2) {
+            statusSummary.innerText = `成功偵測到 ${pairCount} 組配對！已達開始門檻。`;
+            statusSummary.className = "text-green-600 font-bold mb-2";
+            startBtn.disabled = false;
+        } else {
+            statusSummary.innerText = `目前僅有 ${pairCount} 組配對，還差 ${2 - pairCount} 組才能開始。`;
+            statusSummary.className = "text-amber-600 font-bold mb-2";
+            startBtn.disabled = true;
+        }
+    }
+
+    function showView(viewName) {
+        uploadView.classList.add('hidden');
+        gameView.classList.add('hidden');
+        resultView.classList.add('hidden');
+        if (viewName === 'upload') uploadView.classList.remove('hidden');
+        if (viewName === 'game') gameView.classList.remove('hidden');
+        if (viewName === 'result') resultView.classList.remove('hidden');
+    }
+
+    function initGame() {
+        const keys = Object.keys(state.allPairs);
+        const shuffled = keys.sort(() => 0.5 - Math.random());
+        // 最多取 6 組進行遊戲，若不足 6 組則全部使用
+        const cardCount = Math.min(keys.length, 6);
+        state.currentSet = shuffled.slice(0, cardCount);
+        state.maxRounds = cardCount;
+        state.usedTargetIds.clear();
+        state.round = 0;
+        
+        // 根據卡片數量調整網格欄數
+        cardGrid.className = "grid gap-4 min-h-[400px]";
+        if (cardCount <= 4) {
+            cardGrid.classList.add("grid-cols-2");
+        } else {
+            cardGrid.classList.add("grid-cols-3");
+        }
+
+        setupRound();
+    }
+
+    function setupRound() {
+        state.round++;
+        state.stage = 'memorizing';
+        instruction.innerText = "請記住這些卡片...";
+        progressText.innerText = `${state.round} / ${state.maxRounds}`;
+        
+        memorizeBtn.classList.remove('hidden');
+        startSearchBtn.classList.add('hidden');
+        nextBtn.classList.add('hidden');
+
+        // 隨機排序顯示位置
+        const displayOrder = [...state.currentSet].sort(() => 0.5 - Math.random());
+        
+        state.gridCards = displayOrder.map(word => ({
+            word: word,
+            currentUrl: state.allPairs[word][0], 
+            version: 0 
+        }));
+
+        renderGrid(false);
+    }
+
+    function renderGrid(isFlipped) {
+        cardGrid.innerHTML = '';
+        state.gridCards.forEach((card, index) => {
+            const container = document.createElement('div');
+            container.className = `card-container relative w-full h-64 cursor-pointer ${isFlipped ? 'card-flipped' : ''}`;
+            container.onclick = () => handleCardClick(index);
+
+            container.innerHTML = `
+                <div class="card-inner w-full h-full shadow-lg rounded-xl">
+                    <div class="card-front bg-white p-2 border border-slate-200">
+                        <img src="${card.currentUrl}" class="w-full h-full object-contain rounded-lg">
+                    </div>
+                    <div class="card-back border-4 border-white">
+                        <span class="text-4xl">?</span>
+                    </div>
+                </div>
+                <div id="feedback-${index}" class="result-overlay opacity-0 transition-opacity"></div>
+            `;
+            cardGrid.appendChild(container);
+        });
+    }
+
+    function startHiding() {
+        state.stage = 'hidden';
+        instruction.innerText = "正在變換中...";
+        memorizeBtn.classList.add('hidden');
+        
+        const containers = document.querySelectorAll('.card-container');
+        containers.forEach(c => c.classList.add('card-flipped'));
+
+        const availableIndices = [];
+        state.gridCards.forEach((card, idx) => {
+            if (!state.usedTargetIds.has(card.word)) {
+                availableIndices.push(idx);
+            }
+        });
+
+        // 選一個還沒被換過的作為目標
+        const targetIdx = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+        state.targetIndex = targetIdx;
+        state.usedTargetIds.add(state.gridCards[targetIdx].word);
+
+        setTimeout(() => {
+            const targetCard = state.gridCards[targetIdx];
+            targetCard.version = 1;
+            targetCard.currentUrl = state.allPairs[targetCard.word][1];
+            
+            const img = containers[targetIdx].querySelector('img');
+            img.src = targetCard.currentUrl;
+
+            instruction.innerText = "變換完成！";
+            startSearchBtn.classList.remove('hidden');
+        }, 800);
+    }
+
+    function startSearching() {
+        state.stage = 'searching';
+        instruction.innerText = "哪一張卡片被換過了？";
+        startSearchBtn.classList.add('hidden');
+
+        const containers = document.querySelectorAll('.card-container');
+        containers.forEach(c => c.classList.remove('card-flipped'));
+    }
+
+    function handleCardClick(index) {
+        if (state.stage !== 'searching') return;
+
+        const feedback = document.getElementById(`feedback-${index}`);
+        feedback.classList.remove('opacity-0');
+
+        if (index === state.targetIndex) {
+            feedback.innerHTML = `
+                <svg viewBox="0 0 100 100" class="w-32 h-32 text-green-500 fill-current">
+                    <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="8" fill="none" />
+                </svg>
+            `;
+            instruction.innerText = "答對了！太厲害了！";
+            state.stage = 'result';
+            
+            setTimeout(() => {
+                if (state.usedTargetIds.size >= state.maxRounds) {
+                    showView('result');
+                } else {
+                    nextBtn.classList.remove('hidden');
+                }
+            }, 600);
+        } else {
+            feedback.innerHTML = `
+                <svg viewBox="0 0 100 100" class="w-32 h-32 text-red-500">
+                    <line x1="20" y1="20" x2="80" y2="80" stroke="currentColor" stroke-width="12" stroke-linecap="round" />
+                    <line x1="80" y1="20" x2="20" y2="80" stroke="currentColor" stroke-width="12" stroke-linecap="round" />
+                </svg>
+            `;
+            instruction.innerText = "答錯囉，再仔細看看！";
+        }
+    }
+</script>
+</body>
+</html>
