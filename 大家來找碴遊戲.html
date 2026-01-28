@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大家來找碴 - 記憶挑戰賽</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .card-container {
+            perspective: 1000px;
+        }
+        .card-inner {
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        .card-flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            backface-visibility: hidden;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 0.75rem;
+        }
+        .card-back {
+            background-color: #3b82f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            transform: rotateY(180deg);
+        }
+        .result-overlay {
+            pointer-events: none;
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fade-in 0.3s ease-out forwards;
+        }
+        /* Loading Spinner */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Gallery Selection Styles */
+        .gallery-item.selected {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+            transform: scale(0.95);
+        }
+        .gallery-item.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: #3b82f6;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen font-sans">
+
+<div id="app" class="max-w-4xl mx-auto p-4 md:p-8">
+    <!-- 第一頁：上傳介面 -->
+    <div id="upload-view" class="bg-white rounded-2xl shadow-xl p-8 relative transition-all duration-300">
+        <!-- 標題區域 -->
+        <div class="flex justify-between items-center mb-6">
+            <div class="flex-1 text-center relative">
+                <h1 class="text-3xl font-bold text-slate-800 mb-2">大家來找碴：圖片挑戰</h1>
+                <p class="text-slate-500 text-sm">規則：檔名前兩個字相同即為一組（最少 2 組即可開始）</p>
+            </div>
+            <!-- 上傳頁面的重新選擇按鈕 -->
+            <button id="reset-selection-btn" class="hidden absolute top-6 right-6 md:static text-sm bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg transition-colors font-medium flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                清空重選
+            </button>
+        </div>
+        
+        <!-- 選擇方式區域 (左右並排) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- 方式一：手動上傳 -->
+            <div class="p-8 border-4 border-dashed border-slate-200 rounded-xl hover:border-blue-400 hover:bg-slate-50 transition-colors cursor-pointer text-center group flex flex-col justify-center items-center h-full min-h-[200px]" id="drop-zone">
+                <input type="file" id="file-input" multiple accept="image/*" class="hidden">
+                <div class="space-y-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-slate-400 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <div>
+                        <p class="text-lg text-slate-600 font-bold mb-1">方式一</p>
+                        <p class="text-sm text-slate-500">點擊選取多個本機圖片檔案</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 方式二：讀取 GitHub -->
+            <div id="fetch-github-btn" class="p-8 border-4 border-dashed border-transparent bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-colors cursor-pointer text-center group flex flex-col justify-center items-center h-full min-h-[200px]">
+                <div class="space-y-4" id="github-content">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-indigo-400 group-hover:text-indigo-600 transition-colors" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                    <div>
+                        <p class="text-lg text-indigo-700 font-bold mb-1">方式二</p>
+                        <p class="text-sm text-indigo-600">從 GitHub 雲端圖庫選擇</p>
+                        <p class="text-xs text-indigo-400 mt-1 break-all">happy690331/teacher/images</p>
+                    </div>
+                </div>
+                <!-- Loading Spinner (隱藏) -->
+                <div id="github-loading" class="hidden flex flex-col items-center space-y-2">
+                    <div class="spinner"></div>
+                    <p class="text-indigo-600 font-medium">正在讀取 GitHub 資料...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 配對結果預覽區域 -->
+        <div id="file-status" class="hidden space-y-4 border-t pt-6 animate-fade-in">
+            <div class="bg-blue-50 p-4 rounded-lg">
+                <div class="flex justify-between items-center mb-2">
+                    <p class="text-blue-800 font-bold" id="status-summary"></p>
+                </div>
+                <div id="pair-list" class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-blue-700 max-h-40 overflow-y-auto">
+                    <!-- 配對清單會顯示在這裡 -->
+                </div>
+            </div>
+            
+            <div id="error-list" class="text-sm text-red-500 italic"></div>
+
+            <div class="text-center pt-4">
+                <button id="start-game-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-12 py-4 rounded-full font-bold shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto">
+                    開始遊戲
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GitHub 圖片選擇 Modal (新增) -->
+    <div id="github-selection-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+            <div class="p-6 border-b flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                <div>
+                    <h3 class="text-xl font-bold text-slate-800">選擇要遊玩的圖片</h3>
+                    <p class="text-sm text-slate-500">來源：GitHub (happy690331/teacher/images)</p>
+                </div>
+                <button id="close-github-modal-btn" class="text-slate-400 hover:text-slate-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-6 bg-slate-100">
+                <div id="github-grid" class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    <!-- Javascript will populate this -->
+                </div>
+            </div>
+
+            <div class="p-6 border-t bg-white rounded-b-2xl flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="text-sm text-slate-600 flex items-center gap-4">
+                    <span>已選擇 <span id="github-selected-count" class="font-bold text-blue-600">0</span> 張圖片</span>
+                    <button id="select-all-btn" class="text-blue-600 hover:text-blue-800 font-medium text-sm">全選</button>
+                    <button id="deselect-all-btn" class="text-slate-500 hover:text-slate-700 font-medium text-sm">取消全選</button>
+                </div>
+                <div class="space-x-2 w-full md:w-auto flex justify-end">
+                    <button id="cancel-github-modal-btn" class="px-4 py-2 text-slate-500 hover:text-slate-700">取消</button>
+                    <button id="confirm-github-selection-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-lg font-bold shadow transition-colors">
+                        確定選取
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 第二頁：遊戲介面 -->
+    <div id="game-view" class="hidden space-y-6">
+        <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-md">
+            <div class="flex items-center">
+                <span class="text-slate-500">進度:</span>
+                <span id="progress-text" class="text-xl font-bold text-blue-600 ml-2">1 / 4</span>
+            </div>
+            <h2 id="game-instruction" class="text-lg font-medium text-slate-700 text-center flex-1 mx-2">請記住這些卡片...</h2>
+            <div>
+                <button id="reselect-btn" class="text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg transition-colors font-medium flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    重新選擇
+                </button>
+            </div>
+        </div>
+
+        <div id="card-grid" class="grid gap-4 min-h-[400px]">
+            <!-- 卡片會動態生成於此 -->
+        </div>
+
+        <div class="flex justify-center space-x-4">
+            <button id="memorize-btn" class="bg-amber-500 hover:bg-amber-600 text-white px-10 py-4 rounded-xl font-bold shadow-lg transition-all">
+                記住了！
+            </button>
+            <button id="start-search-btn" class="hidden bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-xl font-bold shadow-lg transition-all">
+                開始找
+            </button>
+            <button id="next-round-btn" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-4 rounded-xl font-bold shadow-lg transition-all">
+                換下一題
+            </button>
+        </div>
+    </div>
+
+    <!-- 結算頁面 -->
+    <div id="result-view" class="hidden bg-white rounded-2xl shadow-xl p-12 text-center">
+        <h1 class="text-4xl font-bold text-slate-800 mb-4">挑戰結束！</h1>
+        <p class="text-xl text-slate-600 mb-8">太棒了！你已經辨識完所有更換過的卡片。</p>
+        <button onclick="location.reload()" class="bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-xl font-bold shadow-lg">
+            重新玩
+        </button>
+    </div>
+</div>
+
+<script>
+    const state = {
+        allPairs: {}, 
+        currentSet: [], 
+        gridCards: [], 
+        targetIndex: -1, 
+        usedTargetIds: new Set(), 
+        stage: 'upload', 
+        round: 0,
+        maxRounds: 0,
+        // 新增: 用於存儲從 GitHub 抓到的原始檔案列表與使用者選取狀態
+        fetchedGitHubFiles: [],
+        selectedGitHubFiles: new Set()
+    };
+
+    // DOM 元素
+    const uploadView = document.getElementById('upload-view');
+    const gameView = document.getElementById('game-view');
+    const resultView = document.getElementById('result-view');
+    const fileInput = document.getElementById('file-input');
+    const dropZone = document.getElementById('drop-zone');
+    const startBtn = document.getElementById('start-game-btn');
+    const cardGrid = document.getElementById('card-grid');
+    const memorizeBtn = document.getElementById('memorize-btn');
+    const startSearchBtn = document.getElementById('start-search-btn');
+    const nextBtn = document.getElementById('next-round-btn');
+    const instruction = document.getElementById('game-instruction');
+    const progressText = document.getElementById('progress-text');
+    const pairListContainer = document.getElementById('pair-list');
+    const errorListContainer = document.getElementById('error-list');
+    const statusSummary = document.getElementById('status-summary');
+    const reselectBtn = document.getElementById('reselect-btn');
+    const resetSelectionBtn = document.getElementById('reset-selection-btn');
+    const fetchGitHubBtn = document.getElementById('fetch-github-btn');
+    const githubContent = document.getElementById('github-content');
+    const githubLoading = document.getElementById('github-loading');
+
+    // GitHub Selection Modal Elements
+    const githubModal = document.getElementById('github-selection-modal');
+    const githubGrid = document.getElementById('github-grid');
+    const closeGithubModalBtn = document.getElementById('close-github-modal-btn');
+    const cancelGithubModalBtn = document.getElementById('cancel-github-modal-btn');
+    const confirmGithubSelectionBtn = document.getElementById('confirm-github-selection-btn');
+    const githubSelectedCount = document.getElementById('github-selected-count');
+    const selectAllBtn = document.getElementById('select-all-btn');
+    const deselectAllBtn = document.getElementById('deselect-all-btn');
+
+    // --- Event Listeners ---
+    
+    // 方式一：手動上傳
+    dropZone.onclick = () => fileInput.click();
+    fileInput.onchange = (e) => handleFiles(Array.from(e.target.files));
+    
+    // 方式二：讀取 GitHub
+    fetchGitHubBtn.onclick = async () => {
+        // UI 切換為 Loading 狀態
+        githubContent.classList.add('hidden');
+        githubLoading.classList.remove('hidden');
+        
+        try {
+            const repoOwner = 'happy690331';
+            const repoName = 'teacher';
+            const path = 'images';
+            const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${path}`;
+
+            const response = await fetch(apiUrl);
+            
+            if (!response.ok) {
+                throw new Error(`GitHub API Error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            // 過濾出圖片檔案
+            const imageFiles = data.filter(item => 
+                item.type === 'file' && 
+                /\.(jpg|jpeg|png|gif|webp)$/i.test(item.name)
+            );
+
+            if (imageFiles.length === 0) {
+                alert('在該 GitHub 路徑下找不到圖片檔案。');
+                githubContent.classList.remove('hidden');
+                githubLoading.classList.add('hidden');
+                return;
+            }
+
+            // 保存抓取到的資料
+            state.fetchedGitHubFiles = imageFiles;
+            state.selectedGitHubFiles.clear(); // 預設清空選擇
+            
+            // 渲染選擇介面
+            renderGithubGrid();
+            githubModal.classList.remove('hidden');
+
+        } catch (error) {
+            console.error(error);
+            alert(`讀取 GitHub 失敗: ${error.message}\n請確認網路連線或 API 限制。`);
+        } finally {
+            // 還原按鈕狀態 (無論成功失敗，都要還原載入動畫)
+            githubContent.classList.remove('hidden');
+            githubLoading.classList.add('hidden');
+        }
+    };
+
+    // GitHub Modal Events
+    closeGithubModalBtn.onclick = () => githubModal.classList.add('hidden');
+    cancelGithubModalBtn.onclick = () => githubModal.classList.add('hidden');
+    
+    selectAllBtn.onclick = () => {
+        state.fetchedGitHubFiles.forEach(file => state.selectedGitHubFiles.add(file.name));
+        updateGithubUI();
+    };
+
+    deselectAllBtn.onclick = () => {
+        state.selectedGitHubFiles.clear();
+        updateGithubUI();
+    };
+
+    confirmGithubSelectionBtn.onclick = () => {
+        const selectedNames = Array.from(state.selectedGitHubFiles);
+        if (selectedNames.length === 0) {
+            alert("請至少選擇圖片！");
+            return;
+        }
+
+        const tempMap = {};
+        // 從 fetchedGitHubFiles 中找出選中的檔案資料
+        selectedNames.forEach(name => {
+            const fileData = state.fetchedGitHubFiles.find(f => f.name === name);
+            if (fileData) {
+                const baseName = name.substring(0, 2);
+                if (!tempMap[baseName]) tempMap[baseName] = [];
+                tempMap[baseName].push(fileData.download_url);
+            }
+        });
+
+        // 驗證邏輯：確保每一組都是 2 張
+        const errors = [];
+        const validPairs = {};
+        let validCount = 0;
+
+        for (const [key, urls] of Object.entries(tempMap)) {
+            if (urls.length === 2) {
+                validPairs[key] = urls;
+                validCount++;
+            } else {
+                errors.push(`「${key}」系列您選擇了 ${urls.length} 張 (必須剛好 2 張)`);
+            }
+        }
+
+        if (errors.length > 0) {
+            alert(`選擇有誤：\n\n${errors.join('\n')}\n\n請確保每一組同名圖片(前兩字相同)都剛好勾選了 2 張。`);
+            return;
+        }
+
+        if (validCount < 2) {
+            alert("配對組數不足！最少需要選擇 2 組 (共 4 張) 完整配對的圖片才能開始遊戲。");
+            return;
+        }
+
+        // 成功，進入下一步
+        state.allPairs = validPairs;
+        updateFileStatusUI(validPairs, [], validCount);
+        githubModal.classList.add('hidden');
+    };
+
+    // --- Helper Functions for GitHub Selection ---
+
+    function renderGithubGrid() {
+        githubGrid.innerHTML = '';
+        state.fetchedGitHubFiles.forEach(file => {
+            const isSelected = state.selectedGitHubFiles.has(file.name);
+            const div = document.createElement('div');
+            // 使用 gallery-item class 來套用 CSS 樣式
+            div.className = `gallery-item relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all h-32 bg-gray-100 ${isSelected ? 'selected' : 'border-slate-200 hover:border-blue-300'}`;
+            div.onclick = () => toggleGithubSelection(file.name);
+
+            div.innerHTML = `
+                <img src="${file.download_url}" 
+                     alt="${file.name}" 
+                     class="w-full h-full object-cover"
+                     loading="lazy">
+                <div class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 truncate text-center">
+                    ${file.name}
+                </div>
+            `;
+            githubGrid.appendChild(div);
+        });
+        updateGithubUI();
+    }
+
+    function toggleGithubSelection(name) {
+        if (state.selectedGitHubFiles.has(name)) {
+            state.selectedGitHubFiles.delete(name);
+        } else {
+            state.selectedGitHubFiles.add(name);
+        }
+        updateGithubUI();
+    }
+
+    function updateGithubUI() {
+        githubSelectedCount.innerText = state.selectedGitHubFiles.size;
+        // 更新每個項目的視覺選取狀態
+        const items = githubGrid.children;
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const name = state.fetchedGitHubFiles[i].name; // grid 順序跟 fetchedFiles 一致
+            if (state.selectedGitHubFiles.has(name)) {
+                item.classList.add('selected');
+                item.classList.remove('border-slate-200', 'hover:border-blue-300');
+            } else {
+                item.classList.remove('selected');
+                item.classList.add('border-slate-200', 'hover:border-blue-300');
+            }
+        }
+    }
+
+
+    startBtn.onclick = () => {
+        if (Object.keys(state.allPairs).length < 2) return;
+        initGame();
+        showView('game');
+    };
+
+    memorizeBtn.onclick = () => startHiding();
+    startSearchBtn.onclick = () => startSearching();
+    nextBtn.onclick = () => setupRound();
+    reselectBtn.onclick = () => showView('upload');
+    resetSelectionBtn.onclick = resetUploadState;
+
+    // --- State Reset Logic ---
+    function resetUploadState() {
+        state.allPairs = {};
+        pairListContainer.innerHTML = '';
+        errorListContainer.innerHTML = '';
+        statusSummary.innerText = '';
+        fileInput.value = '';
+        
+        document.getElementById('file-status').classList.add('hidden');
+        resetSelectionBtn.classList.add('hidden'); 
+    }
+
+    // --- Shared File Handling ---
+
+    function handleFiles(files) {
+        const imageFiles = files.filter(file => file.type.startsWith('image/'));
+
+        if (imageFiles.length === 0 && files.length > 0) {
+            alert("沒有選取到圖片檔案。");
+            return;
+        }
+        
+        const tempMap = {};
+        
+        imageFiles.forEach(file => {
+            const fileName = file.name;
+            const baseName = fileName.substring(0, 2);
+            if (!tempMap[baseName]) tempMap[baseName] = [];
+            tempMap[baseName].push(URL.createObjectURL(file));
+        });
+
+        processPairs(tempMap);
+    }
+
+    function processPairs(tempMap) {
+        const validPairs = {};
+        const singles = [];
+        let pairCount = 0;
+
+        for (const word in tempMap) {
+            if (tempMap[word].length >= 2) {
+                // 取前兩張作為一組
+                validPairs[word] = [tempMap[word][0], tempMap[word][1]];
+                pairCount++;
+            } else {
+                singles.push(word);
+            }
+        }
+
+        state.allPairs = validPairs;
+        updateFileStatusUI(validPairs, singles, pairCount);
+    }
+
+    function updateFileStatusUI(pairs, singles, count) {
+        pairListContainer.innerHTML = '';
+        errorListContainer.innerHTML = '';
+        
+        document.getElementById('file-status').classList.remove('hidden');
+        resetSelectionBtn.classList.remove('hidden'); // 顯示清空按鈕
+
+        for (const word in pairs) {
+            const item = document.createElement('div');
+            item.innerHTML = `✅ ${word}... (2張)`;
+            pairListContainer.appendChild(item);
+        }
+
+        if (singles.length > 0) {
+            errorListContainer.innerText = `注意：以下開頭的檔案只有 1 張，無法成對：${singles.join(', ')}`;
+        }
+
+        if (count >= 2) {
+            statusSummary.innerText = `目前已準備好 ${count} 組配對！`;
+            statusSummary.className = "text-green-600 font-bold mb-2";
+            startBtn.disabled = false;
+        } else {
+            statusSummary.innerText = `目前僅有 ${count} 組配對，還差 ${2 - count} 組才能開始。`;
+            statusSummary.className = "text-amber-600 font-bold mb-2";
+            startBtn.disabled = true;
+        }
+    }
+
+    function showView(viewName) {
+        uploadView.classList.add('hidden');
+        gameView.classList.add('hidden');
+        resultView.classList.add('hidden');
+        if (viewName === 'upload') uploadView.classList.remove('hidden');
+        if (viewName === 'game') gameView.classList.remove('hidden');
+        if (viewName === 'result') resultView.classList.remove('hidden');
+    }
+
+    function initGame() {
+        const keys = Object.keys(state.allPairs);
+        const shuffled = keys.sort(() => 0.5 - Math.random());
+        // 最多 6 組，最少 2 組
+        const cardCount = Math.min(keys.length, 6);
+        state.currentSet = shuffled.slice(0, cardCount);
+        state.maxRounds = cardCount;
+        state.usedTargetIds.clear();
+        state.round = 0;
+        
+        // 根據數量調整網格
+        cardGrid.className = "grid gap-4 min-h-[400px]";
+        if (cardCount <= 4) {
+            cardGrid.classList.add("grid-cols-2");
+        } else {
+            cardGrid.classList.add("grid-cols-3");
+        }
+
+        setupRound();
+    }
+
+    function setupRound() {
+        state.round++;
+        state.stage = 'memorizing';
+        instruction.innerText = "請記住這些卡片...";
+        progressText.innerText = `${state.round} / ${state.maxRounds}`;
+        
+        memorizeBtn.classList.remove('hidden');
+        startSearchBtn.classList.add('hidden');
+        nextBtn.classList.add('hidden');
+
+        const displayOrder = [...state.currentSet].sort(() => 0.5 - Math.random());
+        
+        state.gridCards = displayOrder.map(word => ({
+            word: word,
+            currentUrl: state.allPairs[word][0], 
+            version: 0 
+        }));
+
+        renderGrid(false);
+    }
+
+    function renderGrid(isFlipped) {
+        cardGrid.innerHTML = '';
+        state.gridCards.forEach((card, index) => {
+            const container = document.createElement('div');
+            container.className = `card-container relative w-full h-64 cursor-pointer ${isFlipped ? 'card-flipped' : ''}`;
+            container.onclick = () => handleCardClick(index);
+
+            // 建立卡片內部結構
+            const cardInner = document.createElement('div');
+            cardInner.className = 'card-inner w-full h-full shadow-lg rounded-xl';
+
+            // 正面
+            const cardFront = document.createElement('div');
+            cardFront.className = 'card-front bg-white p-2 border border-slate-200 relative';
+            
+            // 圖片元素
+            const img = document.createElement('img');
+            img.src = card.currentUrl;
+            img.className = 'w-full h-full object-contain rounded-lg transition-opacity duration-300';
+            img.alt = card.word;
+            
+            // 替代文字元素
+            const fallback = document.createElement('div');
+            fallback.className = 'hidden absolute inset-0 flex flex-col items-center justify-center text-slate-400 font-bold bg-slate-50 rounded-lg p-2 text-center';
+            fallback.innerHTML = `<span class="text-4xl mb-2">🖼️</span><span>${card.word}</span>`;
+
+            // 當圖片載入錯誤時
+            img.onerror = () => {
+                img.style.display = 'none';
+                fallback.classList.remove('hidden');
+            };
+
+            cardFront.appendChild(img);
+            cardFront.appendChild(fallback);
+
+            // 背面
+            const cardBack = document.createElement('div');
+            cardBack.className = 'card-back border-4 border-white';
+            cardBack.innerHTML = '<span class="text-4xl">?</span>';
+
+            cardInner.appendChild(cardFront);
+            cardInner.appendChild(cardBack);
+            container.appendChild(cardInner);
+
+            // 回饋圖層
+            const feedback = document.createElement('div');
+            feedback.id = `feedback-${index}`;
+            feedback.className = 'result-overlay opacity-0 transition-opacity';
+            
+            container.appendChild(feedback);
+            cardGrid.appendChild(container);
+        });
+    }
+
+    function startHiding() {
+        state.stage = 'hidden';
+        instruction.innerText = "正在變換中...";
+        memorizeBtn.classList.add('hidden');
+        
+        const containers = document.querySelectorAll('.card-container');
+        containers.forEach(c => c.classList.add('card-flipped'));
+
+        const availableIndices = [];
+        state.gridCards.forEach((card, idx) => {
+            if (!state.usedTargetIds.has(card.word)) {
+                availableIndices.push(idx);
+            }
+        });
+
+        const targetIdx = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+        state.targetIndex = targetIdx;
+        state.usedTargetIds.add(state.gridCards[targetIdx].word);
+
+        setTimeout(() => {
+            const targetCard = state.gridCards[targetIdx];
+            targetCard.version = 1;
+            targetCard.currentUrl = state.allPairs[targetCard.word][1];
+            
+            // 更新圖片
+            const container = containers[targetIdx];
+            const img = container.querySelector('img');
+            const fallback = container.querySelector('.card-front > div'); // 取得 fallback div
+            
+            // 重置狀態：先假設圖片是好的
+            img.style.display = 'block';
+            fallback.classList.add('hidden');
+            
+            // 設定新圖片路徑 (如果失敗，img.onerror 會再次觸發)
+            img.src = targetCard.currentUrl;
+
+            instruction.innerText = "變換完成！";
+            startSearchBtn.classList.remove('hidden');
+        }, 800);
+    }
+
+    function startSearching() {
+        state.stage = 'searching';
+        instruction.innerText = "哪一張卡片被換過了？";
+        startSearchBtn.classList.add('hidden');
+
+        const containers = document.querySelectorAll('.card-container');
+        containers.forEach(c => c.classList.remove('card-flipped'));
+    }
+
+    function handleCardClick(index) {
+        if (state.stage !== 'searching') return;
+
+        const feedback = document.getElementById(`feedback-${index}`);
+        feedback.classList.remove('opacity-0');
+
+        if (index === state.targetIndex) {
+            feedback.innerHTML = `
+                <svg viewBox="0 0 100 100" class="w-32 h-32 text-green-500 fill-current">
+                    <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="8" fill="none" />
+                </svg>
+            `;
+            instruction.innerText = "答對了！太厲害了！";
+            state.stage = 'result';
+            
+            setTimeout(() => {
+                if (state.usedTargetIds.size >= state.maxRounds) {
+                    showView('result');
+                } else {
+                    nextBtn.classList.remove('hidden');
+                }
+            }, 600);
+        } else {
+            feedback.innerHTML = `
+                <svg viewBox="0 0 100 100" class="w-32 h-32 text-red-500">
+                    <line x1="20" y1="20" x2="80" y2="80" stroke="currentColor" stroke-width="12" stroke-linecap="round" />
+                    <line x1="80" y1="20" x2="20" y2="80" stroke="currentColor" stroke-width="12" stroke-linecap="round" />
+                </svg>
+            `;
+            instruction.innerText = "答錯囉，再仔細看看！";
+        }
+    }
+</script>
+</body>
+</html>
