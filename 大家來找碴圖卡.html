@@ -46,32 +46,87 @@
             justify-content: center;
             z-index: 10;
         }
+        /* Gallery Selection Styles */
+        .gallery-item.selected {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+            transform: scale(0.95);
+        }
+        .gallery-item.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: #3b82f6;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen font-sans">
 
 <div id="app" class="max-w-4xl mx-auto p-4 md:p-8">
     <!-- 第一頁：上傳介面 -->
-    <div id="upload-view" class="bg-white rounded-2xl shadow-xl p-8">
-        <h1 class="text-3xl font-bold text-slate-800 mb-2 text-center">大家來找碴：圖片挑戰</h1>
-        <p class="text-slate-500 text-center mb-6">規則：檔名前兩個字相同即為一組（最少 2 組即可開始）</p>
-        
-        <div class="mb-8 p-10 border-4 border-dashed border-slate-200 rounded-xl hover:border-blue-400 transition-colors cursor-pointer text-center" id="drop-zone">
-            <input type="file" id="file-input" multiple accept="image/*" class="hidden">
-            <div class="space-y-4">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    <div id="upload-view" class="bg-white rounded-2xl shadow-xl p-8 relative transition-all duration-300">
+        <!-- 標題區域 -->
+        <div class="flex justify-between items-center mb-6">
+            <div class="flex-1 text-center relative">
+                <h1 class="text-3xl font-bold text-slate-800 mb-2">大家來找碴：圖片挑戰</h1>
+                <p class="text-slate-500 text-sm">規則：檔名前兩個字相同即為一組（最少 2 組即可開始）</p>
+            </div>
+            <!-- 上傳頁面的重新選擇按鈕 -->
+            <button id="reset-selection-btn" class="hidden absolute top-6 right-6 md:static text-sm bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg transition-colors font-medium flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                <p class="text-xl text-slate-600 font-medium">點擊或拖放圖片至此</p>
-                <p class="text-sm text-slate-400">目前偵測機制：取檔名前 2 個字進行配對</p>
+                清空重選
+            </button>
+        </div>
+        
+        <!-- 選擇方式區域 (左右並排) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- 方式一：手動上傳 -->
+            <div class="p-8 border-4 border-dashed border-slate-200 rounded-xl hover:border-blue-400 hover:bg-slate-50 transition-colors cursor-pointer text-center group flex flex-col justify-center items-center h-full min-h-[200px]" id="drop-zone">
+                <input type="file" id="file-input" multiple accept="image/*" class="hidden">
+                <div class="space-y-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-slate-400 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <div>
+                        <p class="text-lg text-slate-600 font-bold mb-1">方式一</p>
+                        <p class="text-sm text-slate-500">點擊或拖放本機圖片</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 方式二：內建圖庫 -->
+            <div id="open-gallery-btn" class="p-8 border-4 border-dashed border-transparent bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-colors cursor-pointer text-center group flex flex-col justify-center items-center h-full min-h-[200px]">
+                <div class="space-y-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-indigo-400 group-hover:text-indigo-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    <div>
+                        <p class="text-lg text-indigo-700 font-bold mb-1">方式二</p>
+                        <p class="text-sm text-indigo-600">從內建圖庫選擇</p>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- 配對結果預覽區域 -->
-        <div id="file-status" class="hidden space-y-4">
+        <div id="file-status" class="hidden space-y-4 border-t pt-6 animate-fade-in">
             <div class="bg-blue-50 p-4 rounded-lg">
-                <p class="text-blue-800 font-bold mb-2" id="status-summary"></p>
-                <div id="pair-list" class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-blue-700">
+                <div class="flex justify-between items-center mb-2">
+                    <p class="text-blue-800 font-bold" id="status-summary"></p>
+                </div>
+                <div id="pair-list" class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-blue-700 max-h-40 overflow-y-auto">
                     <!-- 配對清單會顯示在這裡 -->
                 </div>
             </div>
@@ -79,9 +134,44 @@
             <div id="error-list" class="text-sm text-red-500 italic"></div>
 
             <div class="text-center pt-4">
-                <button id="start-game-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-12 py-4 rounded-full font-bold shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                <button id="start-game-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-12 py-4 rounded-full font-bold shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto">
                     開始遊戲
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 圖庫選擇 Modal -->
+    <div id="gallery-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div class="p-6 border-b flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                <div>
+                    <h3 class="text-xl font-bold text-slate-800">內建圖庫選擇</h3>
+                    <p class="text-sm text-slate-500">來源路徑：./images/ (請選擇成對圖片)</p>
+                </div>
+                <button id="close-gallery-btn" class="text-slate-400 hover:text-slate-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-6 bg-slate-100">
+                <div id="gallery-grid" class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    <!-- 圖庫圖片會生成在這裡 -->
+                </div>
+            </div>
+
+            <div class="p-6 border-t bg-white rounded-b-2xl flex justify-between items-center">
+                <div class="text-sm text-slate-600">
+                    已選擇 <span id="gallery-selected-count" class="font-bold text-blue-600">0</span> 張圖片
+                </div>
+                <div class="space-x-2">
+                    <button onclick="document.getElementById('gallery-modal').classList.add('hidden')" class="px-4 py-2 text-slate-500 hover:text-slate-700">取消</button>
+                    <button id="confirm-gallery-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-lg font-bold shadow transition-colors">
+                        確定選取
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -89,15 +179,21 @@
     <!-- 第二頁：遊戲介面 -->
     <div id="game-view" class="hidden space-y-6">
         <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-md">
-            <div>
+            <div class="flex items-center">
                 <span class="text-slate-500">進度:</span>
                 <span id="progress-text" class="text-xl font-bold text-blue-600 ml-2">1 / 4</span>
             </div>
-            <h2 id="game-instruction" class="text-lg font-medium text-slate-700">請記住這些卡片...</h2>
-            <div></div>
+            <h2 id="game-instruction" class="text-lg font-medium text-slate-700 text-center flex-1 mx-2">請記住這些卡片...</h2>
+            <div>
+                <button id="reselect-btn" class="text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg transition-colors font-medium flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    重新選擇
+                </button>
+            </div>
         </div>
 
-        <!-- 卡片網格：這裏的 class 會由 JS 動態調整 -->
         <div id="card-grid" class="grid gap-4 min-h-[400px]">
             <!-- 卡片會動態生成於此 -->
         </div>
@@ -126,6 +222,19 @@
 </div>
 
 <script>
+    // 預設的圖庫檔案清單
+    const BUILT_IN_GALLERY_FILES = [
+        "玩具_1.jpg", "玩具_2.jpg",
+        "花朵A.png", "花朵B.png",
+        "小狗-1.jpg", "小狗-2.jpg",
+        "貓咪_左.jpg", "貓咪_右.jpg",
+        "蘋果_紅.jpg", "蘋果_綠.jpg",
+        "車子_舊.jpg", "車子_新.jpg",
+        "房子_日.jpg", "房子_夜.jpg",
+        "樹木_春.jpg", "樹木_秋.jpg"
+    ];
+    const GALLERY_PATH = "images/";
+
     const state = {
         allPairs: {}, 
         currentSet: [], 
@@ -134,9 +243,11 @@
         usedTargetIds: new Set(), 
         stage: 'upload', 
         round: 0,
-        maxRounds: 0
+        maxRounds: 0,
+        selectedGalleryFiles: new Set() 
     };
 
+    // DOM 元素
     const uploadView = document.getElementById('upload-view');
     const gameView = document.getElementById('game-view');
     const resultView = document.getElementById('result-view');
@@ -152,9 +263,34 @@
     const pairListContainer = document.getElementById('pair-list');
     const errorListContainer = document.getElementById('error-list');
     const statusSummary = document.getElementById('status-summary');
+    const reselectBtn = document.getElementById('reselect-btn');
+    const resetSelectionBtn = document.getElementById('reset-selection-btn');
+    
+    // Gallery Elements
+    const openGalleryBtn = document.getElementById('open-gallery-btn');
+    const galleryModal = document.getElementById('gallery-modal');
+    const closeGalleryBtn = document.getElementById('close-gallery-btn');
+    const confirmGalleryBtn = document.getElementById('confirm-gallery-btn');
+    const galleryGrid = document.getElementById('gallery-grid');
+    const gallerySelectedCount = document.getElementById('gallery-selected-count');
 
+    // --- Helper: Generate SVG Placeholder ---
+    function getPlaceholder(text) {
+        // 生成一個帶有文字的 SVG data URI，確保圖片失效時有東西顯示
+        const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
+            <rect width="100%" height="100%" fill="#f1f5f9"/>
+            <rect width="100%" height="100%" fill="none" stroke="#cbd5e1" stroke-width="4"/>
+            <text x="50%" y="40%" font-family="sans-serif" font-size="60" text-anchor="middle" dominant-baseline="middle" fill="#94a3b8">🖼️</text>
+            <text x="50%" y="65%" font-family="sans-serif" font-size="30" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#475569">${text}</text>
+            <text x="50%" y="80%" font-family="sans-serif" font-size="14" text-anchor="middle" fill="#94a3b8">(圖片未找到)</text>
+        </svg>`.trim();
+        return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    }
+
+    // --- Event Listeners ---
     dropZone.onclick = () => fileInput.click();
-    fileInput.onchange = handleFiles;
+    fileInput.onchange = (e) => handleFiles(Array.from(e.target.files), 'upload');
 
     startBtn.onclick = () => {
         if (Object.keys(state.allPairs).length < 2) return;
@@ -165,54 +301,162 @@
     memorizeBtn.onclick = () => startHiding();
     startSearchBtn.onclick = () => startSearching();
     nextBtn.onclick = () => setupRound();
+    reselectBtn.onclick = () => showView('upload');
+    resetSelectionBtn.onclick = resetUploadState;
 
-    function handleFiles(e) {
-        const files = Array.from(e.target.files);
-        if (files.length === 0) return;
+    openGalleryBtn.onclick = openGallery;
+    closeGalleryBtn.onclick = () => galleryModal.classList.add('hidden');
+    confirmGalleryBtn.onclick = handleGalleryConfirm;
+
+    // --- Logic ---
+    function resetUploadState() {
+        state.allPairs = {};
+        state.selectedGalleryFiles.clear();
+        pairListContainer.innerHTML = '';
+        errorListContainer.innerHTML = '';
+        statusSummary.innerText = '';
+        fileInput.value = '';
+        
+        document.getElementById('file-status').classList.add('hidden');
+        resetSelectionBtn.classList.add('hidden');
+    }
+
+    function openGallery() {
+        updateGalleryUI();
+        renderGalleryGrid();
+        galleryModal.classList.remove('hidden');
+    }
+
+    function renderGalleryGrid() {
+        galleryGrid.innerHTML = '';
+        BUILT_IN_GALLERY_FILES.forEach(filename => {
+            const isSelected = state.selectedGalleryFiles.has(filename);
+            const div = document.createElement('div');
+            div.className = `gallery-item relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all h-32 bg-gray-100 ${isSelected ? 'selected' : 'border-slate-200 hover:border-blue-300'}`;
+            div.onclick = () => toggleGallerySelection(filename);
+
+            const src = `${GALLERY_PATH}${filename}`;
+            // 縮圖也加上 placeholder 機制
+            div.innerHTML = `
+                <img src="${src}" 
+                     alt="${filename}" 
+                     class="w-full h-full object-cover"
+                     onerror="this.onerror=null; this.src='${getPlaceholder(filename.split('.')[0])}'">
+                <div class="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 truncate text-center">
+                    ${filename}
+                </div>
+            `;
+            galleryGrid.appendChild(div);
+        });
+    }
+
+    function toggleGallerySelection(filename) {
+        if (state.selectedGalleryFiles.has(filename)) {
+            state.selectedGalleryFiles.delete(filename);
+        } else {
+            state.selectedGalleryFiles.add(filename);
+        }
+        updateGalleryUI();
+        renderGalleryGrid(); 
+    }
+
+    function updateGalleryUI() {
+        gallerySelectedCount.innerText = state.selectedGalleryFiles.size;
+    }
+
+    function handleGalleryConfirm() {
+        const selectedFiles = Array.from(state.selectedGalleryFiles);
+        if (selectedFiles.length === 0) {
+            alert("請至少選擇圖片！");
+            return;
+        }
 
         const tempMap = {};
-        
-        files.forEach(file => {
-            // 規則更新：直接抓檔名前兩個字作為語詞關鍵字
-            const baseName = file.name.substring(0, 2);
-            
+        const errors = [];
+
+        selectedFiles.forEach(filename => {
+            const baseName = filename.substring(0, 2); 
             if (!tempMap[baseName]) tempMap[baseName] = [];
-            tempMap[baseName].push(URL.createObjectURL(file));
+            tempMap[baseName].push(filename);
         });
 
         const validPairs = {};
+        let validCount = 0;
+
+        for (const [key, files] of Object.entries(tempMap)) {
+            if (files.length === 2) {
+                validPairs[key] = files.map(f => `${GALLERY_PATH}${f}`);
+                validCount++;
+            } else {
+                errors.push(`「${key}」系列選擇了 ${files.length} 張 (必須剛好 2 張)`);
+            }
+        }
+
+        if (errors.length > 0) {
+            alert(`無法開始遊戲，發現以下錯誤：\n\n${errors.join('\n')}\n\n請確保每一組都剛好選擇了 2 張圖片。`);
+            return;
+        }
+
+        if (validCount < 2) {
+            alert("配對組數不足！最少需要選擇 2 組 (共 4 張) 完整配對的圖片才能開始遊戲。");
+            return;
+        }
+
+        state.allPairs = validPairs;
+        updateFileStatusUI(validPairs, [], validCount);
+        galleryModal.classList.add('hidden');
+    }
+
+    function handleFiles(files, type) {
+        if (files.length === 0) return;
+        const tempMap = {};
+        files.forEach(file => {
+            const baseName = file.name.substring(0, 2);
+            if (!tempMap[baseName]) tempMap[baseName] = [];
+            tempMap[baseName].push(URL.createObjectURL(file));
+        });
+        processPairs(tempMap);
+    }
+
+    function processPairs(tempMap) {
+        const validPairs = {};
         const singles = [];
         let pairCount = 0;
-
-        pairListContainer.innerHTML = '';
-        errorListContainer.innerHTML = '';
 
         for (const word in tempMap) {
             if (tempMap[word].length >= 2) {
                 validPairs[word] = [tempMap[word][0], tempMap[word][1]];
                 pairCount++;
-                
-                const item = document.createElement('div');
-                item.innerHTML = `✅ ${word}... (2張)`;
-                pairListContainer.appendChild(item);
             } else {
                 singles.push(word);
             }
         }
-
         state.allPairs = validPairs;
+        updateFileStatusUI(validPairs, singles, pairCount);
+    }
+
+    function updateFileStatusUI(pairs, singles, count) {
+        pairListContainer.innerHTML = '';
+        errorListContainer.innerHTML = '';
         document.getElementById('file-status').classList.remove('hidden');
-        
+        resetSelectionBtn.classList.remove('hidden');
+
+        for (const word in pairs) {
+            const item = document.createElement('div');
+            item.innerHTML = `✅ ${word}... (2張)`;
+            pairListContainer.appendChild(item);
+        }
+
         if (singles.length > 0) {
             errorListContainer.innerText = `注意：以下開頭的檔案只有 1 張，無法成對：${singles.join(', ')}`;
         }
 
-        if (pairCount >= 2) {
-            statusSummary.innerText = `成功偵測到 ${pairCount} 組配對！已達開始門檻。`;
+        if (count >= 2) {
+            statusSummary.innerText = `目前已準備好 ${count} 組配對！`;
             statusSummary.className = "text-green-600 font-bold mb-2";
             startBtn.disabled = false;
         } else {
-            statusSummary.innerText = `目前僅有 ${pairCount} 組配對，還差 ${2 - pairCount} 組才能開始。`;
+            statusSummary.innerText = `目前僅有 ${count} 組配對，還差 ${2 - count} 組才能開始。`;
             statusSummary.className = "text-amber-600 font-bold mb-2";
             startBtn.disabled = true;
         }
@@ -230,14 +474,12 @@
     function initGame() {
         const keys = Object.keys(state.allPairs);
         const shuffled = keys.sort(() => 0.5 - Math.random());
-        // 最多取 6 組進行遊戲，若不足 6 組則全部使用
         const cardCount = Math.min(keys.length, 6);
         state.currentSet = shuffled.slice(0, cardCount);
         state.maxRounds = cardCount;
         state.usedTargetIds.clear();
         state.round = 0;
         
-        // 根據卡片數量調整網格欄數
         cardGrid.className = "grid gap-4 min-h-[400px]";
         if (cardCount <= 4) {
             cardGrid.classList.add("grid-cols-2");
@@ -258,7 +500,6 @@
         startSearchBtn.classList.add('hidden');
         nextBtn.classList.add('hidden');
 
-        // 隨機排序顯示位置
         const displayOrder = [...state.currentSet].sort(() => 0.5 - Math.random());
         
         state.gridCards = displayOrder.map(word => ({
@@ -277,17 +518,45 @@
             container.className = `card-container relative w-full h-64 cursor-pointer ${isFlipped ? 'card-flipped' : ''}`;
             container.onclick = () => handleCardClick(index);
 
-            container.innerHTML = `
-                <div class="card-inner w-full h-full shadow-lg rounded-xl">
-                    <div class="card-front bg-white p-2 border border-slate-200">
-                        <img src="${card.currentUrl}" class="w-full h-full object-contain rounded-lg">
-                    </div>
-                    <div class="card-back border-4 border-white">
-                        <span class="text-4xl">?</span>
-                    </div>
-                </div>
-                <div id="feedback-${index}" class="result-overlay opacity-0 transition-opacity"></div>
-            `;
+            const cardInner = document.createElement('div');
+            cardInner.className = 'card-inner w-full h-full shadow-lg rounded-xl';
+
+            const cardFront = document.createElement('div');
+            cardFront.className = 'card-front bg-white p-2 border border-slate-200 relative';
+            
+            const img = document.createElement('img');
+            img.className = 'w-full h-full object-contain rounded-lg transition-opacity duration-300';
+            img.alt = card.word;
+            
+            // 重要修正：先設定 onerror，再設定 src，確保如果檔案找不到能馬上觸發替代方案
+            img.onerror = function() {
+                // 如果圖片載入失敗，將 src 換成生成的 SVG 佔位圖
+                this.onerror = null; // 避免無窮迴圈
+                this.src = getPlaceholder(card.word);
+            };
+            img.onload = function() {
+                // 圖片載入成功
+                this.style.display = 'block';
+            };
+            
+            // 最後才設定 src
+            img.src = card.currentUrl;
+
+            cardFront.appendChild(img);
+
+            const cardBack = document.createElement('div');
+            cardBack.className = 'card-back border-4 border-white';
+            cardBack.innerHTML = '<span class="text-4xl">?</span>';
+
+            cardInner.appendChild(cardFront);
+            cardInner.appendChild(cardBack);
+            container.appendChild(cardInner);
+
+            const feedback = document.createElement('div');
+            feedback.id = `feedback-${index}`;
+            feedback.className = 'result-overlay opacity-0 transition-opacity';
+            
+            container.appendChild(feedback);
             cardGrid.appendChild(container);
         });
     }
@@ -307,7 +576,6 @@
             }
         });
 
-        // 選一個還沒被換過的作為目標
         const targetIdx = availableIndices[Math.floor(Math.random() * availableIndices.length)];
         state.targetIndex = targetIdx;
         state.usedTargetIds.add(state.gridCards[targetIdx].word);
@@ -317,7 +585,16 @@
             targetCard.version = 1;
             targetCard.currentUrl = state.allPairs[targetCard.word][1];
             
-            const img = containers[targetIdx].querySelector('img');
+            // 更新圖片
+            const container = containers[targetIdx];
+            const img = container.querySelector('img');
+            
+            // 重新綁定錯誤處理，因為路徑改變了，可能新路徑也不存在
+            img.onerror = function() {
+                this.onerror = null;
+                this.src = getPlaceholder(targetCard.word);
+            };
+            
             img.src = targetCard.currentUrl;
 
             instruction.innerText = "變換完成！";
