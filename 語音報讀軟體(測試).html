@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PDF 考卷精準點讀系統</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- PDF.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    
+    <!-- PDF.js viewer CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css" />
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #525659;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 隱藏滾動條但保留功能 */
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: #333; }
+        ::-webkit-scrollbar-thumb { background: #666; border-radius: 5px; }
+        ::-webkit-scrollbar-thumb:hover { background: #888; }
+
+        /* PDF 頁面容器 */
+        .pdf-page-wrapper {
+            position: relative;
+            margin: 20px auto;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            background-color: white;
+        }
+
+        /* Text Layer 設定 */
+        .textLayer {
+            opacity: 1;
+            mix-blend-mode: multiply;
+        }
+
+        .textLayer span {
+            color: transparent;
+            cursor: pointer;
+            transition: background-color 0.1s;
+        }
+
+        /* 滑鼠經過單個文字時的提示 (淺灰) */
+        .textLayer span:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        /* 被選中朗讀的題目 (精確黃色高亮) */
+        .textLayer span.reading-highlight {
+            background-color: rgba(255, 240, 0, 0.5) !important; /* 顯眼的黃色 */
+            box-shadow: 0 0 2px rgba(255, 200, 0, 0.5);
+        }
+
+        /* 載入動畫 */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
+
+    <!-- 頂部浮動工具列 -->
+    <header class="bg-gray-800 text-white shadow-md z-50 flex-none px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <span class="text-2xl">📄</span>
+            <h1 class="text-lg font-medium tracking-wide">考卷點讀模式 (防干擾修正版)</h1>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <div id="statusMsg" class="text-sm text-gray-300 hidden flex items-center gap-2"></div>
+
+            <button id="stopBtn" class="hidden bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded shadow transition flex items-center gap-2 text-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5zm5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5z"/></svg>
+                停止朗讀
+            </button>
+
+            <label class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded shadow transition text-sm font-medium flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
+                開啟 PDF
+                <input type="file" id="pdfUpload" accept="application/pdf" class="hidden" />
+            </label>
+        </div>
+    </header>
+
+    <!-- 主要內容區 -->
+    <main class="flex-1 overflow-y-auto relative text-center py-8" id="mainContainer">
+        <div id="pdfViewer" class="inline-block text-left">
+            <!-- 初始畫面 -->
+            <div class="mt-20 text-gray-400 text-center flex flex-col items-center">
+                <div class="text-6xl mb-4 opacity-50">👆</div>
+                <p class="text-xl">請上傳考卷 PDF</p>
+                <p class="text-sm mt-2 opacity-75">遇到任何空白或換行，系統皆會強制停頓一秒</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+        const upload = document.getElementById("pdfUpload");
+        const pdfViewer = document.getElementById("pdfViewer");
+        const stopBtn = document.getElementById("stopBtn");
+        const statusMsg = document.getElementById("statusMsg");
+        
+        let currentUtterance = null;
+        let globalSpanMap = [];
+        let fullDocumentText = "";
+        let parsedQuestions = [];
+        let speakingTimeout = null; 
+        
+        // 關鍵變數：用於追蹤當前有效的播放序列 ID
+        let currentSequenceId = 0;
+
+        stopBtn.addEventListener("click", stopSpeaking);
+
+        upload.addEventListener("change", async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Reset
+            pdfViewer.innerHTML = "";
+            globalSpanMap = [];
+            fullDocumentText = "";
+            parsedQuestions = [];
+            stopSpeaking();
+            showLoading(true, "正在解析檔案...");
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdfDoc = await pdfjsLib.getDocument(arrayBuffer).promise;
+                
+                for (let i = 1; i <= pdfDoc.numPages; i++) {
+                    showLoading(true, `正在處理第 ${i} / ${pdfDoc.numPages} 頁...`);
+                    const page = await pdfDoc.getPage(i);
+                    const textContent = await page.getTextContent();
+                    await renderPageAndMapText(page, textContent, i);
+                }
+
+                // 開始解析題目
+                parseQuestionsFromFullText(fullDocumentText);
+                
+                if (parsedQuestions.length === 0) {
+                    showError("找不到題目。請確認格式為「數字.」或「數字、」開頭。");
+                } else {
+                    showLoading(false);
+                    statusMsg.innerHTML = `<span class="text-green-400">✓ 準備完成，共解析出 ${parsedQuestions.length} 題</span>`;
+                    statusMsg.classList.remove("hidden");
+                    setTimeout(() => statusMsg.classList.add("hidden"), 3000);
+                    console.log("Parsed Questions:", parsedQuestions);
+                }
+
+            } catch (err) {
+                console.error(err);
+                showError("錯誤: " + err.message);
+            }
+        });
+
+        async function renderPageAndMapText(page, textContent, pageNum) {
+            const scale = 1.5;
+            const viewport = page.getViewport({ scale: scale });
+
+            const pageWrapper = document.createElement("div");
+            pageWrapper.className = "pdf-page-wrapper";
+            pageWrapper.style.width = `${viewport.width}px`;
+            pageWrapper.style.height = `${viewport.height}px`;
+
+            const canvas = document.createElement("canvas");
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            canvas.style.width = "100%";
+            canvas.style.height = "100%";
+            
+            const textLayerDiv = document.createElement("div");
+            textLayerDiv.className = "textLayer";
+            textLayerDiv.style.width = `${viewport.width}px`;
+            textLayerDiv.style.height = `${viewport.height}px`;
+            textLayerDiv.style.setProperty("--scale-factor", scale);
+
+            pageWrapper.appendChild(canvas);
+            pageWrapper.appendChild(textLayerDiv);
+            pdfViewer.appendChild(pageWrapper);
+
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+            await pdfjsLib.renderTextLayer({
+                textContentSource: textContent,
+                container: textLayerDiv,
+                viewport: viewport,
+                textDivs: []
+            }).promise;
+
+            const spanElements = textLayerDiv.querySelectorAll("span");
+            spanElements.forEach((span) => {
+                const text = span.textContent;
+                const startIndex = fullDocumentText.length;
+                fullDocumentText += text;
+                const endIndex = fullDocumentText.length;
+
+                globalSpanMap.push({
+                    text: text,
+                    startIndex: startIndex,
+                    endIndex: endIndex,
+                    element: span
+                });
+            });
+            fullDocumentText += "\n"; 
+        }
+
+        function parseQuestionsFromFullText(text) {
+            const regexStart = /(\d+[\.、．])/g;
+            const matches = [...text.matchAll(regexStart)];
+            
+            for (let i = 0; i < matches.length; i++) {
+                const currentMatch = matches[i];
+                const startIdx = currentMatch.index;
+                const nextMatch = matches[i + 1];
+                let limitIdx = text.length; 
+                
+                if (nextMatch) {
+                    limitIdx = nextMatch.index;
+                }
+
+                parsedQuestions.push({
+                    text: text.slice(startIdx, limitIdx),
+                    startIndex: startIdx,
+                    endIndex: limitIdx
+                });
+            }
+        }
+
+        document.addEventListener("click", (e) => {
+            if (e.target.tagName === 'SPAN' && e.target.closest('.textLayer')) {
+                handleSpanClick(e.target);
+            }
+        });
+
+        function handleSpanClick(clickedSpan) {
+            const spanData = globalSpanMap.find(item => item.element === clickedSpan);
+            if (!spanData) return;
+
+            const matchedQuestion = parsedQuestions.find(q => 
+                spanData.startIndex >= q.startIndex && 
+                spanData.startIndex < q.endIndex
+            );
+
+            if (matchedQuestion) {
+                console.log("朗讀題目範圍:", matchedQuestion.text);
+                
+                let fullText = matchedQuestion.text.trim();
+                let questionNumberText = "";
+                let contentText = fullText;
+
+                // 1. 分離題號 (例如 "1." -> "第一題")
+                const numberMatch = fullText.match(/^(\d+)[\.、．]/);
+                
+                if (numberMatch) {
+                    const num = numberMatch[1];
+                    questionNumberText = `第${num}題，`;
+                    contentText = fullText.substring(numberMatch[0].length);
+                }
+
+                // 2. 內容中的選項處理 (① -> \n一)
+                // 這裡在數字前加上 \n，利用 split 邏輯將其切分為新段落
+                // 這樣前一段結束後就會產生 1秒 的 postDelay，達成「唸數字前停頓」的效果
+                contentText = contentText.replace(/①|⑴|\(1\)|（1）/g, `\n一`);
+                contentText = contentText.replace(/②|⑵|\(2\)|（2）/g, `\n二`);
+                contentText = contentText.replace(/③|⑶|\(3\)|（3）/g, `\n三`);
+                contentText = contentText.replace(/④|⑷|\(4\)|（4）/g, `\n四`);
+
+                // 3. 建立播放序列
+                const speechQueue = [];
+                
+                // (A) 如果有抓到題號，加入序列
+                if (questionNumberText) {
+                    speechQueue.push({ text: questionNumberText, rate: 0.6, postDelay: 500 });
+                }
+                
+                // (B) 強制根據「任何空白」或「換行」切割
+                const segments = contentText.split(/[\s\n\u3000]+/);
+                
+                segments.forEach(seg => {
+                    const trimmedSeg = seg.trim();
+                    if (trimmedSeg) {
+                        speechQueue.push({ 
+                            text: trimmedSeg, 
+                            rate: 1.0,
+                            postDelay: 1000 // 每一段結束強制停頓1秒
+                        });
+                    }
+                });
+
+                // 執行序列播放
+                speakSequence(speechQueue);
+
+                // 高亮整題
+                highlightRange(matchedQuestion.startIndex, matchedQuestion.endIndex);
+            } else {
+                // 如果點擊的地方不在解析的題目範圍內
+                speakSequence([{ text: clickedSpan.textContent, rate: 1.0 }]);
+                
+                clickedSpan.classList.add("reading-highlight");
+                setTimeout(() => clickedSpan.classList.remove("reading-highlight"), 500);
+            }
+        }
+
+        function highlightRange(qStart, qEnd) {
+            document.querySelectorAll(".reading-highlight").forEach(el => el.classList.remove("reading-highlight"));
+            globalSpanMap.forEach(item => {
+                const intersectionStart = Math.max(item.startIndex, qStart);
+                const intersectionEnd = Math.min(item.endIndex, qEnd);
+                if (intersectionStart < intersectionEnd) {
+                    item.element.classList.add("reading-highlight");
+                }
+            });
+        }
+
+        // 序列播放 (支援 postDelay 停頓 + Sequence ID 防衝突)
+        function speakSequence(items) {
+            stopSpeaking(); // 這會讓 currentSequenceId 遞增
+            
+            if (!items || items.length === 0) return;
+
+            const mySequenceId = currentSequenceId;
+            let currentIndex = 0;
+
+            function playNext() {
+                if (mySequenceId !== currentSequenceId) return;
+
+                if (currentIndex >= items.length) {
+                    checkIfSpeakingStopped();
+                    return;
+                }
+
+                const item = items[currentIndex];
+                
+                if (!item.text || !item.text.trim()) {
+                    currentIndex++;
+                    playNext();
+                    return;
+                }
+
+                const u = new SpeechSynthesisUtterance(item.text);
+                currentUtterance = u; 
+                
+                u.lang = "zh-TW";
+                u.rate = item.rate || 1.0; 
+                
+                const voices = speechSynthesis.getVoices();
+                const zhVoice = voices.find(v => v.lang === "zh-TW" || v.lang === "zh-HK" || v.lang.includes("zh"));
+                if (zhVoice) u.voice = zhVoice;
+
+                u.onstart = () => {
+                    if (mySequenceId === currentSequenceId) {
+                        stopBtn.classList.remove("hidden");
+                    }
+                };
+                
+                u.onend = () => {
+                    if (mySequenceId !== currentSequenceId) return; 
+
+                    if (item.postDelay) {
+                        speakingTimeout = setTimeout(() => {
+                            if (mySequenceId !== currentSequenceId) return; 
+                            currentIndex++;
+                            playNext();
+                        }, item.postDelay);
+                    } else {
+                        currentIndex++;
+                        playNext();
+                    }
+                };
+
+                u.onerror = (e) => {
+                    if (e.error === 'interrupted' || e.error === 'canceled') return;
+                    console.warn("Speech skipped due to error:", e.error);
+                    if (mySequenceId === currentSequenceId) {
+                        currentIndex++;
+                        playNext();
+                    }
+                };
+
+                speechSynthesis.speak(u);
+            }
+
+            playNext();
+        }
+
+        function stopSpeaking() {
+            currentSequenceId++;
+            speechSynthesis.cancel();
+            currentUtterance = null;
+            if (speakingTimeout) {
+                clearTimeout(speakingTimeout);
+                speakingTimeout = null;
+            }
+            stopBtn.classList.add("hidden");
+            document.querySelectorAll(".reading-highlight").forEach(el => el.classList.remove("reading-highlight"));
+        }
+
+        function checkIfSpeakingStopped() {
+            if (!speechSynthesis.speaking) stopBtn.classList.add("hidden");
+        }
+
+        function showLoading(show, text = "") {
+            statusMsg.classList.remove("hidden", "text-red-400");
+            if (show) {
+                statusMsg.innerHTML = `<div class="loader"></div> <span>${text}</span>`;
+                statusMsg.classList.remove("hidden");
+            } else {
+                statusMsg.classList.add("hidden");
+            }
+        }
+
+        function showError(msg) {
+            statusMsg.innerHTML = `⚠️ ${msg}`;
+            statusMsg.classList.remove("hidden");
+            statusMsg.classList.add("text-red-400");
+        }
+
+        if (typeof speechSynthesis !== 'undefined') {
+            speechSynthesis.onvoiceschanged = () => {};
+        }
+    </script>
+</body>
+</html>
