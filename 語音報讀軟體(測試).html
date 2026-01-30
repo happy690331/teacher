@@ -72,6 +72,12 @@
             animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Modal 動畫 */
+        .modal-enter { opacity: 0; transform: scale(0.95); }
+        .modal-enter-active { opacity: 1; transform: scale(1); transition: opacity 0.2s, transform 0.2s; }
+        .modal-exit { opacity: 1; transform: scale(1); }
+        .modal-exit-active { opacity: 0; transform: scale(0.95); transition: opacity 0.2s, transform 0.2s; }
     </style>
 </head>
 <body class="flex flex-col h-screen">
@@ -80,7 +86,7 @@
     <header class="bg-gray-800 text-white shadow-md z-50 flex-none px-4 py-3 flex items-center justify-between">
         <div class="flex items-center gap-3">
             <span class="text-2xl">📄</span>
-            <h1 class="text-lg font-medium tracking-wide">考卷點讀模式 (防干擾修正版)</h1>
+            <h1 class="text-lg font-medium tracking-wide hidden md:block">考卷點讀模式 (雲端/本機版)</h1>
         </div>
         
         <div class="flex items-center gap-4">
@@ -88,16 +94,47 @@
 
             <button id="stopBtn" class="hidden bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded shadow transition flex items-center gap-2 text-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5zm5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5z"/></svg>
-                停止朗讀
+                停止
             </button>
 
+            <!-- 雲端題庫按鈕 -->
+            <button id="cloudBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded shadow transition text-sm font-medium flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383zm.653.757c-.757.653-1.153 1.44-1.56 2.518l-.242.634-.679.135c-1.354.27-2.287 1.49-2.287 2.932 0 1.63 1.284 2.91 2.87 2.91h8.917c1.378 0 2.5-1.134 2.5-2.528 0-1.31-1.002-2.39-2.29-2.528l-.68-.073-.207-.638c-.378-1.166-1.427-1.928-2.613-1.928a3.73 3.73 0 0 0-3.323 1.558z"/>
+                </svg>
+                雲端題庫
+            </button>
+
+            <!-- 本機上傳按鈕 -->
             <label class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded shadow transition text-sm font-medium flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
-                開啟 PDF
+                本機 PDF
                 <input type="file" id="pdfUpload" accept="application/pdf" class="hidden" />
             </label>
         </div>
     </header>
+
+    <!-- 雲端檔案選擇 Modal -->
+    <div id="cloudModal" class="fixed inset-0 bg-black bg-opacity-60 hidden z-[60] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden transform transition-all scale-100">
+            <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-gray-700 text-lg flex items-center gap-2">
+                    <span class="text-indigo-500">☁️</span> 選擇雲端試卷
+                </h3>
+                <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600 p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            
+            <div id="fileListContainer" class="flex-1 overflow-y-auto p-2 space-y-1">
+                <div class="text-center py-8 text-gray-400">正在載入檔案列表...</div>
+            </div>
+
+            <div class="p-3 border-t border-gray-100 bg-gray-50 text-xs text-gray-500 text-center">
+                資料來源: github.com/happy690331
+            </div>
+        </div>
+    </div>
 
     <!-- 主要內容區 -->
     <main class="flex-1 overflow-y-auto relative text-center py-8" id="mainContainer">
@@ -105,8 +142,12 @@
             <!-- 初始畫面 -->
             <div class="mt-20 text-gray-400 text-center flex flex-col items-center">
                 <div class="text-6xl mb-4 opacity-50">👆</div>
-                <p class="text-xl">請上傳考卷 PDF</p>
-                <p class="text-sm mt-2 opacity-75">遇到任何空白或換行，系統皆會強制停頓一秒</p>
+                <p class="text-xl">請選擇試卷來源</p>
+                <div class="flex gap-4 mt-6">
+                    <button onclick="document.getElementById('cloudBtn').click()" class="px-6 py-2 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition font-medium">☁️ 雲端題庫</button>
+                    <button onclick="document.getElementById('pdfUpload').click()" class="px-6 py-2 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition font-medium">💻 本機檔案</button>
+                </div>
+                <p class="text-sm mt-8 opacity-75 max-w-md">系統會自動偵測選擇題，遇到空白或換行會強制停頓一秒，遇到①②③④會唸出對應數字。</p>
             </div>
         </div>
     </main>
@@ -115,6 +156,10 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
         const upload = document.getElementById("pdfUpload");
+        const cloudBtn = document.getElementById("cloudBtn");
+        const cloudModal = document.getElementById("cloudModal");
+        const closeModalBtn = document.getElementById("closeModalBtn");
+        const fileListContainer = document.getElementById("fileListContainer");
         const pdfViewer = document.getElementById("pdfViewer");
         const stopBtn = document.getElementById("stopBtn");
         const statusMsg = document.getElementById("statusMsg");
@@ -124,27 +169,95 @@
         let fullDocumentText = "";
         let parsedQuestions = [];
         let speakingTimeout = null; 
-        
-        // 關鍵變數：用於追蹤當前有效的播放序列 ID
         let currentSequenceId = 0;
 
+        // --- Event Listeners ---
         stopBtn.addEventListener("click", stopSpeaking);
-
+        
+        // 1. 本機上傳
         upload.addEventListener("change", async (e) => {
             const file = e.target.files[0];
             if (!file) return;
+            const arrayBuffer = await file.arrayBuffer();
+            loadPdf(arrayBuffer);
+        });
 
-            // Reset
+        // 2. 雲端按鈕 & Modal 控制
+        cloudBtn.addEventListener("click", () => {
+            cloudModal.classList.remove("hidden");
+            fetchGitHubFiles();
+        });
+
+        closeModalBtn.addEventListener("click", () => {
+            cloudModal.classList.add("hidden");
+        });
+
+        cloudModal.addEventListener("click", (e) => {
+            if (e.target === cloudModal) cloudModal.classList.add("hidden");
+        });
+
+        // --- Functions ---
+
+        // 取得 GitHub 檔案列表
+        async function fetchGitHubFiles() {
+            const repoOwner = 'happy690331';
+            const repoName = 'teacher';
+            const path = 'exam paper';
+            const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${encodeURIComponent(path)}`;
+
+            fileListContainer.innerHTML = `<div class="flex justify-center py-8"><div class="loader border-indigo-500"></div></div>`;
+
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error('無法讀取雲端列表');
+                
+                const data = await response.json();
+                
+                // 過濾 PDF 檔案
+                const pdfFiles = data.filter(file => file.name.toLowerCase().endsWith('.pdf'));
+
+                if (pdfFiles.length === 0) {
+                    fileListContainer.innerHTML = '<div class="text-center py-4 text-gray-500">此資料夾沒有 PDF 檔案</div>';
+                    return;
+                }
+
+                fileListContainer.innerHTML = '';
+                pdfFiles.forEach(file => {
+                    const item = document.createElement('div');
+                    item.className = 'p-3 hover:bg-indigo-50 rounded-lg cursor-pointer transition flex items-center gap-3 border-b border-gray-50 last:border-0';
+                    item.innerHTML = `
+                        <span class="text-red-500 flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/><path d="M4.603 14.087a.81.81 0 0 1-.438-.42c-.195-.388-.13-.776.08-1.102.198-.307.526-.568.897-.787a7.68 7.68 0 0 1 1.482-.645 19.697 19.697 0 0 0 1.062-2.227 7.269 7.269 0 0 1-.43-1.295c-.086-.4-.119-.796-.046-1.136.075-.354.274-.672.65-.823.192-.077.4-.12.602-.077a.7.7 0 0 1 .477.365c.088.164.12.356.127.538.007.188-.012.396-.047.614-.084.51-.27 1.134-.52 1.794a10.954 10.954 0 0 0 .98 1.686 5.753 5.753 0 0 1 1.334.05c.364.066.734.195.96.465.12.144.193.32.2.518.007.192-.047.382-.138.563a1.04 1.04 0 0 1-.354.416.856.856 0 0 1-.51.138c-.331-.014-.654-.196-.933-.417a5.712 5.712 0 0 1-.911-.95 11.651 11.651 0 0 0-1.997.406 11.307 11.307 0 0 1-1.02 1.51c-.292.35-.609.656-.927.787a.793.793 0 0 1-.58.029zm1.379-1.901c-.166.076-.32.156-.459.238-.328.194-.541.383-.647.545-.094.145-.096.25-.04.361.01.022.02.036.026.044a.266.266 0 0 0 .035-.012c.137-.056.355-.235.635-.572a8.18 8.18 0 0 0 .45-.604zm1.649-1.055a22.95 22.95 0 0 1-.71 1.84c.356.33.691.431.97.431.282 0 .484-.131.606-.317.032-.049.042-.102.04-.151a.26.26 0 0 0-.018-.057c-.03-.092-.15-.22-.395-.348-.194-.102-.454-.175-.76-.233a10.02 10.02 0 0 1-.733-1.165zm.365-4.57c-.03.208-.046.387-.046.535.003.116.032.203.076.263.033.045.07.085.114.116.04.029.08.05.114.053.05.003.102-.012.144-.044.038-.029.055-.067.058-.093.003-.035-.005-.122-.047-.39-.033-.212-.086-.53-.16-.948a2.536 2.536 0 0 0-.253.508zm.296 2.37c.075-.24.135-.502.176-.777a12.715 12.715 0 0 0-.918-.035 15.65 15.65 0 0 1-.36 1.488c.325-.268.68-.498 1.102-.676z"/></svg>
+                        </span>
+                        <span class="text-sm font-medium text-gray-700 truncate w-full">${file.name}</span>
+                    `;
+                    item.onclick = () => {
+                        cloudModal.classList.add("hidden");
+                        loadPdf(file.download_url); // 傳入 URL
+                    };
+                    fileListContainer.appendChild(item);
+                });
+
+            } catch (err) {
+                console.error(err);
+                fileListContainer.innerHTML = `<div class="text-center py-4 text-red-400">無法載入列表<br/><span class="text-xs">${err.message}</span></div>`;
+            }
+        }
+
+        // --- 核心載入邏輯 (統一入口) ---
+        async function loadPdf(source) {
+            // Reset UI & State
             pdfViewer.innerHTML = "";
             globalSpanMap = [];
             fullDocumentText = "";
             parsedQuestions = [];
             stopSpeaking();
-            showLoading(true, "正在解析檔案...");
+            showLoading(true, "正在下載/解析檔案...");
 
             try {
-                const arrayBuffer = await file.arrayBuffer();
-                const pdfDoc = await pdfjsLib.getDocument(arrayBuffer).promise;
+                // PDF.js getDocument 支援 ArrayBuffer 或 URL
+                const loadingTask = pdfjsLib.getDocument(source);
+                const pdfDoc = await loadingTask.promise;
                 
                 for (let i = 1; i <= pdfDoc.numPages; i++) {
                     showLoading(true, `正在處理第 ${i} / ${pdfDoc.numPages} 頁...`);
@@ -170,7 +283,7 @@
                 console.error(err);
                 showError("錯誤: " + err.message);
             }
-        });
+        }
 
         async function renderPageAndMapText(page, textContent, pageNum) {
             const scale = 1.5;
