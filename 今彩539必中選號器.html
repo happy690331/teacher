@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>今彩539 智慧選號器（修正版）</title>
+<style>
+body { font-family: Arial; background:#f4f4f4; padding:20px; }
+.box { background:#fff; padding:20px; border-radius:10px; margin-bottom:20px; }
+h2 { margin-top:0 }
+label { display:block; margin:6px 0; }
+textarea { width:100%; height:120px; }
+button { padding:10px 16px; font-size:16px; margin-right:10px; }
+.result { font-size:18px; margin:6px 0; }
+small { color:#555; }
+</style>
+</head>
+<body>
+
+<h1>🎯 今彩539 智慧選號器</h1>
+
+<div class="box">
+<h2>📌 選號機制（可勾選）</h2>
+<label><input type="checkbox" id="c1" checked> 避開 3 連號以上（含 3 / 4 / 5 連）</label>
+<label><input type="checkbox" id="c2" checked> 避開等差數列（明顯規律）</label>
+<label><input type="checkbox" id="c3" checked> 避開接近等差數列</label>
+<label><input type="checkbox" id="c4" checked> 避開過去一年曾開出的完整組合</label>
+<label><input type="checkbox" id="c5" checked> 避開過度集中於小數 / 大數</label>
+<label><input type="checkbox" id="c6" checked> 奇偶比例限制為 2:3 或 3:2</label>
+<label><input type="checkbox" id="c7" checked> 避開過去一年高頻出現的單一號碼（熱號）</label>
+<small>※ 熱號定義：出現次數前 25%</small>
+</div>
+
+<div class="box">
+<h2>📥 過去一年開獎號碼</h2>
+<textarea id="history" placeholder="01,05,12,23,38"></textarea>
+<br><br>
+<input type="file" accept=".csv" onchange="loadCSV(event)">
+</div>
+
+<div class="box">
+<h2>🎯 產生中頭獎組合</h2>
+選擇組數：
+<select id="pick">
+<script>
+for(let i=1;i<=20;i++) document.write(`<option>${i}</option>`);
+</script>
+</select>
+<br><br>
+<button onclick="run()">開始產生</button>
+<button onclick="clearAll()">清除重新</button>
+</div>
+
+<div class="box" id="output"></div>
+
+<script>
+// ===== 工具 =====
+function shuffle(arr){
+ for(let i=arr.length-1;i>0;i--){
+  let j=Math.floor(Math.random()*(i+1));
+  [arr[i],arr[j]]=[arr[j],arr[i]];
+ }
+ return arr;
+}
+
+function loadCSV(e){
+ const r=new FileReader();
+ r.onload=()=>document.getElementById("history").value=r.result.replace(/,/g,", ");
+ r.readAsText(e.target.files[0]);
+}
+
+function getHotNumbers(freq){
+ let list=Object.entries(freq).sort((a,b)=>b[1]-a[1]);
+ let cut=Math.floor(list.length*0.25);
+ return new Set(list.slice(0,cut).map(x=>+x[0]));
+}
+
+// ===== 主流程 =====
+function run(){
+ const lines=document.getElementById("history").value.trim().split("\n");
+ const historySet=new Set();
+ const freq={};
+
+ lines.forEach(l=>{
+  const n=l.split(/[, ]+/).map(x=>+x).sort((a,b)=>a-b);
+  if(n.length===5){
+   historySet.add(n.join("-"));
+   n.forEach(x=>freq[x]=(freq[x]||0)+1);
+  }
+ });
+
+ const hotNumbers=getHotNumbers(freq);
+ let pool=[];
+
+ for(let a=1;a<=35;a++)
+ for(let b=a+1;b<=36;b++)
+ for(let c=b+1;c<=37;c++)
+ for(let d=c+1;d<=38;d++)
+ for(let e=d+1;e<=39;e++){
+  let n=[a,b,c,d,e];
+
+  if(c4.checked && historySet.has(n.join("-"))) continue;
+  if(c7.checked && n.some(x=>hotNumbers.has(x))) continue;
+
+  if(c1.checked){
+   let s=1, ok=true;
+   for(let i=1;i<5;i++){
+    if(n[i]==n[i-1]+1){s++; if(s>=3) ok=false;}
+    else s=1;
+   }
+   if(!ok) continue;
+  }
+
+  if(c2.checked){
+   let d0=n[1]-n[0], ok=false;
+   for(let i=1;i<4;i++) if(n[i+1]-n[i]!=d0) ok=true;
+   if(!ok) continue;
+  }
+
+  if(c3.checked){
+   let diffs=n.slice(1).map((v,i)=>v-n[i]);
+   let avg=diffs.reduce((a,b)=>a+b)/diffs.length;
+   if(diffs.every(d=>Math.abs(d-avg)<=1)) continue;
+  }
+
+  if(c5.checked){
+   let small=n.filter(x=>x<=20).length;
+   if(small===5 || small===0) continue;
+  }
+
+  if(c6.checked){
+   let odd=n.filter(x=>x%2).length;
+   if(!(odd===2 || odd===3)) continue;
+  }
+
+  let score=n.reduce((s,x)=>{
+   let base=freq[x]||0;
+   let balance=20-Math.abs(x-20);
+   return s + base + balance*0.3;
+  },0);
+
+  pool.push({n,score});
+ }
+
+ shuffle(pool);
+ pool.sort((a,b)=>b.score-a.score);
+
+ let highPool=pool.slice(0,Math.max(100, pool.length*0.1));
+ let need=+pick.value;
+ let chosen=[];
+
+ while(chosen.length<need && highPool.length){
+  let r=highPool[Math.floor(Math.random()*highPool.length)];
+  if(!chosen.some(x=>x.n.join()==r.n.join())) chosen.push(r);
+ }
+
+ let out=`<p>✅ 篩選後剩餘組數：<b>${pool.length}</b></p><hr>`;
+ chosen.forEach(x=>{
+  out+=`<div class="result">👉 ${x.n.join(", ")}</div>`;
+ });
+
+ output.innerHTML=out;
+}
+
+function clearAll(){
+ history.value="";
+ output.innerHTML="";
+}
+</script>
+</body>
+</html>
