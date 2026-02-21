@@ -187,8 +187,9 @@
         <div class="upload-box">
             <h2>🌐 方式二：從 GitHub 題庫載入</h2>
             <p style="font-size: 13px; color: #bdc3c7;">來源: happy690331/teacher/tree/main/exam paper</p>
-            <input type="text" id="github-filename" placeholder="請輸入檔名 (例: 114-1三年級社會期末考正式版.pdf)">
-            <button class="fetch-btn" onclick="loadFromGitHub()">⬇️ 從網址載入並解析</button>
+            <button class="fetch-btn" id="btn-fetch-list" onclick="fetchGitHubList()">🔍 瀏覽線上題庫列表</button>
+            <select id="github-select" style="display:none; margin-top: 15px; font-size: 16px; padding: 8px; width: 90%; border-radius: 4px; border: none;"></select>
+            <button class="fetch-btn" id="btn-load-selected" onclick="loadSelectedGitHub()" style="display:none; background-color: #27ae60; margin-top: 10px;">🚀 載入選擇的考卷</button>
         </div>
     </div>
     
@@ -217,18 +218,58 @@
             }
         });
 
-        async function loadFromGitHub() {
-            let filename = document.getElementById('github-filename').value.trim();
-            if (!filename) {
-                alert("請輸入 PDF 檔名！");
+        async function fetchGitHubList() {
+            const btnFetch = document.getElementById('btn-fetch-list');
+            btnFetch.innerText = '讀取清單中... ⏳';
+            btnFetch.disabled = true;
+
+            try {
+                // 使用 GitHub 官方 API 獲取資料夾內的檔案清單
+                const apiUrl = "https://api.github.com/repos/happy690331/teacher/contents/exam%20paper?ref=main";
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error("無法取得線上清單");
+                const data = await response.json();
+
+                // 篩選出附檔名為 .pdf 的檔案
+                const pdfFiles = data.filter(item => item.name.toLowerCase().endsWith('.pdf'));
+
+                if (pdfFiles.length === 0) {
+                    alert("該資料夾下沒有找到 PDF 檔案！");
+                    btnFetch.innerText = '🔍 瀏覽線上題庫列表';
+                    btnFetch.disabled = false;
+                    return;
+                }
+
+                // 將檔案填入下拉選單中
+                const selectElement = document.getElementById('github-select');
+                selectElement.innerHTML = '<option value="">-- 請選擇一份考卷 --</option>';
+                pdfFiles.forEach(file => {
+                    const option = document.createElement('option');
+                    option.value = file.download_url; // API 提供的 raw 原始檔下載網址
+                    option.textContent = file.name;
+                    selectElement.appendChild(option);
+                });
+
+                // 隱藏讀取按鈕，顯示下拉選單與載入按鈕
+                btnFetch.style.display = 'none';
+                selectElement.style.display = 'block';
+                document.getElementById('btn-load-selected').style.display = 'inline-block';
+
+            } catch (error) {
+                alert("獲取清單失敗：" + error.message);
+                btnFetch.innerText = '🔍 瀏覽線上題庫列表';
+                btnFetch.disabled = false;
+            }
+        }
+
+        async function loadSelectedGitHub() {
+            const selectElement = document.getElementById('github-select');
+            const fetchUrl = selectElement.value;
+            
+            if (!fetchUrl) {
+                alert("請先從下拉選單選擇一份考卷！");
                 return;
             }
-            if (!filename.toLowerCase().endsWith('.pdf')) {
-                filename += '.pdf';
-            }
-
-            const rawBaseUrl = "https://raw.githubusercontent.com/happy690331/teacher/main/exam%20paper/";
-            const fetchUrl = rawBaseUrl + encodeURIComponent(filename);
 
             showLoading();
 
@@ -239,7 +280,7 @@
                 const typedarray = new Uint8Array(arrayBuffer);
                 renderPDFAndExtractCoordinates(typedarray);
             } catch (error) {
-                alert("無法從 GitHub 載入檔案！\n請確認檔名是否完全正確，或該檔案是否存在於資料夾中。\n詳細錯誤：" + error.message);
+                alert("無法從 GitHub 載入檔案！\n詳細錯誤：" + error.message);
                 hideLoading();
             }
         }
