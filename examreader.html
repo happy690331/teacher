@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全通用雙欄考卷 - 精準實境報讀系統</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <style>
+        body {
+            font-family: "Microsoft JhengHei", sans-serif;
+            background-color: #2c3e50;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            padding-bottom: 60px;
+        }
+
+        #control-panel {
+            position: sticky;
+            top: 0;
+            background-color: #ffffff;
+            padding: 15px 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .title-area h1 { margin: 0; font-size: 20px; color: #2c3e50; font-weight: bold; }
+        .title-area p { margin: 5px 0 0 0; font-size: 14px; color: #7f8c8d; }
+
+        .controls { display: flex; align-items: center; gap: 10px; }
+        button {
+            background-color: #3498db; color: white; border: none;
+            padding: 8px 12px; border-radius: 6px; font-size: 15px;
+            cursor: pointer; font-weight: bold; transition: all 0.2s;
+        }
+        button:hover { background-color: #2980b9; }
+        button.btn-stop { background-color: #e74c3c; }
+        button.btn-pause { background-color: #f39c12; }
+        button.btn-resume { background-color: #2ecc71; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+
+        .speed-control {
+            display: flex; align-items: center; gap: 8px; font-weight: bold;
+            background: #f1f2f6; padding: 5px 10px; border-radius: 6px;
+        }
+
+        #upload-screen {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; height: 80vh; color: white; gap: 20px;
+        }
+        .upload-box {
+            background: rgba(255,255,255,0.1); padding: 30px; border-radius: 12px;
+            text-align: center; border: 2px dashed #ecf0f1; width: 80%; max-width: 500px;
+        }
+        .upload-box input[type="file"] {
+            margin-top: 15px; font-size: 16px; color: white; width: 100%;
+        }
+        .upload-box input[type="text"] {
+            margin-top: 15px; font-size: 16px; padding: 8px; width: 70%; border-radius: 4px; border: none;
+        }
+        .upload-box button.fetch-btn {
+            margin-top: 15px; background-color: #e67e22; font-size: 16px;
+        }
+        .upload-box button.fetch-btn:hover { background-color: #d35400; }
+        
+        #loading-screen {
+            display: none; color: white; text-align: center; margin-top: 50px; font-size: 20px;
+        }
+
+        #pdf-viewer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 30px auto;
+            width: 100%;
+            opacity: 0; 
+            transition: opacity 0.5s;
+        }
+
+        .pdf-page {
+            position: relative; 
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background-color: white;
+        }
+
+        .pdf-page canvas { display: block; }
+
+        .textLayer {
+            position: absolute; left: 0; top: 0; right: 0; bottom: 0;
+            color: transparent; pointer-events: none; overflow: hidden;
+        }
+        .textLayer span {
+            position: absolute; white-space: pre; transform-origin: 0% 0%;
+        }
+
+        .boxLayer {
+            position: absolute; left: 0; top: 0; right: 0; bottom: 0;
+            pointer-events: none; 
+        }
+
+        .q-box {
+            position: absolute;
+            border: 2px solid rgba(231, 76, 60, 0.7);
+            border-radius: 4px;
+            background-color: rgba(231, 76, 60, 0.03);
+            cursor: pointer;
+            pointer-events: auto; 
+            transition: all 0.2s;
+        }
+
+        .q-box:hover {
+            background-color: rgba(231, 76, 60, 0.15);
+            border-color: rgba(231, 76, 60, 1);
+            box-shadow: 0 2px 8px rgba(231, 76, 60, 0.4);
+        }
+
+        .q-box.reading {
+            background-color: rgba(241, 196, 15, 0.25); 
+            border-color: #e67e22;
+            border-width: 3px;
+            box-shadow: 0 0 15px rgba(241, 196, 15, 0.6);
+            z-index: 10;
+        }
+
+        .q-box.paused {
+            background-color: rgba(189, 195, 199, 0.4);
+            border-style: dashed;
+            border-color: #7f8c8d;
+        }
+
+        .progress-container {
+            position: absolute;
+            bottom: -6px; 
+            left: -2px; 
+            width: calc(100% + 4px);
+            height: 6px;
+            background-color: #ecf0f1;
+            border-radius: 2px;
+            overflow: hidden;
+            display: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .q-box.reading .progress-container, 
+        .q-box.paused .progress-container {
+            display: block;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: #2ecc71; 
+            transition: width 0.1s linear;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="control-panel">
+        <div class="title-area">
+            <h1>全通用雙欄考卷 - 實境報讀系統</h1>
+            <p id="status-text">請選擇載入方式：本機上傳 或 GitHub 題庫下載。</p>
+        </div>
+        <div class="controls">
+            <div class="speed-control">
+                <label for="speedRate">語速：</label>
+                <input type="range" id="speedRate" min="0.5" max="1.5" step="0.1" value="1.0">
+                <span id="speedValue">1.0</span>
+            </div>
+            <button class="btn-pause" id="btnPause" onclick="pauseReading()" disabled>⏸️ 暫停</button>
+            <button class="btn-resume" id="btnResume" onclick="resumeReading()" disabled>▶️ 繼續</button>
+            <button class="btn-stop" id="btnStop" onclick="stopReading()" disabled>⏹️ 停止</button>
+        </div>
+    </div>
+
+    <div id="upload-screen">
+        <div class="upload-box">
+            <h2>📁 方式一：從本機上傳考卷 PDF</h2>
+            <p>支援任何標準直式雙欄考卷</p>
+            <input type="file" id="pdf-upload" accept="application/pdf">
+        </div>
+        <div class="upload-box">
+            <h2>🌐 方式二：從 GitHub 題庫載入</h2>
+            <p style="font-size: 13px; color: #bdc3c7;">來源: happy690331/teacher/tree/main/exam paper</p>
+            <input type="text" id="github-filename" placeholder="請輸入檔名 (例: 114-1三年級社會期末考正式版.pdf)">
+            <button class="fetch-btn" onclick="loadFromGitHub()">⬇️ 從網址載入並解析</button>
+        </div>
+    </div>
+    
+    <div id="loading-screen">系統正在啟動「精準雙欄物理切分」與「AI自動題號辨識」，請稍候... ⚙️</div>
+
+    <div id="pdf-viewer"></div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        // ==========================================
+        // 載入邏輯：本機上傳 或 GitHub 下載
+        // ==========================================
+        document.getElementById('pdf-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file && file.type === 'application/pdf') {
+                showLoading();
+                setTimeout(() => {
+                    const fileReader = new FileReader();
+                    fileReader.onload = function() {
+                        const typedarray = new Uint8Array(this.result);
+                        renderPDFAndExtractCoordinates(typedarray);
+                    };
+                    fileReader.readAsArrayBuffer(file);
+                }, 100);
+            }
+        });
+
+        async function loadFromGitHub() {
+            let filename = document.getElementById('github-filename').value.trim();
+            if (!filename) {
+                alert("請輸入 PDF 檔名！");
+                return;
+            }
+            if (!filename.toLowerCase().endsWith('.pdf')) {
+                filename += '.pdf';
+            }
+
+            const rawBaseUrl = "https://raw.githubusercontent.com/happy690331/teacher/main/exam%20paper/";
+            const fetchUrl = rawBaseUrl + encodeURIComponent(filename);
+
+            showLoading();
+
+            try {
+                const response = await fetch(fetchUrl);
+                if (!response.ok) throw new Error("找不到檔案 (HTTP " + response.status + ")");
+                const arrayBuffer = await response.arrayBuffer();
+                const typedarray = new Uint8Array(arrayBuffer);
+                renderPDFAndExtractCoordinates(typedarray);
+            } catch (error) {
+                alert("無法從 GitHub 載入檔案！\n請確認檔名是否完全正確，或該檔案是否存在於資料夾中。\n詳細錯誤：" + error.message);
+                hideLoading();
+            }
+        }
+
+        function showLoading() {
+            document.getElementById('upload-screen').style.display = 'none';
+            document.getElementById('loading-screen').style.display = 'block';
+            document.getElementById('pdf-viewer').style.opacity = '0';
+        }
+
+        function hideLoading() {
+            document.getElementById('upload-screen').style.display = 'flex';
+            document.getElementById('loading-screen').style.display = 'none';
+        }
+
+        // ==========================================
+        // 核心解析與動態題庫生成引擎
+        // ==========================================
+        async function renderPDFAndExtractCoordinates(pdfData) {
+            const pdf = await pdfjsLib.getDocument(pdfData).promise;
+            const viewer = document.getElementById('pdf-viewer');
+            viewer.innerHTML = '';
+            
+            let allChars = []; 
+
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                const page = await pdf.getPage(pageNum);
+                const viewport = page.getViewport({ scale: 2.0 });
+
+                const pageDiv = document.createElement('div');
+                pageDiv.className = 'pdf-page';
+                pageDiv.style.width = viewport.width + 'px';
+                pageDiv.style.height = viewport.height + 'px';
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                pageDiv.appendChild(canvas);
+                
+                const textLayerDiv = document.createElement('div');
+                textLayerDiv.className = 'textLayer';
+                pageDiv.appendChild(textLayerDiv);
+                
+                const boxLayerDiv = document.createElement('div');
+                boxLayerDiv.className = 'boxLayer';
+                pageDiv.appendChild(boxLayerDiv);
+
+                viewer.appendChild(pageDiv);
+
+                await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+
+                const textContent = await page.getTextContent();
+                await pdfjsLib.renderTextLayer({
+                    textContent: textContent,
+                    container: textLayerDiv,
+                    viewport: viewport,
+                    textDivs: []
+                }).promise;
+
+                const spans = textLayerDiv.querySelectorAll('span');
+                const pageRect = pageDiv.getBoundingClientRect();
+
+                spans.forEach(span => {
+                    const text = span.textContent;
+                    if (!text.trim()) return;
+
+                    const rect = span.getBoundingClientRect();
+                    const spanLeft = rect.left - pageRect.left;
+                    const spanTop = rect.top - pageRect.top;
+                    const charWidth = rect.width / text.length;
+                    
+                    for (let i = 0; i < text.length; i++) {
+                        let char = text[i];
+                        // 【升級】：加入 \u3000-\u303F 確保「、」、「：」、「，」等中文標點不會被過濾掉！
+                        let sanitized = char.replace(/[^\u4e00-\u9fa5a-zA-Z0-9\u2000-\u2BFF\u3000-\u303F\u3105-\u312F\uF000-\uF8FF\(\)（）\.\?。？ˇ：:,，；!！]/g, '');
+                        if (sanitized) {
+                            allChars.push({
+                                char: char,
+                                layer: boxLayerDiv,
+                                left: spanLeft + (i * charWidth),
+                                top: spanTop,
+                                width: charWidth,
+                                height: rect.height,
+                                pageIndex: pageNum,
+                                pageMidX: viewport.width / 2 
+                            });
+                        }
+                    }
+                });
+            }
+
+            // 【第一頁頂端雜訊橡皮擦】：剔除第一頁頂部標題、成績欄等雜訊
+            let page1Chars = allChars.filter(c => c.pageIndex === 1);
+            page1Chars.sort((a, b) => {
+                const topDiff = a.top - b.top;
+                if (Math.abs(topDiff) > 10) return topDiff;
+                return a.left - b.left;
+            });
+            let p1Text = page1Chars.map(c => c.char).join('');
+            
+            // 更穩健地尋找第一大題的開頭（例如：一、 / 二、），容許空格存在
+            let firstQMatch = p1Text.match(/[一二三四五六七八九十]+\s*、/);
+            let cutoffTop = 280; 
+            if (firstQMatch) {
+                let matchIdx = p1Text.indexOf(firstQMatch[0]);
+                if (matchIdx !== -1 && page1Chars[matchIdx]) {
+                    cutoffTop = page1Chars[matchIdx].top;
+                }
+            }
+            
+            allChars = allChars.filter(c => !(c.pageIndex === 1 && c.top < cutoffTop - 15));
+
+            // 【物理座標強制切分法】
+            allChars.forEach(c => {
+                c.col = c.left < c.pageMidX ? 0 : 1; 
+            });
+
+            // 終極閱讀排序：頁碼 -> 左右欄位 -> 由上到下 -> 由左到右
+            allChars.sort((a, b) => {
+                if (a.pageIndex !== b.pageIndex) return a.pageIndex - b.pageIndex;
+                if (a.col !== b.col) return a.col - b.col; 
+                const topDiff = a.top - b.top;
+                if (Math.abs(topDiff) > 15) return topDiff; 
+                return a.left - b.left; 
+            });
+
+            autoGenerateQuestionsAndDrawBoxes(allChars);
+        }
+
+        function autoGenerateQuestionsAndDrawBoxes(allChars) {
+            let textWithNewlines = "";
+            let charMap = []; 
+
+            let lastC = null;
+            for(let i = 0; i < allChars.length; i++) {
+                let c = allChars[i];
+                if (lastC) {
+                    // 【升級】：將換行判定更靈敏化 (從 >15 降為 >8)，確保遇到行距較小時也能正確斷行
+                    if (c.pageIndex !== lastC.pageIndex || c.col !== lastC.col || Math.abs(c.top - lastC.top) > 8) {
+                        textWithNewlines += "\n";
+                        charMap.push(null);
+                    }
+                }
+                textWithNewlines += c.char;
+                charMap.push(c);
+                lastC = c;
+            }
+
+            // 【升級題號捕獲】：加強對「四、」這類開頭的辨識，允許前方有標點符號或空白
+            const regex = /(?:^|[\n\s。！？.」：,，])([一二三四五六七八九十]+\s*、|\([ \u3000]*\)\s*\d+\.|\d+\.\s*|\([\d]+\)\s*|（[\d]+）\s*)/g;
+            let matchIndices = [];
+            let match;
+            while ((match = regex.exec(textWithNewlines)) !== null) {
+                let prefixStart = match.index + match[0].lastIndexOf(match[1]);
+                matchIndices.push(prefixStart);
+            }
+
+            let foundQuestions = [];
+
+            for (let i = 0; i < matchIndices.length; i++) {
+                let start = matchIndices[i];
+                let end = (i + 1 < matchIndices.length) ? matchIndices[i+1] - 1 : textWithNewlines.length - 1;
+                let qObj = createQuestionObj(start, end, charMap, allChars);
+                if (qObj) foundQuestions.push(qObj);
+            }
+
+            drawBoxesFromDynamicQuestions(foundQuestions, allChars);
+        }
+
+        function createQuestionObj(startStrIdx, endStrIdx, charMap, allChars) {
+            let s = startStrIdx;
+            while(s <= endStrIdx && charMap[s] === null) s++;
+            if (s > endStrIdx) return null;
+            let startIdx = allChars.indexOf(charMap[s]);
+
+            let e = endStrIdx;
+            while(e >= startStrIdx && charMap[e] === null) e--;
+            if (e < startStrIdx) return null;
+            let endIdx = allChars.indexOf(charMap[e]);
+
+            if (startIdx === -1 || endIdx === -1) return null;
+
+            let qText = "";
+            for(let k = startIdx; k <= endIdx; k++) {
+                qText += allChars[k].char;
+            }
+
+            // 【大題項判定】：判斷這一段是否為國字數字開頭的大題項（一、二、四、等）
+            let isMainSection = /^[一二三四五六七八九十]+\s*、/.test(qText.trim());
+
+            return {
+                text: qText,
+                startIndex: startIdx,
+                endIndex: endIdx,
+                isMainSection: isMainSection,
+                boxes: []
+            };
+        }
+
+        function drawBoxesFromDynamicQuestions(foundQuestions, allChars) {
+            foundQuestions.forEach(q => {
+                let chars = [];
+                for (let i = q.startIndex; i <= q.endIndex; i++) chars.push(allChars[i]);
+                if (chars.length === 0) return;
+
+                let charsByLayer = new Map();
+                chars.forEach(c => {
+                    if (!charsByLayer.has(c.layer)) charsByLayer.set(c.layer, []);
+                    charsByLayer.get(c.layer).push(c);
+                });
+
+                charsByLayer.forEach((layerChars, layer) => {
+                    
+                    if (q.isMainSection) {
+                        // 【大題項專屬處理】：解除中線限制！將整個大標題項包覆在單一、獨立且不受欄位切割的大紅框中
+                        let minL = Math.min(...layerChars.map(c => c.left));
+                        let minT = Math.min(...layerChars.map(c => c.top));
+                        let maxR = Math.max(...layerChars.map(c => c.left + c.width));
+                        let maxB = Math.max(...layerChars.map(c => c.top + c.height));
+                        
+                        let boxWidth = maxR - minL;
+                        if (boxWidth <= 0) return;
+
+                        const paddingX = 4;
+                        const paddingY = 1; 
+                        const paddingRight = 8; 
+                        
+                        const box = document.createElement('div');
+                        box.className = 'q-box main-section-box';
+                        // 加粗邊框與更顯眼的樣式，以區別這是一個大題項
+                        box.style.borderWidth = '3px'; 
+                        box.style.left = (minL - paddingX) + 'px';
+                        box.style.top = (minT - paddingY) + 'px';
+                        box.style.width = (boxWidth + paddingX + paddingRight) + 'px';
+                        box.style.height = (maxB - minT + paddingY * 2) + 'px';
+                        
+                        const progressContainer = document.createElement('div');
+                        progressContainer.className = 'progress-container';
+                        const progressBar = document.createElement('div');
+                        progressBar.className = 'progress-bar';
+                        progressContainer.appendChild(progressBar);
+                        box.appendChild(progressContainer);
+
+                        box.onclick = () => readText(q.text, q.boxes);
+                        layer.appendChild(box);
+                        q.boxes.push(box);
+
+                    } else {
+                        // 【一般題目處理】：嚴格套用左右欄中線物理隔離
+                        const charsByCol = { '-1': [], 0: [], 1: [] };
+                        layerChars.forEach(c => {
+                            if (!charsByCol[c.col]) charsByCol[c.col] = [];
+                            charsByCol[c.col].push(c);
+                        });
+
+                        Object.keys(charsByCol).forEach(colKey => {
+                            const col = parseInt(colKey);
+                            const validChars = charsByCol[col];
+                            
+                            if (validChars.length === 0) return;
+                            if (col !== -1 && validChars.length < 2) return; 
+
+                            let minL = Math.min(...validChars.map(c => c.left));
+                            let minT = Math.min(...validChars.map(c => c.top));
+                            let maxR = Math.max(...validChars.map(c => c.left + c.width));
+                            let maxB = Math.max(...validChars.map(c => c.top + c.height));
+                            let midX = validChars[0].pageMidX;
+                            
+                            let finalLeft = minL;
+                            let finalRight = maxR;
+
+                            if (col === 0) {
+                                finalRight = Math.min(finalRight, midX - 2); 
+                            } else if (col === 1) {
+                                finalLeft = Math.max(finalLeft, midX + 2); 
+                            }
+                            
+                            let boxWidth = finalRight - finalLeft;
+                            if (boxWidth <= 0) return;
+
+                            const paddingX = 4;
+                            const paddingY = 1; 
+                            const paddingRight = 8; 
+                            
+                            const box = document.createElement('div');
+                            box.className = 'q-box';
+                            box.style.left = (finalLeft - paddingX) + 'px';
+                            box.style.top = (minT - paddingY) + 'px';
+                            box.style.width = (boxWidth + paddingX + paddingRight) + 'px';
+                            box.style.height = (maxB - minT + paddingY * 2) + 'px';
+                            
+                            const progressContainer = document.createElement('div');
+                            progressContainer.className = 'progress-container';
+                            const progressBar = document.createElement('div');
+                            progressBar.className = 'progress-bar';
+                            progressContainer.appendChild(progressBar);
+                            box.appendChild(progressContainer);
+
+                            box.onclick = () => readText(q.text, q.boxes);
+                            layer.appendChild(box);
+                            q.boxes.push(box);
+                        });
+                    }
+                });
+            });
+            
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('pdf-viewer').style.opacity = '1';
+            
+            if (foundQuestions.length === 0) {
+                document.getElementById('status-text').innerText = "⚠️ 解析失敗，請確認上傳的 PDF 是否包含可選取的文字。";
+                document.getElementById('status-text').style.color = "#e74c3c";
+            } else {
+                document.getElementById('status-text').innerText = `✅ 解析完成！已完美隔離「大題項標題」與「獨立題目」。`;
+                document.getElementById('status-text').style.color = "#27ae60";
+            }
+        }
+
+        // ==========================================
+        // 語音報讀、智慧斷句停頓與進度條控制
+        // ==========================================
+        const synth = window.speechSynthesis;
+        let currentUtterance = null;
+        let currentActiveBoxes = []; 
+
+        const btnPause = document.getElementById('btnPause');
+        const btnResume = document.getElementById('btnResume');
+        const btnStop = document.getElementById('btnStop');
+        const speedInput = document.getElementById('speedRate');
+        
+        speedInput.addEventListener('input', e => { document.getElementById('speedValue').innerText = e.target.value; });
+
+        function updateButtonsState(isPlaying, isPaused) {
+            btnPause.disabled = !isPlaying || isPaused;
+            btnResume.disabled = !isPaused;
+            btnStop.disabled = !isPlaying && !isPaused;
+        }
+
+        function clearHighlights() {
+            if (currentActiveBoxes && currentActiveBoxes.length > 0) {
+                currentActiveBoxes.forEach(box => {
+                    box.classList.remove('reading', 'paused');
+                    let pb = box.querySelector('.progress-bar');
+                    if (pb) pb.style.width = '0%';
+                });
+            }
+        }
+
+        let chunkQueue = [];
+        let currentChunkIndex = 0;
+        let isReadingStopped = true;
+        let isReadingProcessPaused = false;
+        let isWaitingInGap = false;
+        let pauseTimeout = null;
+
+        let currentSpeakText = "";
+        let pausedCharIndex = 0;
+        let isResumingFromPause = false;
+        let baseCharIndex = 0;
+
+        function readText(textToRead, boxElementsArray) {
+            if (currentActiveBoxes === boxElementsArray && isReadingProcessPaused) {
+                resumeReading();
+                return;
+            }
+
+            stopReading(); 
+            isReadingStopped = false;
+            isResumingFromPause = false;
+            pausedCharIndex = 0;
+            currentActiveBoxes = boxElementsArray;
+
+            const regex = /((?:\([ \u3000]*\)[\s]*)?\d+\.\s*|[①-⑳]\s*|\(\d+\)\s*)/g;
+            chunkQueue = [];
+            let lastIndex = 0;
+            let match;
+            let cumulativeLength = 0;
+
+            while ((match = regex.exec(textToRead)) !== null) {
+                if (match.index > lastIndex) {
+                    let txt = textToRead.substring(lastIndex, match.index);
+                    chunkQueue.push({ text: txt, isNumber: false, startIdx: cumulativeLength, length: txt.length });
+                    cumulativeLength += txt.length;
+                }
+                let numTxt = match[0];
+                chunkQueue.push({ text: numTxt, isNumber: true, startIdx: cumulativeLength, length: numTxt.length });
+                cumulativeLength += numTxt.length;
+                lastIndex = regex.lastIndex;
+            }
+            if (lastIndex < textToRead.length) {
+                let txt = textToRead.substring(lastIndex);
+                chunkQueue.push({ text: txt, isNumber: false, startIdx: cumulativeLength, length: txt.length });
+            }
+
+            currentChunkIndex = 0;
+            playNextChunk();
+        }
+
+        function playNextChunk() {
+            if (isReadingStopped) return;
+
+            while (currentChunkIndex < chunkQueue.length && chunkQueue[currentChunkIndex].text.trim() === '') {
+                let chunk = chunkQueue[currentChunkIndex];
+                updateProgressBar(chunk.startIdx + chunk.length);
+                currentChunkIndex++;
+            }
+
+            if (currentChunkIndex >= chunkQueue.length) {
+                updateProgressBar(Number.MAX_SAFE_INTEGER); 
+                setTimeout(() => {
+                    if (!isReadingStopped) {
+                        clearHighlights();
+                        currentActiveBoxes = [];
+                        updateButtonsState(false, false);
+                        isReadingStopped = true;
+                    }
+                }, 500);
+                return;
+            }
+
+            let chunk = chunkQueue[currentChunkIndex];
+            
+            let isOptionBullet = /[①-⑳]/.test(chunk.text);
+            if (isOptionBullet && chunk._hasPreDelayed !== true && !isResumingFromPause) {
+                isWaitingInGap = true;
+                chunk._hasPreDelayed = true; 
+                pauseTimeout = setTimeout(() => {
+                    if (isReadingStopped) return;
+                    if (!isReadingProcessPaused) {
+                        isWaitingInGap = false;
+                        playNextChunk(); 
+                    }
+                }, 1000);
+                return;
+            }
+
+            isWaitingInGap = false;
+
+            if (!isResumingFromPause) {
+                let speakText = chunk.text
+                    .replace(/[０-９]/g, m => String.fromCharCode(m.charCodeAt(0) - 0xFEE0)) 
+                    .replace(/(\d+)\./g, '$1、') 
+                    .replace(/(?<!\d)(\d{1,2})(?!\d)/g, (match) => { 
+                        const n = parseInt(match, 10);
+                        if (n === 10) return '十';
+                        if (n > 10 && n < 20) return '十' + (n - 10);
+                        if (n >= 20 && n % 10 === 0) return Math.floor(n / 10) + '十';
+                        if (n > 20) return Math.floor(n / 10) + '十' + (n % 10);
+                        return match; 
+                    })
+                    .replace(/打[vVｖＶˇ]/g, '打勾')
+                    .replace(/ˇ/g, '打勾')
+                    .replace(/[☐]/g, '方框')
+                    .replace(/口(?=中打)/g, '方框')
+                    .replace(/①/g, '一、')
+                    .replace(/②/g, '二、')
+                    .replace(/③/g, '三、')
+                    .replace(/④/g, '四、')
+                    .replace(/⑤/g, '五、')
+                    .replace(/⑥/g, '六、')
+                    .replace(/ㄅ/g, '波、')
+                    .replace(/ㄆ/g, '坡、')
+                    .replace(/ㄇ/g, '摸、')
+                    .replace(/ㄈ/g, '佛、')
+                    .replace(/ㄉ/g, '得、')
+                    .replace(/ㄊ/g, '特、');
+
+                currentSpeakText = speakText;
+                pausedCharIndex = 0;
+            }
+
+            let textToSpeak = currentSpeakText.substring(pausedCharIndex);
+            baseCharIndex = pausedCharIndex; 
+
+            currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
+            currentUtterance.lang = 'zh-TW';
+            currentUtterance.rate = parseFloat(speedInput.value);
+
+            currentUtterance.onstart = () => {
+                isWaitingInGap = false;
+                if (!currentActiveBoxes[0]?.classList.contains('reading')) {
+                    currentActiveBoxes.forEach(box => {
+                        box.classList.add('reading');
+                        box.classList.remove('paused');
+                    });
+                    updateButtonsState(true, false);
+                }
+            };
+
+            currentUtterance.onboundary = (event) => {
+                if (isReadingStopped) return;
+                pausedCharIndex = baseCharIndex + event.charIndex; 
+                let progressRatio = currentSpeakText.length > 0 ? (pausedCharIndex / currentSpeakText.length) : 0;
+                let currentGlobalIdx = chunk.startIdx + Math.floor(chunk.length * progressRatio);
+                updateProgressBar(currentGlobalIdx);
+            };
+
+            currentUtterance.onend = () => {
+                if (isReadingStopped || isReadingProcessPaused) return; 
+
+                updateProgressBar(chunk.startIdx + chunk.length); 
+                currentChunkIndex++;
+                isResumingFromPause = false;
+                pausedCharIndex = 0;
+                
+                if (chunk.isNumber) {
+                    isWaitingInGap = true;
+                    pauseTimeout = setTimeout(() => {
+                        if (isReadingStopped) return;
+                        if (!isReadingProcessPaused) {
+                            playNextChunk(); 
+                        }
+                    }, 500);
+                } else {
+                    playNextChunk(); 
+                }
+            };
+
+            currentUtterance.onerror = (e) => {
+                if (e.error !== 'canceled' && !isReadingStopped) {
+                    currentChunkIndex++;
+                    isResumingFromPause = false;
+                    pausedCharIndex = 0;
+                    playNextChunk();
+                }
+            };
+
+            if (!isReadingProcessPaused) {
+                synth.speak(currentUtterance);
+            }
+        }
+
+        function updateProgressBar(currentGlobalIdx) {
+            if (chunkQueue.length === 0) return;
+            let lastChunk = chunkQueue[chunkQueue.length - 1];
+            let totalLength = lastChunk.startIdx + lastChunk.length;
+            let percentage = totalLength === 0 ? 100 : (currentGlobalIdx / totalLength) * 100;
+            if (percentage > 100) percentage = 100;
+            currentActiveBoxes.forEach(box => {
+                let pb = box.querySelector('.progress-bar');
+                if (pb) pb.style.width = percentage + '%';
+            });
+        }
+
+        function pauseReading() {
+            if (currentActiveBoxes.length > 0 && !isReadingProcessPaused && !isReadingStopped) {
+                isReadingProcessPaused = true;
+                if (!isWaitingInGap) {
+                    synth.cancel(); 
+                } else {
+                    clearTimeout(pauseTimeout); 
+                }
+                currentActiveBoxes.forEach(box => {
+                    box.classList.remove('reading');
+                    box.classList.add('paused');
+                });
+                updateButtonsState(true, true);
+            }
+        }
+
+        function resumeReading() {
+            if (isReadingProcessPaused) {
+                isReadingProcessPaused = false;
+                
+                if (isWaitingInGap) {
+                    isWaitingInGap = false;
+                    playNextChunk(); 
+                } else {
+                    isResumingFromPause = true;
+                    playNextChunk(); 
+                }
+
+                currentActiveBoxes.forEach(box => {
+                    box.classList.remove('paused');
+                    box.classList.add('reading');
+                });
+                updateButtonsState(true, false);
+            }
+        }
+
+        function stopReading() {
+            isReadingStopped = true;
+            isReadingProcessPaused = false;
+            clearTimeout(pauseTimeout);
+            synth.cancel();
+            clearHighlights();
+            currentActiveBoxes = [];
+            updateButtonsState(false, false);
+            isResumingFromPause = false;
+            pausedCharIndex = 0;
+        }
+
+        window.onbeforeunload = () => synth.cancel();
+    </script>
+</body>
+</html>
