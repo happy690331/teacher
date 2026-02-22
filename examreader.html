@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全通用雙欄考卷 - 精準實境報讀系統</title>
+    <title>直式雙欄報讀系統</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <style>
         body {
@@ -42,6 +42,13 @@
         button.btn-pause { background-color: #f39c12; }
         button.btn-resume { background-color: #2ecc71; }
         button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        
+        /* 新增重新選擇按鈕樣式：強制拉開與左邊(停止鍵)的距離，推到最右邊 */
+        button.btn-reset { 
+            background-color: #9b59b6; 
+            margin-left: 80px; /* 增加 80px 的超大安全距離 (拉開兩倍) */
+        }
+        button.btn-reset:hover { background-color: #8e44ad; }
 
         .speed-control {
             display: flex; align-items: center; gap: 8px; font-weight: bold;
@@ -49,12 +56,14 @@
         }
 
         #upload-screen {
-            display: flex; flex-direction: column; align-items: center;
-            justify-content: center; height: 80vh; color: white; gap: 20px;
+            display: flex; flex-direction: row; flex-wrap: wrap; align-items: stretch;
+            justify-content: center; min-height: 70vh; color: white; gap: 30px;
+            padding: 40px 20px; box-sizing: border-box;
         }
         .upload-box {
-            background: rgba(255,255,255,0.1); padding: 30px; border-radius: 12px;
-            text-align: center; border: 2px dashed #ecf0f1; width: 80%; max-width: 500px;
+            background: rgba(255,255,255,0.1); padding: 40px 30px; border-radius: 12px;
+            text-align: center; border: 2px dashed #ecf0f1; flex: 1; min-width: 300px; max-width: 450px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
         .upload-box input[type="file"] {
             margin-top: 15px; font-size: 16px; color: white; width: 100%;
@@ -105,9 +114,9 @@
 
         .q-box {
             position: absolute;
-            border: 2px solid rgba(231, 76, 60, 0.7);
+            border: 2px solid transparent; /* 將預設邊框改為透明隱形 */
             border-radius: 4px;
-            background-color: rgba(231, 76, 60, 0.03);
+            background-color: transparent; /* 將預設背景改為透明隱形 */
             cursor: pointer;
             pointer-events: auto; 
             transition: all 0.2s;
@@ -115,7 +124,7 @@
 
         .q-box:hover {
             background-color: rgba(231, 76, 60, 0.15);
-            border-color: rgba(231, 76, 60, 1);
+            border-color: rgba(231, 76, 60, 1); /* 滑鼠游標移入時才顯示紅色邊框 */
             box-shadow: 0 2px 8px rgba(231, 76, 60, 0.4);
         }
 
@@ -163,7 +172,7 @@
 
     <div id="control-panel">
         <div class="title-area">
-            <h1>全通用雙欄考卷 - 實境報讀系統</h1>
+            <h1>直式雙欄報讀系統</h1>
             <p id="status-text">請選擇載入方式：本機上傳 或 GitHub 題庫下載。</p>
         </div>
         <div class="controls">
@@ -175,6 +184,8 @@
             <button class="btn-pause" id="btnPause" onclick="pauseReading()" disabled>⏸️ 暫停</button>
             <button class="btn-resume" id="btnResume" onclick="resumeReading()" disabled>▶️ 繼續</button>
             <button class="btn-stop" id="btnStop" onclick="stopReading()" disabled>⏹️ 停止</button>
+            <!-- 新增重新選擇按鈕 -->
+            <button class="btn-reset" id="btnReset" onclick="resetSystem()">🔄 重新選擇</button>
         </div>
     </div>
 
@@ -224,13 +235,11 @@
             btnFetch.disabled = true;
 
             try {
-                // 使用 GitHub 官方 API 獲取資料夾內的檔案清單
                 const apiUrl = "https://api.github.com/repos/happy690331/teacher/contents/exam%20paper?ref=main";
                 const response = await fetch(apiUrl);
                 if (!response.ok) throw new Error("無法取得線上清單");
                 const data = await response.json();
 
-                // 篩選出附檔名為 .pdf 的檔案
                 const pdfFiles = data.filter(item => item.name.toLowerCase().endsWith('.pdf'));
 
                 if (pdfFiles.length === 0) {
@@ -240,17 +249,15 @@
                     return;
                 }
 
-                // 將檔案填入下拉選單中
                 const selectElement = document.getElementById('github-select');
                 selectElement.innerHTML = '<option value="">-- 請選擇一份考卷 --</option>';
                 pdfFiles.forEach(file => {
                     const option = document.createElement('option');
-                    option.value = file.download_url; // API 提供的 raw 原始檔下載網址
+                    option.value = file.download_url; 
                     option.textContent = file.name;
                     selectElement.appendChild(option);
                 });
 
-                // 隱藏讀取按鈕，顯示下拉選單與載入按鈕
                 btnFetch.style.display = 'none';
                 selectElement.style.display = 'block';
                 document.getElementById('btn-load-selected').style.display = 'inline-block';
@@ -354,8 +361,16 @@
                     
                     for (let i = 0; i < text.length; i++) {
                         let char = text[i];
-                        // 【升級】：加入 \u3000-\u303F 確保「、」、「：」、「，」等中文標點不會被過濾掉！
-                        let sanitized = char.replace(/[^\u4e00-\u9fa5a-zA-Z0-9\u2000-\u2BFF\u3000-\u303F\u3105-\u312F\uF000-\uF8FF\(\)（）\.\?。？ˇ：:,，；!！]/g, '');
+                        
+                        // 【重要修復】：將全形數字與全形小數點轉為半形，確保題號能被精準辨識
+                        if (char >= '０' && char <= '９') {
+                            char = String.fromCharCode(char.charCodeAt(0) - 0xFEE0);
+                        } else if (char === '．') {
+                            char = '.';
+                        }
+
+                        // 【重要修復】：確保底線 _ 也能通過，因為考卷常出現 (___) 1. 的題號格式
+                        let sanitized = char.replace(/[^\u4e00-\u9fa5a-zA-Z0-9\u2000-\u2BFF\u3000-\u303F\u3105-\u312F\uF000-\uF8FF\(\)（）\.\?。？ˇ：:,，；!！_]/g, '');
                         if (sanitized) {
                             allChars.push({
                                 char: char,
@@ -372,7 +387,6 @@
                 });
             }
 
-            // 【第一頁頂端雜訊橡皮擦】：剔除第一頁頂部標題、成績欄等雜訊
             let page1Chars = allChars.filter(c => c.pageIndex === 1);
             page1Chars.sort((a, b) => {
                 const topDiff = a.top - b.top;
@@ -381,7 +395,6 @@
             });
             let p1Text = page1Chars.map(c => c.char).join('');
             
-            // 更穩健地尋找第一大題的開頭（例如：一、 / 二、），容許空格存在
             let firstQMatch = p1Text.match(/[一二三四五六七八九十]+\s*、/);
             let cutoffTop = 280; 
             if (firstQMatch) {
@@ -393,12 +406,10 @@
             
             allChars = allChars.filter(c => !(c.pageIndex === 1 && c.top < cutoffTop - 15));
 
-            // 【物理座標強制切分法】
             allChars.forEach(c => {
                 c.col = c.left < c.pageMidX ? 0 : 1; 
             });
 
-            // 終極閱讀排序：頁碼 -> 左右欄位 -> 由上到下 -> 由左到右
             allChars.sort((a, b) => {
                 if (a.pageIndex !== b.pageIndex) return a.pageIndex - b.pageIndex;
                 if (a.col !== b.col) return a.col - b.col; 
@@ -418,7 +429,6 @@
             for(let i = 0; i < allChars.length; i++) {
                 let c = allChars[i];
                 if (lastC) {
-                    // 【升級】：將換行判定更靈敏化 (從 >15 降為 >8)，確保遇到行距較小時也能正確斷行
                     if (c.pageIndex !== lastC.pageIndex || c.col !== lastC.col || Math.abs(c.top - lastC.top) > 8) {
                         textWithNewlines += "\n";
                         charMap.push(null);
@@ -429,8 +439,9 @@
                 lastC = c;
             }
 
-            // 【升級題號捕獲】：加強對「四、」這類開頭的辨識，允許前方有標點符號或空白
-            const regex = /(?:^|[\n\s。！？.」：,，])([一二三四五六七八九十]+\s*、|\([ \u3000]*\)\s*\d+\.|\d+\.\s*|\([\d]+\)\s*|（[\d]+）\s*)/g;
+            // 【終極題號捕獲修復】：加強對「1、」、「1．」、「( ) 1.」等各式國小考卷題號的辨識
+            // 解決整頁被當成單一題目的問題 (因為原本的正規表達式抓不到 1、 這種題號格式)
+            const regex = /(?:^|[\n\s。！？.」：,，])([一二三四五六七八九十]+\s*、|(?:[\(（][ \u3000_]*[\)）]\s*)?\d+\s*[\.．、]\s*|[\(（]\s*\d+\s*[\)）]\s*)/g;
             let matchIndices = [];
             let match;
             while ((match = regex.exec(textWithNewlines)) !== null) {
@@ -468,7 +479,6 @@
                 qText += allChars[k].char;
             }
 
-            // 【大題項判定】：判斷這一段是否為國字數字開頭的大題項（一、二、四、等）
             let isMainSection = /^[一二三四五六七八九十]+\s*、/.test(qText.trim());
 
             return {
@@ -495,7 +505,6 @@
                 charsByLayer.forEach((layerChars, layer) => {
                     
                     if (q.isMainSection) {
-                        // 【大題項專屬處理】：解除中線限制！將整個大標題項包覆在單一、獨立且不受欄位切割的大紅框中
                         let minL = Math.min(...layerChars.map(c => c.left));
                         let minT = Math.min(...layerChars.map(c => c.top));
                         let maxR = Math.max(...layerChars.map(c => c.left + c.width));
@@ -510,7 +519,6 @@
                         
                         const box = document.createElement('div');
                         box.className = 'q-box main-section-box';
-                        // 加粗邊框與更顯眼的樣式，以區別這是一個大題項
                         box.style.borderWidth = '3px'; 
                         box.style.left = (minL - paddingX) + 'px';
                         box.style.top = (minT - paddingY) + 'px';
@@ -529,7 +537,6 @@
                         q.boxes.push(box);
 
                     } else {
-                        // 【一般題目處理】：嚴格套用左右欄中線物理隔離
                         const charsByCol = { '-1': [], 0: [], 1: [] };
                         layerChars.forEach(c => {
                             if (!charsByCol[c.col]) charsByCol[c.col] = [];
@@ -640,6 +647,8 @@
         let pausedCharIndex = 0;
         let isResumingFromPause = false;
         let baseCharIndex = 0;
+        
+        let currentOriginalText = "";
 
         function readText(textToRead, boxElementsArray) {
             if (currentActiveBoxes === boxElementsArray && isReadingProcessPaused) {
@@ -652,8 +661,10 @@
             isResumingFromPause = false;
             pausedCharIndex = 0;
             currentActiveBoxes = boxElementsArray;
+            currentOriginalText = textToRead;
 
-            const regex = /((?:\([ \u3000]*\)[\s]*)?\d+\.\s*|[①-⑳]\s*|\(\d+\)\s*)/g;
+            // 【同步升級】：讓語音分段引擎也能認得「1、」、「( ) 1.」等格式
+            const regex = /((?:[\(（][ \u3000_]*[\)）]\s*)?\d+\s*[\.．、]\s*|[①-⑳]\s*|[\(（]\s*\d+\s*[\)）]\s*|[□☐])/g;
             chunkQueue = [];
             let lastIndex = 0;
             let match;
@@ -666,7 +677,8 @@
                     cumulativeLength += txt.length;
                 }
                 let numTxt = match[0];
-                chunkQueue.push({ text: numTxt, isNumber: true, startIdx: cumulativeLength, length: numTxt.length });
+                let isNumSign = !/[□☐]/.test(numTxt);
+                chunkQueue.push({ text: numTxt, isNumber: isNumSign, startIdx: cumulativeLength, length: numTxt.length });
                 cumulativeLength += numTxt.length;
                 lastIndex = regex.lastIndex;
             }
@@ -676,6 +688,16 @@
             }
 
             currentChunkIndex = 0;
+
+            // 【核心修復】：立刻強制解鎖按鈕與 UI 狀態！
+            // 網頁版環境下，語音引擎的 onstart 事件有時會延遲或失效，
+            // 將解鎖按鈕的邏輯直接寫在這裡，確保點擊題目後按鈕 100% 可以操作。
+            currentActiveBoxes.forEach(box => {
+                box.classList.add('reading');
+                box.classList.remove('paused');
+            });
+            updateButtonsState(true, false);
+
             playNextChunk();
         }
 
@@ -704,16 +726,25 @@
             let chunk = chunkQueue[currentChunkIndex];
             
             let isOptionBullet = /[①-⑳]/.test(chunk.text);
-            if (isOptionBullet && chunk._hasPreDelayed !== true && !isResumingFromPause) {
+            let isSquare = /[□☐]/.test(chunk.text); 
+
+            if ((isOptionBullet || isSquare) && chunk._hasPreDelayed !== true && !isResumingFromPause) {
                 isWaitingInGap = true;
                 chunk._hasPreDelayed = true; 
+                let delayMs = 500; 
+                
+                // 確保在停頓 0.5 秒的緩衝期間，暫停與停止按鈕依然保持可點擊狀態
+                currentActiveBoxes.forEach(box => {
+                    box.classList.add('reading');
+                    box.classList.remove('paused');
+                });
+                updateButtonsState(true, false);
+
                 pauseTimeout = setTimeout(() => {
-                    if (isReadingStopped) return;
-                    if (!isReadingProcessPaused) {
-                        isWaitingInGap = false;
-                        playNextChunk(); 
-                    }
-                }, 1000);
+                    if (isReadingStopped || isReadingProcessPaused) return; 
+                    isWaitingInGap = false;
+                    playNextChunk(); 
+                }, delayMs);
                 return;
             }
 
@@ -722,31 +753,52 @@
             if (!isResumingFromPause) {
                 let speakText = chunk.text
                     .replace(/[０-９]/g, m => String.fromCharCode(m.charCodeAt(0) - 0xFEE0)) 
-                    .replace(/(\d+)\./g, '$1、') 
-                    .replace(/(?<!\d)(\d{1,2})(?!\d)/g, (match) => { 
-                        const n = parseInt(match, 10);
-                        if (n === 10) return '十';
-                        if (n > 10 && n < 20) return '十' + (n - 10);
-                        if (n >= 20 && n % 10 === 0) return Math.floor(n / 10) + '十';
-                        if (n > 20) return Math.floor(n / 10) + '十' + (n % 10);
-                        return match; 
-                    })
+                    .replace(/(^|\D)0+(\d+)/g, '$1$2'); // 【物理拔除所有數字開頭的 0】
+
+                // 數字轉純中文函數，防禦語音引擎自作主張加「零」
+                const numToZh = (nStr) => {
+                    const n = parseInt(nStr, 10);
+                    const arr = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+                    if (n > 0 && n < 10) return arr[n];
+                    if (n === 10) return '十';
+                    if (n > 10 && n < 20) return '十' + arr[n - 10];
+                    if (n >= 20 && n % 10 === 0) return arr[Math.floor(n / 10)] + '十';
+                    if (n > 20 && n < 100) return arr[Math.floor(n / 10)] + '十' + arr[n % 10];
+                    return nStr; 
+                };
+
+                // 【去清單化，徹底消滅零音】：
+                // 擴充對「1、」、「1．」的支援，轉成「一，」，逗號能確保斷句且保證只唸「一」
+                speakText = speakText
+                    .replace(/(?:[\(（])(\d{1,2})(?:[\)）])/g, (m, d) => numToZh(d) + '，') // (1) -> 一，
+                    // 若小數點/頓號後面不是數字，代表是題號，將其轉為「一，」
+                    .replace(/(\d{1,2})(?:\.|．|、)(?=[^\d]|$)/g, (m, d) => numToZh(d) + '，') 
+                    .replace(/(^|[^\d])(\d{1,2})(?=[^\d]|$)/g, (m, p1, d) => p1 + numToZh(d)) // 處理剩下的獨立數字
                     .replace(/打[vVｖＶˇ]/g, '打勾')
-                    .replace(/ˇ/g, '打勾')
-                    .replace(/[☐]/g, '方框')
+                    .replace(/ˇ/g, '打勾');
+
+                let isAtLineStart = /(^|\n)\s*$/.test(currentOriginalText.substring(0, chunk.startIdx));
+                if (isAtLineStart) {
+                    speakText = speakText.replace(/[□☐]/g, ''); 
+                } else {
+                    speakText = speakText.replace(/[□☐]/g, '方框'); 
+                }
+
+                speakText = speakText
                     .replace(/口(?=中打)/g, '方框')
-                    .replace(/①/g, '一、')
-                    .replace(/②/g, '二、')
-                    .replace(/③/g, '三、')
-                    .replace(/④/g, '四、')
-                    .replace(/⑤/g, '五、')
-                    .replace(/⑥/g, '六、')
+                    // 【全自動圓圈數字翻譯機】：轉成「一，」，徹底阻絕「零一」
+                    .replace(/[①-⑳]/g, match => { 
+                        const num = match.charCodeAt(0) - 9311;
+                        return numToZh(num.toString()) + '，';
+                    })
                     .replace(/ㄅ/g, '波、')
                     .replace(/ㄆ/g, '坡、')
                     .replace(/ㄇ/g, '摸、')
                     .replace(/ㄈ/g, '佛、')
                     .replace(/ㄉ/g, '得、')
-                    .replace(/ㄊ/g, '特、');
+                    .replace(/ㄊ/g, '特、')
+                    // 【終極保險】：任何殘留的「零一」~「零九」強制拔除「零」
+                    .replace(/零([一二三四五六七八九])/g, '$1');
 
                 currentSpeakText = speakText;
                 pausedCharIndex = 0;
@@ -760,18 +812,13 @@
             currentUtterance.rate = parseFloat(speedInput.value);
 
             currentUtterance.onstart = () => {
+                if (isReadingStopped || isReadingProcessPaused) return; 
                 isWaitingInGap = false;
-                if (!currentActiveBoxes[0]?.classList.contains('reading')) {
-                    currentActiveBoxes.forEach(box => {
-                        box.classList.add('reading');
-                        box.classList.remove('paused');
-                    });
-                    updateButtonsState(true, false);
-                }
+                // (按鈕解鎖邏輯已移至上方，確保不受瀏覽器 onstart 漏發的影響)
             };
 
             currentUtterance.onboundary = (event) => {
-                if (isReadingStopped) return;
+                if (isReadingStopped || isReadingProcessPaused) return; 
                 pausedCharIndex = baseCharIndex + event.charIndex; 
                 let progressRatio = currentSpeakText.length > 0 ? (pausedCharIndex / currentSpeakText.length) : 0;
                 let currentGlobalIdx = chunk.startIdx + Math.floor(chunk.length * progressRatio);
@@ -789,10 +836,8 @@
                 if (chunk.isNumber) {
                     isWaitingInGap = true;
                     pauseTimeout = setTimeout(() => {
-                        if (isReadingStopped) return;
-                        if (!isReadingProcessPaused) {
-                            playNextChunk(); 
-                        }
+                        if (isReadingStopped || isReadingProcessPaused) return; 
+                        playNextChunk(); 
                     }, 500);
                 } else {
                     playNextChunk(); 
@@ -800,7 +845,9 @@
             };
 
             currentUtterance.onerror = (e) => {
-                if (e.error !== 'canceled' && !isReadingStopped) {
+                if (isReadingStopped || isReadingProcessPaused) return; 
+                
+                if (e.error !== 'canceled') {
                     currentChunkIndex++;
                     isResumingFromPause = false;
                     pausedCharIndex = 0;
@@ -845,6 +892,8 @@
             if (isReadingProcessPaused) {
                 isReadingProcessPaused = false;
                 
+                synth.resume(); 
+                
                 if (isWaitingInGap) {
                     isWaitingInGap = false;
                     playNextChunk(); 
@@ -871,6 +920,27 @@
             updateButtonsState(false, false);
             isResumingFromPause = false;
             pausedCharIndex = 0;
+        }
+
+        function resetSystem() {
+            stopReading(); 
+            
+            document.getElementById('pdf-viewer').innerHTML = '';
+            document.getElementById('pdf-viewer').style.opacity = '0';
+            
+            document.getElementById('status-text').innerText = "請選擇載入方式：本機上傳 或 GitHub 題庫下載。";
+            document.getElementById('status-text').style.color = "#7f8c8d";
+            
+            document.getElementById('pdf-upload').value = '';
+            
+            document.getElementById('btn-fetch-list').style.display = 'inline-block';
+            document.getElementById('btn-fetch-list').innerText = '🔍 瀏覽線上題庫列表';
+            document.getElementById('btn-fetch-list').disabled = false;
+            document.getElementById('github-select').style.display = 'none';
+            document.getElementById('btn-load-selected').style.display = 'none';
+            
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('upload-screen').style.display = 'flex';
         }
 
         window.onbeforeunload = () => synth.cancel();
