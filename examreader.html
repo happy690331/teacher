@@ -731,9 +731,21 @@
             if ((isOptionBullet || isSquare) && chunk._hasPreDelayed !== true && !isResumingFromPause) {
                 isWaitingInGap = true;
                 chunk._hasPreDelayed = true; 
-                let delayMs = 500; 
+                let delayMs = 500; // 預設 0.5 秒
                 
-                // 確保在停頓 0.5 秒的緩衝期間，暫停與停止按鈕依然保持可點擊狀態
+                if (isSquare) {
+                    delayMs = 1000; // 方框固定停頓 1 秒
+                } else if (isOptionBullet) {
+                    // 【動態停頓判斷】：檢查選項前方是否有空白、換行或位於句首
+                    let precedingText = currentOriginalText.substring(0, chunk.startIdx);
+                    if (precedingText.length === 0 || /[\s\n\u3000]$/.test(precedingText)) {
+                        delayMs = 1000; // 若有空白間隔或換行，停頓 1 秒
+                    } else {
+                        delayMs = 500;  // 若緊緊相連無空白，停頓 0.5 秒
+                    }
+                }
+                
+                // 確保在停頓的緩衝期間，暫停與停止按鈕依然保持可點擊狀態
                 currentActiveBoxes.forEach(box => {
                     box.classList.add('reading');
                     box.classList.remove('paused');
@@ -777,15 +789,10 @@
                     .replace(/打[vVｖＶˇ]/g, '打勾')
                     .replace(/ˇ/g, '打勾');
 
-                let isAtLineStart = /(^|\n)\s*$/.test(currentOriginalText.substring(0, chunk.startIdx));
-                if (isAtLineStart) {
-                    speakText = speakText.replace(/[□☐]/g, ''); 
-                } else {
-                    speakText = speakText.replace(/[□☐]/g, '方框'); 
-                }
-
+                // 【全面靜音方框】：將所有方框符號（包含誤植為口的字）消音，單純用前方的 1 秒停頓來取代
                 speakText = speakText
-                    .replace(/口(?=中打)/g, '方框')
+                    .replace(/[□☐]/g, '') 
+                    .replace(/口(?=中打)/g, '')
                     // 【全自動圓圈數字翻譯機】：轉成「一，」，徹底阻絕「零一」
                     .replace(/[①-⑳]/g, match => { 
                         const num = match.charCodeAt(0) - 9311;
