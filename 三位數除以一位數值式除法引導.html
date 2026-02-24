@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三位數除以一位數直式除法教學</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #f8fafc; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: row;
+            gap: 1.5rem;
+            width: 100%;
+            max-width: 1050px; /* 加寬以容納右側數字鍵盤 */
+            background-color: #ffffff;
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            align-items: flex-start;
+        }
+
+        /* 左側：垂直乘法表 */
+        .helper-sidebar {
+            flex: 0 0 140px;
+            background-color: #f1f5f9;
+            padding: 1.2rem;
+            border-radius: 1rem;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+            margin-top: 2rem;
+        }
+
+        .helper-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.8rem;
+            text-align: center;
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 0.4rem;
+        }
+
+        .mult-item {
+            font-size: 1.15rem;
+            color: #334155;
+            margin-bottom: 0.4rem;
+            font-family: 'Courier New', Courier, monospace;
+            white-space: nowrap;
+            text-align: center;
+        }
+
+        /* 中間：遊戲與計算區域 */
+        .game-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 0.5rem;
+        }
+
+        /* 除法直式結構 - 擴展為 11 列 5 欄 */
+        .division-grid {
+            display: grid;
+            grid-template-columns: 0.8fr 0.2fr 1fr 1fr 1fr; 
+            grid-template-rows: repeat(11, auto); 
+            font-size: 2.2rem; 
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 1.5rem;
+            position: relative;
+            line-height: 1.1;
+            width: 360px;
+        }
+
+        .division-symbol {
+            position: absolute;
+            top: calc((100% / 11) * 1 + 8px); 
+            left: 17%; 
+            width: 82%; 
+            height: calc(100% / 11); 
+            border-left: 4px solid #334155;
+            border-top: 4px solid #334155;
+            border-top-left-radius: 0.5rem;
+            z-index: 0;
+        }
+
+        .cell {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+            min-height: 3.5rem; 
+        }
+
+        .quotient-cell .box {
+            transform: translateY(-16px);
+        }
+
+        .box {
+            width: 85%; height: 85%; display: flex; justify-content: center; align-items: center;
+            border: 2px dashed #94a3b8; border-radius: 0.5rem; cursor: pointer;
+            font-weight: 700; color: #94a3b8; transition: all 0.2s;
+            background-color: #fff;
+        }
+        .static-num { font-weight: 700; color: #1e293b; border: none; cursor: default; }
+        .box.auto-filled { border-style: solid; border-color: #cbd5e1; background-color: #f8fafc; color: #475569; }
+        .box.selected { border-color: #3b82f6; background-color: #dbeafe; color: #2563eb; transform: scale(1.05); }
+        .box.incorrect { border-style: solid; border-color: #ef4444; background-color: #fee2e2; color: #dc2626; }
+        .box.correct { border-style: solid; border-color: #22c55e; background-color: #dcfce7; color: #16a34a; }
+        
+        /* 橫線樣式 */
+        .line { 
+            border-bottom: 4px solid #334155; 
+            margin: 0; 
+            z-index: 1; 
+            height: 1px;
+            transform: translateY(-28px); 
+        }
+
+        /* 右側：數字鍵盤區 */
+        .numpad-sidebar {
+            flex: 0 0 160px;
+            background-color: #ffffff;
+            padding: 1.2rem;
+            border-radius: 1rem;
+            border: 2px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            margin-top: 2rem;
+            transition: all 0.3s ease;
+            
+            /* 預設為半透明，無法點擊，直到選擇了格子 */
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .numpad-sidebar.active {
+            opacity: 1;
+            pointer-events: auto;
+            border-color: #3b82f6;
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.15);
+        }
+
+        .numpad-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.8rem;
+            text-align: center;
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 0.4rem;
+        }
+
+        .pad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+        }
+        .num-btn {
+            padding: 0.8rem 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+            background-color: #f1f5f9;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #cbd5e1;
+            text-align: center;
+        }
+        .num-btn:hover { background-color: #e2e8f0; transform: scale(1.05); border-color: #94a3b8; }
+        .num-btn-0 { grid-column: 1 / span 3; } /* 0 佔滿底部一整列 */
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .btn {
+            padding: 0.8rem 2.2rem; font-size: 1.15rem; font-weight: 700; border-radius: 0.75rem;
+            cursor: pointer; transition: all 0.2s; border: none;
+        }
+        .btn-check { background-color: #3b82f6; color: white; box-shadow: 0 4px 0 #2563eb; }
+        .btn-check:hover { background-color: #2563eb; }
+        .btn-next { background-color: #10b981; color: white; box-shadow: 0 4px 0 #059669; }
+        .btn-next:hover { background-color: #059669; }
+        
+        #message {
+            margin-top: 1rem; font-size: 1.2rem; font-weight: 700; height: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .main-container { flex-direction: column; align-items: center; gap: 1rem; }
+            .helper-sidebar { width: 100%; flex: none; flex-direction: row; flex-wrap: wrap; justify-content: center; margin-top: 0; }
+            .mult-item { margin: 0.25rem 0.5rem; }
+            .division-grid { font-size: 1.8rem; width: 300px; }
+            .cell { min-height: 3rem; }
+            .line { transform: translateY(-24px); }
+            
+            /* 手機版將數字鍵盤放到下方橫向排列 */
+            .numpad-sidebar { width: 100%; flex: none; align-items: center; margin-top: 0; padding: 1rem; }
+            .pad-grid { grid-template-columns: repeat(5, 1fr); gap: 0.5rem; width: 100%; max-width: 320px; }
+            .num-btn { padding: 0.6rem 0; font-size: 1.2rem; }
+            .num-btn-0 { grid-column: auto; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <!-- 左側：輔助表 -->
+        <div class="helper-sidebar">
+            <div class="helper-title" id="helper-title">輔助表</div>
+            <div id="mult-list"></div>
+        </div>
+
+        <!-- 中間：計算區 -->
+        <div class="game-content">
+            <div class="division-grid" id="problem-grid">
+                <div class="division-symbol"></div>
+                
+                <!-- 商數區 -->
+                <div class="cell quotient-cell" style="grid-row: 1; grid-column: 3;"><div class="box" id="q1">?</div></div>
+                <div class="cell quotient-cell" style="grid-row: 1; grid-column: 4;"><div class="box" id="q2">?</div></div>
+                <div class="cell quotient-cell" style="grid-row: 1; grid-column: 5;"><div class="box" id="q3">?</div></div>
+                
+                <!-- 被除數與除數區 -->
+                <div class="cell static-num" style="grid-row: 2; grid-column: 1;" id="divisor"></div>
+                <div class="cell static-num" style="grid-row: 2; grid-column: 3;" id="d1"></div>
+                <div class="cell static-num" style="grid-row: 2; grid-column: 4;" id="d2"></div>
+                <div class="cell static-num" style="grid-row: 2; grid-column: 5;" id="d3"></div>
+                
+                <!-- 第一階段乘積 -->
+                <div class="cell" style="grid-row: 3; grid-column: 3;" id="c_s1_1"><div class="box" id="s1_1">?</div></div>
+                
+                <!-- 第一條橫線 -->
+                <div class="cell line" style="grid-row: 4; grid-column: 3 / span 2;" id="line1"></div>
+
+                <!-- 第一階段餘數 + 放下十位數 -->
+                <div class="cell" style="grid-row: 5; grid-column: 3;" id="c_s2_1"><div class="box" id="s2_1">?</div></div>
+                <div class="cell" style="grid-row: 5; grid-column: 4;" id="c_s2_2"><div class="box" id="s2_2">?</div></div>
+                
+                <!-- 第二階段乘積 -->
+                <div class="cell" style="grid-row: 6; grid-column: 3;" id="c_s3_1"><div class="box" id="s3_1">?</div></div>
+                <div class="cell" style="grid-row: 6; grid-column: 4;" id="c_s3_2"><div class="box" id="s3_2">?</div></div>
+                
+                <!-- 第二條橫線 -->
+                <div class="cell line" style="grid-row: 7; grid-column: 3 / span 2;" id="line2"></div>
+                
+                <!-- 第二階段餘數 + 放下個位數 -->
+                <div class="cell" style="grid-row: 8; grid-column: 4;" id="c_s4_1"><div class="box" id="s4_1">?</div></div>
+                <div class="cell" style="grid-row: 8; grid-column: 5;" id="c_s4_2"><div class="box" id="s4_2">?</div></div>
+
+                <!-- 第三階段乘積 -->
+                <div class="cell" style="grid-row: 9; grid-column: 4;" id="c_s5_1"><div class="box" id="s5_1">?</div></div>
+                <div class="cell" style="grid-row: 9; grid-column: 5;" id="c_s5_2"><div class="box" id="s5_2">?</div></div>
+
+                <!-- 第三條橫線 -->
+                <div class="cell line" style="grid-row: 10; grid-column: 4 / span 2;" id="line3"></div>
+
+                <!-- 最終餘數 -->
+                <div class="cell" style="grid-row: 11; grid-column: 5;" id="c_rem"><div class="box" id="rem">?</div></div>
+            </div>
+
+            <div class="controls">
+                <button class="btn btn-check" id="check-btn">檢查答案</button>
+                <button class="btn btn-next" id="next-btn">下一題</button>
+            </div>
+            
+            <div id="message"></div>
+        </div>
+
+        <!-- 右側：固定的數字鍵盤 -->
+        <div class="numpad-sidebar" id="number-pad">
+            <div class="numpad-title">請選擇數字</div>
+            <div class="pad-grid">
+                <button class="num-btn">1</button>
+                <button class="num-btn">2</button>
+                <button class="num-btn">3</button>
+                <button class="num-btn">4</button>
+                <button class="num-btn">5</button>
+                <button class="num-btn">6</button>
+                <button class="num-btn">7</button>
+                <button class="num-btn">8</button>
+                <button class="num-btn">9</button>
+                <button class="num-btn num-btn-0">0</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentProblem = {};
+        let userAnswers = {};
+        let selectedBoxId = null;
+
+        const problemGrid = document.getElementById('problem-grid');
+        const numberPad = document.getElementById('number-pad');
+        const messageEl = document.getElementById('message');
+        const multListEl = document.getElementById('mult-list');
+        const helperTitle = document.getElementById('helper-title');
+
+        function generateProblem() {
+            messageEl.textContent = '';
+            
+            // 隨機除數 (2-9)
+            const divisor = Math.floor(Math.random() * 8) + 2; 
+            
+            // 隨機被除數：強制讓百位數 >= 除數
+            const d1 = Math.floor(Math.random() * (9 - divisor + 1)) + divisor; 
+            const d2 = Math.floor(Math.random() * 10);
+            const d3 = Math.floor(Math.random() * 10);
+
+            // 第一階段 (百位)
+            const q1 = Math.floor(d1 / divisor);
+            const p1 = q1 * divisor;
+            const rem1 = d1 - p1;
+
+            // 第二階段 (十位)
+            const val2 = rem1 * 10 + d2;
+            const q2 = Math.floor(val2 / divisor);
+            const p2 = q2 * divisor;
+            const rem2 = val2 - p2;
+
+            // 第三階段 (個位)
+            const val3 = rem2 * 10 + d3;
+            const q3 = Math.floor(val3 / divisor);
+            const p3 = q3 * divisor;
+            const rem3 = val3 - p3;
+
+            currentProblem = {
+                divisor, d1, d2, d3,
+                solution: {
+                    q1, q2, q3,
+                    s1_1: p1,
+                    s2_1: rem1,
+                    s2_2: d2,
+                    s3_1: Math.floor(p2 / 10),
+                    s3_2: p2 % 10,
+                    s4_1: rem2,
+                    s4_2: d3,
+                    s5_1: Math.floor(p3 / 10),
+                    s5_2: p3 % 10,
+                    rem: rem3
+                }
+            };
+
+            updateHelperTable(divisor);
+            renderUI();
+        }
+
+        function updateHelperTable(n) {
+            helperTitle.textContent = `${n} 的乘法表`;
+            multListEl.innerHTML = '';
+            for (let i = 1; i <= 9; i++) {
+                const item = document.createElement('div');
+                item.className = 'mult-item';
+                item.textContent = `${n} × ${i} = ${n * i}`;
+                multListEl.appendChild(item);
+            }
+        }
+
+        function renderUI() {
+            document.getElementById('divisor').textContent = currentProblem.divisor;
+            document.getElementById('d1').textContent = currentProblem.d1;
+            document.getElementById('d2').textContent = currentProblem.d2;
+            document.getElementById('d3').textContent = currentProblem.d3;
+
+            // 重置所有輸入框與鍵盤狀態
+            document.querySelectorAll('.box').forEach(box => {
+                box.textContent = '?';
+                box.className = 'box';
+                box.parentNode.style.visibility = 'visible';
+            });
+            numberPad.classList.remove('active');
+            selectedBoxId = null;
+            userAnswers = {};
+
+            // 根據計算邏輯隱藏不必要的格子
+            const sol = currentProblem.solution;
+            if (sol.s2_1 === 0) document.getElementById('c_s2_1').style.visibility = 'hidden';
+            if (sol.s3_1 === 0) document.getElementById('c_s3_1').style.visibility = 'hidden';
+            if (sol.s4_1 === 0) document.getElementById('c_s4_1').style.visibility = 'hidden';
+            if (sol.s5_1 === 0) document.getElementById('c_s5_1').style.visibility = 'hidden';
+        }
+
+        function onBoxClick(e) {
+            const box = e.target.closest('.box');
+            if (!box || box.classList.contains('static-num')) return;
+
+            // 移除其他格子的選中狀態
+            document.querySelectorAll('.box').forEach(b => b.classList.remove('selected'));
+            box.classList.add('selected');
+            selectedBoxId = box.id;
+
+            // 啟用右側的數字鍵盤
+            numberPad.classList.add('active');
+        }
+
+        function onNumClick(e) {
+            const btn = e.target.closest('.num-btn');
+            if (!btn || !selectedBoxId) return;
+
+            const val = parseInt(btn.textContent);
+            const box = document.getElementById(selectedBoxId);
+            box.textContent = val;
+            
+            // 填寫完後取消選中狀態，並收起(半透明化)數字鍵盤
+            box.classList.remove('selected');
+            userAnswers[selectedBoxId] = val;
+            
+            autoFillLogic(selectedBoxId, val);
+
+            numberPad.classList.remove('active');
+            selectedBoxId = null;
+        }
+
+        function autoFillLogic(id, val) {
+            const divisor = currentProblem.divisor;
+            const sol = currentProblem.solution;
+            
+            if (id === 'q1') {
+                const prod = val * divisor;
+                const b = document.getElementById('s1_1');
+                b.textContent = prod;
+                b.classList.add('auto-filled');
+                userAnswers['s1_1'] = prod;
+
+            } else if (id === 'q2') {
+                const prod = val * divisor;
+                const b1 = document.getElementById('s3_1');
+                const b2 = document.getElementById('s3_2');
+                
+                if (sol.s3_1 !== 0) {
+                    b1.textContent = Math.floor(prod / 10);
+                    b1.classList.add('auto-filled');
+                    userAnswers['s3_1'] = Math.floor(prod / 10);
+                }
+                b2.textContent = prod % 10;
+                b2.classList.add('auto-filled');
+                userAnswers['s3_2'] = prod % 10;
+
+            } else if (id === 'q3') {
+                const prod = val * divisor;
+                const b1 = document.getElementById('s5_1');
+                const b2 = document.getElementById('s5_2');
+                
+                if (sol.s5_1 !== 0) {
+                    b1.textContent = Math.floor(prod / 10);
+                    b1.classList.add('auto-filled');
+                    userAnswers['s5_1'] = Math.floor(prod / 10);
+                }
+                b2.textContent = prod % 10;
+                b2.classList.add('auto-filled');
+                userAnswers['s5_2'] = prod % 10;
+            }
+        }
+
+        function checkAnswers() {
+            let isAllCorrect = true;
+            const solution = currentProblem.solution;
+
+            document.querySelectorAll('.box').forEach(box => {
+                if (box.classList.contains('static-num') || box.parentNode.style.visibility === 'hidden') return;
+
+                const userVal = userAnswers[box.id];
+                const correctVal = solution[box.id];
+
+                box.classList.remove('correct', 'incorrect');
+                if (userVal === correctVal) {
+                    box.classList.add('correct');
+                } else {
+                    box.classList.add('incorrect');
+                    isAllCorrect = false;
+                }
+            });
+
+            if (isAllCorrect) {
+                messageEl.textContent = '非常棒！計算完全正確！';
+                messageEl.style.color = '#16a34a';
+            } else {
+                messageEl.textContent = '還有數字不對喔，對照輔助表再檢查看看。';
+                messageEl.style.color = '#dc2626';
+            }
+        }
+
+        problemGrid.addEventListener('click', onBoxClick);
+        numberPad.addEventListener('click', onNumClick);
+        document.getElementById('check-btn').addEventListener('click', checkAnswers);
+        document.getElementById('next-btn').addEventListener('click', generateProblem);
+
+        // 若點擊空白處，取消選中狀態並禁用數字盤
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.box') && !e.target.closest('.numpad-sidebar')) {
+                numberPad.classList.remove('active');
+                if(selectedBoxId) document.getElementById(selectedBoxId).classList.remove('selected');
+                selectedBoxId = null;
+            }
+        });
+
+        generateProblem();
+    </script>
+</body>
+</html>
