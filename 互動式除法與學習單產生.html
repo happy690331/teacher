@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>直式除法教學與練習</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #f8fafc; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+        }
+
+        /* 設定區塊樣式 */
+        .settings-container {
+            width: 100%;
+            max-width: 1050px;
+            background-color: #ffffff;
+            padding: 1rem 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        @media (min-width: 640px) {
+            .settings-container {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+            }
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: row;
+            gap: 1.5rem;
+            width: 100%;
+            max-width: 1050px;
+            background-color: #ffffff;
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            align-items: flex-start;
+        }
+
+        /* 左側：垂直乘法表 */
+        .helper-sidebar {
+            flex: 0 0 140px;
+            background-color: #f1f5f9;
+            padding: 1.2rem;
+            border-radius: 1rem;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+            margin-top: 2rem;
+        }
+
+        .helper-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.8rem;
+            text-align: center;
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 0.4rem;
+        }
+
+        .mult-item {
+            font-size: 1.15rem;
+            color: #334155;
+            margin-bottom: 0.4rem;
+            font-family: 'Courier New', Courier, monospace;
+            white-space: nowrap;
+            text-align: center;
+        }
+
+        /* 中間：遊戲與計算區域 */
+        .game-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 0.5rem;
+        }
+
+        /* 除法直式結構 - 動態產生 */
+        .division-grid {
+            display: grid;
+            font-size: 2.2rem; 
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 1.5rem;
+            position: relative;
+            line-height: 1.1;
+            transition: all 0.3s;
+        }
+
+        .division-symbol {
+            position: absolute;
+            border-left: 4px solid #334155;
+            border-top: 4px solid #334155;
+            border-top-left-radius: 0.5rem;
+            z-index: 0;
+        }
+
+        .cell {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+            min-height: 3.5rem; 
+        }
+
+        .quotient-cell .box {
+            transform: translateY(-16px);
+        }
+
+        .box {
+            width: 85%; height: 85%; display: flex; justify-content: center; align-items: center;
+            border: 2px dashed #94a3b8; border-radius: 0.5rem; cursor: pointer;
+            font-weight: 700; color: #94a3b8; transition: all 0.2s;
+            background-color: #fff;
+        }
+        .static-num { font-weight: 700; color: #1e293b; border: none; cursor: default; }
+        .box.auto-filled { border-style: solid; border-color: #cbd5e1; background-color: #f8fafc; color: #475569; }
+        .box.selected { border-color: #3b82f6; background-color: #dbeafe; color: #2563eb; transform: scale(1.05); }
+        .box.incorrect { border-style: solid; border-color: #ef4444; background-color: #fee2e2; color: #dc2626; }
+        .box.correct { border-style: solid; border-color: #22c55e; background-color: #dcfce7; color: #16a34a; }
+        
+        /* 橫線樣式 */
+        .line { 
+            border-bottom: 4px solid #334155; 
+            margin: 0; 
+            z-index: 1; 
+            height: 1px;
+            transform: translateY(-28px); 
+        }
+
+        /* 右側：數字鍵盤區 */
+        .numpad-sidebar {
+            flex: 0 0 160px;
+            background-color: #ffffff;
+            padding: 1.2rem;
+            border-radius: 1rem;
+            border: 2px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            margin-top: 2rem;
+            transition: all 0.3s ease;
+            
+            /* 預設為半透明，無法點擊，直到選擇了格子 */
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .numpad-sidebar.active {
+            opacity: 1;
+            pointer-events: auto;
+            border-color: #3b82f6;
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.15);
+        }
+
+        .numpad-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.8rem;
+            text-align: center;
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 0.4rem;
+        }
+
+        .pad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+        }
+        .num-btn {
+            padding: 0.8rem 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+            background-color: #f1f5f9;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #cbd5e1;
+            text-align: center;
+        }
+        .num-btn:hover { background-color: #e2e8f0; transform: scale(1.05); border-color: #94a3b8; }
+        .num-btn-0 { grid-column: 1 / span 3; }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .btn {
+            padding: 0.8rem 2.2rem; font-size: 1.15rem; font-weight: 700; border-radius: 0.75rem;
+            cursor: pointer; transition: all 0.2s; border: none;
+        }
+        .btn-check { background-color: #3b82f6; color: white; box-shadow: 0 4px 0 #2563eb; }
+        .btn-check:hover { background-color: #2563eb; }
+        .btn-next { background-color: #10b981; color: white; box-shadow: 0 4px 0 #059669; }
+        .btn-next:hover { background-color: #059669; }
+        
+        #message {
+            margin-top: 1rem; font-size: 1.2rem; font-weight: 700; height: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .main-container { flex-direction: column; align-items: center; gap: 1rem; }
+            .helper-sidebar { width: 100%; flex: none; flex-direction: row; flex-wrap: wrap; justify-content: center; margin-top: 0; }
+            .mult-item { margin: 0.25rem 0.5rem; }
+            .division-grid { font-size: 1.8rem; width: 300px !important; }
+            .cell { min-height: 3rem; }
+            .line { transform: translateY(-24px); }
+            
+            .numpad-sidebar { width: 100%; flex: none; align-items: center; margin-top: 0; padding: 1rem; }
+            .pad-grid { grid-template-columns: repeat(5, 1fr); gap: 0.5rem; width: 100%; max-width: 320px; }
+            .num-btn { padding: 0.6rem 0; font-size: 1.2rem; }
+            .num-btn-0 { grid-column: auto; }
+            
+            .download-section { flex-direction: column; gap: 1rem; text-align: center; padding: 1.5rem; }
+            .dl-controls { flex-direction: column; width: 100%; }
+        }
+
+        .download-section {
+            width: 100%;
+            max-width: 1050px;
+            background-color: #ffffff;
+            padding: 1.5rem 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem;
+        }
+        .dl-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .btn-pdf { background-color: #ef4444; color: white; box-shadow: 0 4px 0 #b91c1c; }
+        .btn-pdf:hover { background-color: #dc2626; }
+        .btn-doc { background-color: #8b5cf6; color: white; box-shadow: 0 4px 0 #6d28d9; }
+        .btn-doc:hover { background-color: #7c3aed; }
+    </style>
+</head>
+<body>
+
+    <!-- 新增：設定面板 -->
+    <div class="settings-container">
+        <div class="flex flex-col sm:flex-row gap-4 sm:gap-8">
+            <div class="flex items-center flex-wrap gap-2">
+                <span class="font-bold text-slate-700 mr-2">題型位數：</span>
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="chk-2d" class="mr-1 form-checkbox h-5 w-5 text-blue-600 rounded" value="2"> 二位數
+                </label>
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="chk-3d" class="mr-1 form-checkbox h-5 w-5 text-blue-600 rounded" value="3" checked> 三位數
+                </label>
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="chk-4d" class="mr-1 form-checkbox h-5 w-5 text-blue-600 rounded" value="4"> 四位數
+                </label>
+            </div>
+            <div class="flex items-center flex-wrap gap-2">
+                <span class="font-bold text-slate-700 mr-2">是否整除：</span>
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="chk-rem-yes" class="mr-1 form-checkbox h-5 w-5 text-blue-600 rounded" value="yes" checked> 有餘數
+                </label>
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="chk-rem-no" class="mr-1 form-checkbox h-5 w-5 text-blue-600 rounded" value="no" checked> 整除
+                </label>
+            </div>
+        </div>
+        <button id="btn-apply-settings" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow transition">
+            套用設定並出題
+        </button>
+    </div>
+
+    <div class="main-container">
+        <!-- 左側：輔助表 -->
+        <div class="helper-sidebar">
+            <div class="helper-title" id="helper-title">輔助表</div>
+            <div id="mult-list"></div>
+        </div>
+
+        <!-- 中間：計算區 -->
+        <div class="game-content">
+            <!-- 網格將透過 JS 動態生成 -->
+            <div class="division-grid" id="problem-grid">
+            </div>
+
+            <div class="controls">
+                <button class="btn btn-check" id="check-btn">檢查答案</button>
+                <button class="btn btn-next" id="next-btn">下一題</button>
+            </div>
+            
+            <div id="message"></div>
+        </div>
+
+        <!-- 右側：固定的數字鍵盤 -->
+        <div class="numpad-sidebar" id="number-pad">
+            <div class="numpad-title">請選擇數字</div>
+            <div class="pad-grid">
+                <button class="num-btn">1</button>
+                <button class="num-btn">2</button>
+                <button class="num-btn">3</button>
+                <button class="num-btn">4</button>
+                <button class="num-btn">5</button>
+                <button class="num-btn">6</button>
+                <button class="num-btn">7</button>
+                <button class="num-btn">8</button>
+                <button class="num-btn">9</button>
+                <button class="num-btn num-btn-0">0</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 下載學習單區塊 -->
+    <div class="download-section">
+        <div class="text-lg font-bold text-slate-800">
+            <span class="text-2xl mr-2">🖨️</span>依設定產生學習單 (回家作業)
+        </div>
+        <div class="dl-controls">
+            <label for="q-count" class="font-bold text-slate-600">題數：</label>
+            <select id="q-count" class="border-2 border-slate-300 rounded-lg p-2 font-bold text-slate-700 outline-none focus:border-blue-500 w-24">
+                <option value="5">5 題</option>
+                <option value="10" selected>10 題</option>
+                <option value="15">15 題</option>
+                <option value="20">20 題</option>
+            </select>
+            <button class="btn btn-pdf" id="btn-print-pdf">列印 / 存為 PDF</button>
+            <button class="btn btn-doc" id="btn-dl-doc">下載 Word</button>
+        </div>
+    </div>
+
+    <script>
+        let currentProblem = {};
+        let userAnswers = {};
+        let selectedBoxId = null;
+
+        const problemGrid = document.getElementById('problem-grid');
+        const numberPad = document.getElementById('number-pad');
+        const messageEl = document.getElementById('message');
+        const multListEl = document.getElementById('mult-list');
+        const helperTitle = document.getElementById('helper-title');
+
+        // 取得使用者勾選的位數
+        function getSelectedDigits() {
+            let selected = [];
+            if (document.getElementById('chk-2d').checked) selected.push(2);
+            if (document.getElementById('chk-3d').checked) selected.push(3);
+            if (document.getElementById('chk-4d').checked) selected.push(4);
+            // 避免全部取消勾選
+            if (selected.length === 0) {
+                document.getElementById('chk-3d').checked = true;
+                return [3];
+            }
+            return selected;
+        }
+
+        // 取得使用者勾選的餘數設定
+        function getSelectedRems() {
+            let selected = [];
+            if (document.getElementById('chk-rem-yes').checked) selected.push('yes');
+            if (document.getElementById('chk-rem-no').checked) selected.push('no');
+            // 避免全部取消勾選
+            if (selected.length === 0) {
+                document.getElementById('chk-rem-yes').checked = true;
+                document.getElementById('chk-rem-no').checked = true;
+                return ['yes', 'no'];
+            }
+            return selected;
+        }
+
+        // 核心題型產生邏輯
+        function generateProblemData(allowedDigits, allowedRem) {
+            const N = allowedDigits[Math.floor(Math.random() * allowedDigits.length)];
+            const remType = allowedRem[Math.floor(Math.random() * allowedRem.length)];
+            
+            const divisor = Math.floor(Math.random() * 8) + 2; 
+            
+            // 根據所選位數，設定被除數的最小值與最大值
+            let min = Math.pow(10, N - 1);
+            let max = Math.pow(10, N) - 1;
+            let dividend = Math.floor(Math.random() * (max - min + 1)) + min;
+            
+            // 調整以符合整除或餘數條件
+            if (remType === 'no') {
+                dividend -= (dividend % divisor);
+                if (dividend < min) dividend += divisor; // 若減除後低於位數最小值，則加回一倍除數
+            } else if (remType === 'yes') {
+                let r = dividend % divisor;
+                let targetR = Math.floor(Math.random() * (divisor - 1)) + 1;
+                dividend = dividend - r + targetR;
+                if (dividend > max) dividend -= divisor; // 若超過位數最大值，則減去一倍除數
+                if (dividend < min) dividend += divisor; // 若低於位數最小值，則加上一倍除數
+            }
+            
+            const digits = dividend.toString().split('').map(Number);
+            
+            // 建立標準解答與計算步驟
+            let solution = {};
+            let rem = 0;
+            for(let i=0; i<N; i++) {
+                let val = rem * 10 + digits[i];
+                let q = Math.floor(val / divisor);
+                let p = q * divisor;
+                rem = val - p;
+                
+                solution[`q${i+1}`] = q;
+                if (i === 0) {
+                    solution[`p1`] = p;
+                } else {
+                    solution[`p${i+1}_1`] = Math.floor(p/10);
+                    solution[`p${i+1}_2`] = p % 10;
+                    
+                    solution[`r${i}_1`] = Math.floor(val/10); 
+                    solution[`r${i}_2`] = val % 10;           
+                }
+                if (i === N - 1) {
+                    solution[`rem`] = rem;
+                }
+            }
+            
+            return { N, divisor, digits, dividend, solution };
+        }
+
+        function generateProblem() {
+            messageEl.textContent = '';
+            const allowedDigits = getSelectedDigits();
+            const allowedRem = getSelectedRems();
+            
+            currentProblem = generateProblemData(allowedDigits, allowedRem);
+            updateHelperTable(currentProblem.divisor);
+            renderDynamicGrid(currentProblem.N);
+        }
+
+        function updateHelperTable(n) {
+            helperTitle.textContent = `${n} 的乘法表`;
+            multListEl.innerHTML = '';
+            for (let i = 1; i <= 9; i++) {
+                const item = document.createElement('div');
+                item.className = 'mult-item';
+                item.textContent = `${n} × ${i} = ${n * i}`;
+                multListEl.appendChild(item);
+            }
+        }
+
+        // 動態產生 N 位數除法的網格 UI
+        function renderDynamicGrid(N) {
+            const rows = N * 3 + 2;
+            problemGrid.style.gridTemplateColumns = `0.8fr 0.2fr repeat(${N}, 1fr)`;
+            problemGrid.style.gridTemplateRows = `repeat(${rows}, auto)`;
+            problemGrid.style.width = `${120 + N * 80}px`;
+
+            // 計算除號符號的位置
+            const leftPct = (0.8 / (1 + N)) * 100;
+            const widthPct = 100 - leftPct + 2;
+            
+            let html = `<div class="division-symbol" style="top: calc((100% / ${rows}) * 1 + 8px); height: calc(100% / ${rows}); left: calc(${leftPct}% + 4px); width: calc(${widthPct}% - 8px);"></div>`;
+            
+            // 1. 商數區 (Row 1)
+            for(let i=0; i<N; i++) {
+                html += `<div class="cell quotient-cell" style="grid-row: 1; grid-column: ${3+i};"><div class="box" id="q${i+1}">?</div></div>`;
+            }
+            
+            // 2. 除數與被除數 (Row 2)
+            html += `<div class="cell static-num" style="grid-row: 2; grid-column: 1;" id="divisor">${currentProblem.divisor}</div>`;
+            for(let i=0; i<N; i++) {
+                html += `<div class="cell static-num" style="grid-row: 2; grid-column: ${3+i};" id="d${i+1}">${currentProblem.digits[i]}</div>`;
+            }
+            
+            // 3. 計算步驟
+            for(let i=0; i<N; i++) {
+                const rRow = 3 + i*3;
+                
+                // 乘積
+                if (i === 0) {
+                    html += `<div class="cell" style="grid-row: ${rRow}; grid-column: 3;" id="c_p1"><div class="box" id="p1">?</div></div>`;
+                } else {
+                    const v1 = currentProblem.solution[`p${i+1}_1`] === 0 ? 'hidden' : 'visible';
+                    html += `<div class="cell" style="grid-row: ${rRow}; grid-column: ${i+2}; visibility: ${v1};" id="c_p${i+1}_1"><div class="box" id="p${i+1}_1">?</div></div>`;
+                    html += `<div class="cell" style="grid-row: ${rRow}; grid-column: ${i+3};" id="c_p${i+1}_2"><div class="box" id="p${i+1}_2">?</div></div>`;
+                }
+                
+                // 橫線
+                const lineCol = (i === 0) ? 3 : i + 2;
+                html += `<div class="cell line" style="grid-row: ${rRow+1}; grid-column: ${lineCol} / span 2;"></div>`;
+                
+                // 餘數與放下來的數字
+                if (i < N - 1) {
+                    const v2 = currentProblem.solution[`r${i+1}_1`] === 0 ? 'hidden' : 'visible';
+                    html += `<div class="cell" style="grid-row: ${rRow+2}; grid-column: ${i+3}; visibility: ${v2};" id="c_r${i+1}_1"><div class="box" id="r${i+1}_1">?</div></div>`;
+                    html += `<div class="cell" style="grid-row: ${rRow+2}; grid-column: ${i+4};" id="c_r${i+1}_2"><div class="box" id="r${i+1}_2">?</div></div>`;
+                } else {
+                    const remCol = (i === 0) ? 3 : i + 3;
+                    html += `<div class="cell" style="grid-row: ${rRow+2}; grid-column: ${remCol};" id="c_rem"><div class="box" id="rem">?</div></div>`;
+                }
+            }
+            
+            problemGrid.innerHTML = html;
+
+            // 狀態重置
+            numberPad.classList.remove('active');
+            selectedBoxId = null;
+            userAnswers = {};
+        }
+
+        function onBoxClick(e) {
+            const box = e.target.closest('.box');
+            if (!box || box.classList.contains('static-num')) return;
+
+            document.querySelectorAll('.box').forEach(b => b.classList.remove('selected'));
+            box.classList.add('selected');
+            selectedBoxId = box.id;
+
+            numberPad.classList.add('active');
+        }
+
+        function onNumClick(e) {
+            const btn = e.target.closest('.num-btn');
+            if (!btn || !selectedBoxId) return;
+
+            const val = parseInt(btn.textContent);
+            const box = document.getElementById(selectedBoxId);
+            box.textContent = val;
+            
+            box.classList.remove('selected');
+            userAnswers[selectedBoxId] = val;
+            
+            autoFillLogic(selectedBoxId, val);
+
+            numberPad.classList.remove('active');
+            selectedBoxId = null;
+        }
+
+        function autoFillLogic(id, val) {
+            const divisor = currentProblem.divisor;
+            const sol = currentProblem.solution;
+            
+            if (id.startsWith('q')) {
+                const step = parseInt(id.substring(1)); // 取出 q 後面的數字 (1, 2, 3...)
+                const prod = val * divisor;
+                
+                if (step === 1) {
+                    const b = document.getElementById('p1');
+                    if(b) {
+                        b.textContent = prod;
+                        b.classList.add('auto-filled');
+                        userAnswers['p1'] = prod;
+                    }
+                } else {
+                    const b1 = document.getElementById(`p${step}_1`);
+                    const b2 = document.getElementById(`p${step}_2`);
+                    
+                    if (b1) {
+                        if (sol[`p${step}_1`] !== 0) {
+                            b1.textContent = Math.floor(prod / 10);
+                            b1.classList.add('auto-filled');
+                            userAnswers[`p${step}_1`] = Math.floor(prod / 10);
+                        }
+                    }
+                    if (b2) {
+                        b2.textContent = prod % 10;
+                        b2.classList.add('auto-filled');
+                        userAnswers[`p${step}_2`] = prod % 10;
+                    }
+                }
+            }
+        }
+
+        function checkAnswers() {
+            let isAllCorrect = true;
+            const solution = currentProblem.solution;
+
+            document.querySelectorAll('.box').forEach(box => {
+                if (box.classList.contains('static-num') || box.parentNode.style.visibility === 'hidden') return;
+
+                const userVal = userAnswers[box.id];
+                const correctVal = solution[box.id];
+
+                box.classList.remove('correct', 'incorrect');
+                if (userVal === correctVal) {
+                    box.classList.add('correct');
+                } else {
+                    box.classList.add('incorrect');
+                    isAllCorrect = false;
+                }
+            });
+
+            if (isAllCorrect) {
+                messageEl.textContent = '非常棒！計算完全正確！';
+                messageEl.style.color = '#16a34a';
+            } else {
+                messageEl.textContent = '還有數字不對喔，對照輔助表再檢查看看。';
+                messageEl.style.color = '#dc2626';
+            }
+        }
+
+        // 套用設定按鈕
+        document.getElementById('btn-apply-settings').addEventListener('click', generateProblem);
+
+        problemGrid.addEventListener('click', onBoxClick);
+        numberPad.addEventListener('click', onNumClick);
+        document.getElementById('check-btn').addEventListener('click', checkAnswers);
+        document.getElementById('next-btn').addEventListener('click', generateProblem);
+
+        function getWorksheetHTML(count) {
+            let html = `
+            <!DOCTYPE html>
+            <html lang="zh-Hant">
+            <head>
+                <meta charset="UTF-8">
+                <title>直式除法練習</title>
+                <style>
+                    @page { size: A4 portrait; margin: 1.27cm; }
+                    body { font-family: 'DFKai-SB', 'MingLiU', '標楷體', sans-serif; padding: 0; margin: 0; color: #000; background: white; }
+                    .header-table { width: 100%; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 5px; border-collapse: collapse; }
+                    .header-title { font-size: 24px; font-weight: bold; text-align: left; vertical-align: bottom; }
+                    .header-info { font-size: 18px; text-align: right; vertical-align: bottom; white-space: nowrap; padding-bottom: 3px; }
+                    .q-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+                    .q-cell { width: 50%; vertical-align: top; padding: 15px 15px 85px 15px; } 
+                    .q-horizontal { font-size: 18px; margin-bottom: 30px; font-weight: bold; white-space: nowrap; } 
+                    .div-table { border-collapse: collapse; margin-left: 15px; }
+                    .div-table td { padding: 5px; text-align: center; font-size: 24px; font-weight: bold; }
+                    .div-divisor { border: none; vertical-align: bottom; padding-right: 8px; }
+                    .div-dividend { border-top: 2px solid black; border-left: 2px solid black; letter-spacing: 6px; padding-left: 10px; }
+                </style>
+            </head>
+            <body>
+                <table class="header-table">
+                    <tr>
+                        <td class="header-title">直式除法綜合練習</td>
+                        <td class="header-info">年級/班級：_______________ &emsp; 姓名：_______________</td>
+                    </tr>
+                </table>
+                <table class="q-table">
+            `;
+
+            const allowedDigits = getSelectedDigits();
+            const allowedRem = getSelectedRems();
+            
+            // 若全部為整除題，隱藏餘數框
+            const hideRemStr = (allowedRem.length === 1 && allowedRem[0] === 'no');
+
+            for(let i=0; i<count; i+=2) {
+                html += `<tr>`;
+                for(let j=0; j<2; j++) {
+                    if (i+j < count) {
+                        const prob = generateProblemData(allowedDigits, allowedRem);
+                        const dividend = prob.dividend;
+                        const divisor = prob.divisor;
+                        const ansFormat = hideRemStr ? `(&emsp;&emsp;&emsp;)` : `(&emsp;&emsp;&emsp;) ... (&emsp;&emsp;&emsp;)`;
+
+                        html += `
+                        <td class="q-cell">
+                            <div class="q-horizontal">
+                                ${i+j+1}) &nbsp;&nbsp; ${dividend} &divide; ${divisor} = ${ansFormat}
+                            </div>
+                            <table class="div-table">
+                                <tr>
+                                    <td class="div-divisor">${divisor}</td>
+                                    <td class="div-dividend">${dividend}</td>
+                                </tr>
+                            </table>
+                        </td>`;
+                    } else {
+                        html += `<td class="q-cell"></td>`; 
+                    }
+                }
+                html += `</tr>`;
+            }
+
+            html += `
+                </table>
+            </body>
+            </html>
+            `;
+            return html;
+        }
+
+        document.getElementById('btn-print-pdf').addEventListener('click', () => {
+            let count = parseInt(document.getElementById('q-count').value) || 10;
+            if (count > 20) count = 20;
+            if (count < 1) count = 1;
+            
+            const content = getWorksheetHTML(count);
+            const printWin = window.open('', '_blank');
+            printWin.document.write(content);
+            printWin.document.close();
+            
+            setTimeout(() => {
+                printWin.print();
+            }, 300);
+        });
+
+        document.getElementById('btn-dl-doc').addEventListener('click', () => {
+            let count = parseInt(document.getElementById('q-count').value) || 10;
+            if (count > 20) count = 20;
+            if (count < 1) count = 1;
+            const content = getWorksheetHTML(count);
+
+            const headMatch = content.match(/<style>([\s\S]*?)<\/style>/);
+            const style = headMatch ? headMatch[0] : '';
+            const bodyMatch = content.match(/<body>([\s\S]*?)<\/body>/);
+            const bodyContent = bodyMatch ? bodyMatch[1] : '';
+
+            const wordHtml = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head><meta charset='utf-8'><title>直式除法練習</title>${style}</head>
+                <body>${bodyContent}</body>
+                </html>
+            `;
+
+            const blob = new Blob(['\ufeff', wordHtml], { type: 'application/msword' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = '直式除法學習單.doc';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.box') && !e.target.closest('.numpad-sidebar')) {
+                numberPad.classList.remove('active');
+                if(selectedBoxId) {
+                    const box = document.getElementById(selectedBoxId);
+                    if(box) box.classList.remove('selected');
+                }
+                selectedBoxId = null;
+            }
+        });
+
+        // 初始執行
+        generateProblem();
+    </script>
+</body>
+</html>
