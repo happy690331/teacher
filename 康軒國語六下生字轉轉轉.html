@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="zh-TW">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>康軒六下生字轉轉轉</title>
+  <style>
+        body {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 10px 20px;
+            font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100%;
+            color: #333;
+        }
+        
+        html {
+            height: 100%;
+        }
+
+        .game-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 20px 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #718096;
+            margin-bottom: 20px;
+        }
+
+        .stage-info {
+            background: #e2e8f0;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            color: #2d3748;
+        }
+
+        .game-area {
+            background: #f7fafc;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            min-height: 250px;
+            position: relative;
+            border: 3px dashed #cbd5e0;
+        }
+
+        .component {
+            display: inline-block;
+            font-size: 4rem;
+            font-weight: bold;
+            color: #2b6cb0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: absolute;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .component.rotating {
+            animation: rotate 3s linear infinite;
+        }
+
+        .component:hover {
+            transform: scale(1.1);
+            color: #1a365d;
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .answer-display {
+            text-align: center;
+            font-size: 6rem;
+            font-weight: bold;
+            color: #38a169;
+            margin: 20px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4299e1, #3182ce);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .btn:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .next-btn {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+        }
+
+        .question-counter {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4a5568;
+            margin: 0 20px 20px 20px;
+            padding: 15px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            display: inline-block;
+        }
+
+        .feedback {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .feedback.correct {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 2px solid #38a169;
+        }
+
+        .feedback.incorrect {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 2px solid #e53e3e;
+        }
+
+        .feedback.hint {
+            background: #fef5e7;
+            color: #744210;
+            border: 2px solid #ed8936;
+        }
+
+        /* Menu Screen Styles */
+        .menu-screen {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .menu-title {
+            font-size: 2.8rem;
+            color: #4a5568;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+
+        .menu-subtitle {
+            font-size: 1.3rem;
+            color: #718096;
+            margin-bottom: 40px;
+        }
+
+        .lesson-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+        }
+
+        .lesson-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 20px;
+            font-size: 1.5rem;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .lesson-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .lesson-btn:nth-child(1) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .lesson-btn:nth-child(2) {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .lesson-btn:nth-child(3) {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .lesson-btn:nth-child(4) {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        .lesson-btn:nth-child(5) {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .lesson-btn:nth-child(6) {
+            background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+        }
+
+        .lesson-btn:nth-child(7) {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+
+        .lesson-btn:nth-child(8) {
+            background: linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%);
+        }
+
+        .lesson-btn:nth-child(9) {
+            background: linear-gradient(135deg, #2e2e78 0%, #662d8c 100%);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+  <script src="https://cdn.tailwindcss.com/3.4.17" type="text/javascript"></script>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="/_sdk/element_sdk.js" type="text/javascript"></script>
+ </head>
+ <body>
+  <main class="game-container"><!-- Menu Screen -->
+   <div id="menuScreen" class="menu-screen">
+    <header class="header">
+     <h1 class="menu-title">🧩 康軒六下生字轉轉轉</h1>
+     <div class="menu-subtitle">
+      選擇要練習的課程
+     </div>
+    </header>
+    <div class="lesson-grid" id="lessonGrid"><!-- 課程按鈕會在這裡生成 -->
+    </div>
+   </div><!-- Game Screen -->
+   <div id="gameScreen" class="hidden">
+    <header class="header">
+     <h1 class="title" id="gameTitle">🧩 康軒六下生字轉轉轉</h1>
+     <div class="stage-info" id="stageInfo">
+      第一階段：觀察散落的部件，猜猜看是什麼字？
+     </div>
+    </header>
+    <div class="game-area" id="gameArea"><!-- 部件會在這裡顯示 -->
+    </div>
+    <div class="controls">
+     <div class="question-counter" id="questionCounter">
+      第 1 題 / 共 13 題
+     </div><button class="btn" id="prevBtn" onclick="prevQuestion()">上一題</button> <button class="btn" id="hintBtn" onclick="nextHint()">提示</button> <button class="btn next-btn" id="nextBtn" onclick="nextQuestion()">下一題</button> <button class="btn" onclick="backToMenu()" style="background: linear-gradient(135deg, #fd6e6a, #ec008c);">回到選單</button>
+    </div>
+    <div class="feedback" id="feedback" style="display: none;"></div>
+   </div>
+  </main>
+  <script>
+        const lessonsData = {
+            1: {
+                title: '康軒六下第一課生字轉轉轉',
+                questions: [
+                    { answer: '嶼', components: ['山', '臼', '丂'] },
+                    { answer: '獨', components: ['犭', '罒', '虫'] },
+                    { answer: '馳', components: ['馬', '也'] },
+                    { answer: '輾', components: ['車', '尸', '二', '廾'] },
+                    { answer: '櫛', components: ['木', '⺮', '即'] },
+                    { answer: '鱗', components: ['魚', '米', '舛'] },
+                    { answer: '幣', components: ['⺌', '攵', '巾'] },
+                    { answer: '莊', components: ['艹', '爿', '士'] },
+                    { answer: '瀕', components: ['氵', '步', '頁'] },
+                    { answer: '撒', components: ['扌', '艹', '月', '攵'] },
+                    { answer: '掠', components: ['扌', '亠', '口', '小'] },
+                    { answer: '覓', components: ['爫', '冖', '見'] },
+                    { answer: '紳', components: ['糸', '申'] },
+                    { answer: '濛', components: ['氵', '艹', '冖', '豕'] },
+                    { answer: '亢', components: ['亠', '几'] },
+                    { answer: '凌', components: ['冫', '土', '儿', '夂'] },
+                    { answer: '岌', components: ['山', '及'] }
+                ]
+            },
+            2: {
+                title: '康軒六下第二課生字轉轉轉',
+                questions: [
+                    { answer: '址', components: ['土', '止'] },
+                    { answer: '屏', components: ['尸', '并'] },
+                    { answer: '秘', components: ['禾', '必'] },
+                    { answer: '魯', components: ['魚', '日'] },
+                    { answer: '璀', components: ['王', '山', '隹'] },
+                    { answer: '璨', components: ['王', '歹', '又', '米'] },
+                    { answer: '愜', components: ['忄', '匚', '夾'] },
+                    { answer: '振', components: ['扌', '辰'] },
+                    { answer: '氛', components: ['气', '分'] },
+                    { answer: '序', components: ['广', '予'] },
+                    { answer: '澎', components: ['氵', '十', '豆', '彡'] },
+                    { answer: '湃', components: ['氵', '扌', '二', '丨'] },
+                    { answer: '砌', components: ['石', '切'] },
+                    { answer: '梯', components: ['木', '弟'] },
+                    { answer: '玄', components: ['亠', '幺'] },
+                    { answer: '拴', components: ['扌', '全'] },
+                    { answer: '盎', components: ['央', '皿'] },
+                    { answer: '眸', components: ['目', '牟'] },
+                    { answer: '杏', components: ['木', '口'] }
+                ]
+            },
+            3: {
+                title: '康軒六下第三課生字轉轉轉',
+                questions: [
+                    { answer: '萊', components: ['艹', '來'] },
+                    { answer: '瑞', components: ['王', '山', '而'] },
+                    { answer: '霍', components: ['雨', '隹'] },
+                    { answer: '茅', components: ['艹', '矛'] },
+                    { answer: '唯', components: ['口', '隹'] },
+                    { answer: '爆', components: ['火', '日', '共', '水'] },
+                    { answer: '供', components: ['亻', '共'] },
+                    { answer: '府', components: ['广', '付'] },
+                    { answer: '購', components: ['貝', '冓'] },
+                    { answer: '碳', components: ['石', '山', '灰'] },
+                    { answer: '騎', components: ['馬', '奇'] },
+                    { answer: '駛', components: ['馬', '史'] },
+                    { answer: '箱', components: ['⺮', '木', '目'] },
+                    { answer: '嬉', components: ['女', '喜'] },
+                    { answer: '乒', components: ['丘', '丿'] },
+                    { answer: '乓', components: ['丘', '丶'] },
+                    { answer: '鬆', components: ['髟', '木', '公'] },
+                    { answer: '欄', components: ['木', '門', '柬'] }
+                ]
+            },
+            4: {
+                title: '康軒六下第四課生字轉轉轉',
+                questions: [
+                    { answer: '郭', components: ['亠', '口', '子', '阝'] },
+                    { answer: '征', components: ['彳', '正'] },
+                    { answer: '茲', components: ['艹', '幺', '幺'] },
+                    { answer: '蕭', components: ['艹', '肅'] },
+                    { answer: '澈', components: ['氵', '育', '攵'] },
+                    { answer: '辭', components: ['辛', '舌', '辛'] },
+                    { answer: '臥', components: ['臣', '人'] },
+                    { answer: '蹤', components: ['足', '宗'] },
+                    { answer: '逢', components: ['辶', '夂', '丰'] },
+                    { answer: '抒', components: ['扌', '予'] },
+                    { answer: '泊', components: ['氵', '白'] },
+                    { answer: '暉', components: ['日', '軍'] },
+                    { answer: '摯', components: ['執', '手'] },
+                    { answer: '誼', components: ['言', '宀', '且'] }
+                ]
+            },
+            5: {
+                title: '康軒六下第五課生字轉轉轉',
+                questions: [
+                    { answer: '蚵', components: ['虫', '可'] },
+                    { answer: '嬸', components: ['女', '宀', '申'] },
+                    { answer: '攏', components: ['扌', '龍'] },
+                    { answer: '柄', components: ['木', '丙'] },
+                    { answer: '笨', components: ['⺮', '本'] },
+                    { answer: '拙', components: ['扌', '出'] },
+                    { answer: '疲', components: ['疒', '皮'] },
+                    { answer: '憊', components: ['亻', '備'] },
+                    { answer: '鈔', components: ['金', '少'] },
+                    { answer: '剖', components: ['立', '口', '刂'] },
+                    { answer: '棚', components: ['木', '朋'] },
+                    { answer: '裹', components: ['衣', '果'] },
+                    { answer: '樁', components: ['木', '舂'] },
+                    { answer: '巡', components: ['巛', '辶'] },
+                    { answer: '甦', components: ['更', '生'] },
+                    { answer: '豎', components: ['臣', '又', '豆'] },
+                    { answer: '媒', components: ['女', '某'] },
+                    { answer: '沸', components: ['氵', '弗'] },
+                    { answer: '宛', components: ['宀', '夗'] }
+                ]
+            },
+            6: {
+                title: '康軒六下第六課生字轉轉轉',
+                questions: [
+                    { answer: '碧', components: ['王', '白', '石'] },
+                    { answer: '疏', components: ['疋', '㐬'] },
+                    { answer: '凰', components: ['几', '白', '王'] },
+                    { answer: '株', components: ['木', '朱'] },
+                    { answer: '巔', components: ['山', '真', '頁'] },
+                    { answer: '戀', components: ['言', '糸', '心'] },
+                    { answer: '蔭', components: ['艹', '阝', '侌'] },
+                    { answer: '紡', components: ['糸', '方'] },
+                    { answer: '緯', components: ['糸', '韋'] },
+                    { answer: '纖', components: ['糸', '人', '戈', '韭'] },
+                    { answer: '裊', components: ['衣', '鳥'] },
+                    { answer: '袖', components: ['衤', '由'] },
+                    { answer: '鋁', components: ['金', '呂'] },
+                    { answer: '廠', components: ['广', '敞'] },
+                    { answer: '孜', components: ['子', '攵'] },
+                    { answer: '猶', components: ['犭', '酋'] },
+                    { answer: '陰', components: ['阝', '今', '云'] },
+                    { answer: '逝', components: ['辶', '折'] },
+                    { answer: '斑', components: ['王', '文', '王'] }
+                ]
+            },
+            7: {
+                title: '康軒六下第七課生字轉轉轉',
+                questions: [
+                    { answer: '斜', components: ['余', '斗'] },
+                    { answer: '閣', components: ['門', '各'] },
+                    { answer: '匱', components: ['匚', '貴'] },
+                    { answer: '攤', components: ['扌', '難'] },
+                    { answer: '冥', components: ['冖', '日', '六'] },
+                    { answer: '篷', components: ['⺮', '逢'] },
+                    { answer: '徒', components: ['彳', '土', '止'] },
+                    { answer: '籌', components: ['⺮', '壽'] },
+                    { answer: '埡', components: ['土', '亞'] },
+                    { answer: '脈', components: ['月', '永'] },
+                    { answer: '紮', components: ['木', '乚', '糸'] },
+                    { answer: '窸', components: ['穴', '米', '心'] },
+                    { answer: '窣', components: ['穴', '卒'] },
+                    { answer: '誦', components: ['言', '甬'] },
+                    { answer: '宇', components: ['宀', '于'] },
+                    { answer: '宙', components: ['宀', '由'] },
+                    { answer: '浩', components: ['氵', '告'] },
+                    { answer: '瀚', components: ['氵', '翰'] }
+                ]
+            },
+            8: {
+                title: '康軒六下第八課生字轉轉轉',
+                questions: [
+                    { answer: '瞻', components: ['目', '詹'] },
+                    { answer: '愚', components: ['禺', '心'] },
+                    { answer: '汲', components: ['氵', '及'] },
+                    { answer: '庶', components: ['广', '廿', '灬'] },
+                    { answer: '鍥', components: ['金', '契'] },
+                    { answer: '垮', components: ['土', '夸'] },
+                    { answer: '嶄', components: ['山', '車', '斤'] },
+                    { answer: '輩', components: ['非', '車'] },
+                    { answer: '赴', components: ['走', '卜'] },
+                    { answer: '構', components: ['木', '冓'] },
+                    { answer: '諺', components: ['言', '彥'] },
+                    { answer: '羹', components: ['羊', '美', '灬'] },
+                    { answer: '坪', components: ['土', '平'] },
+                    { answer: '斤', components: ['丿', '丅'] },
+                    { answer: '貫', components: ['母', '貝'] },
+                    { answer: '拓', components: ['扌', '石'] }
+                ]
+            },
+            9: {
+                title: '康軒六下第九課生字轉轉轉',
+                questions: [
+                    { answer: '恭', components: ['共', '心'] },
+                    { answer: '份', components: ['亻', '分'] },
+                    { answer: '荊', components: ['艹', '刑'] },
+                    { answer: '棘', components: ['朿', '朿'] },
+                    { answer: '俗', components: ['亻', '谷'] },
+                    { answer: '窘', components: ['穴', '君'] },
+                    { answer: '溝', components: ['氵', '冓'] },
+                    { answer: '闖', components: ['門', '馬'] },
+                    { answer: '涯', components: ['氵', '厓'] },
+                    { answer: '曙', components: ['日', '署'] },
+                    { answer: '帆', components: ['巾', '凡'] },
+                    { answer: '槳', components: ['將', '木'] }
+                ]
+            }
+        };
+
+        let currentLesson = null;
+        let questions = [];
+        let currentQuestion = 0;
+        let currentStage = 0;
+        let gameCompleted = false;
+
+        function initMenu() {
+            const lessonGrid = document.getElementById('lessonGrid');
+            lessonGrid.innerHTML = '';
+            
+            for (let i = 1; i <= 9; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'lesson-btn';
+                btn.textContent = `第 ${i} 課`;
+                btn.onclick = () => startLesson(i);
+                lessonGrid.appendChild(btn);
+            }
+        }
+
+        function startLesson(lessonNum) {
+            currentLesson = lessonNum;
+            const lessonData = lessonsData[lessonNum];
+            
+            // 使用已定義的問題
+            questions = lessonData.questions.map(q => ({
+                answer: q.answer,
+                components: q.components,
+                positions: [
+                    generatePositions(q.components.length),
+                    generatePositions(q.components.length, 0.6),
+                    'complete'
+                ]
+            }));
+
+            questions = shuffleArray(questions);
+            
+            document.getElementById('gameTitle').textContent = lessonData.title;
+            document.getElementById('menuScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+            
+            currentQuestion = 0;
+            currentStage = 0;
+            gameCompleted = false;
+            initGame();
+        }
+
+        function generatePositions(componentCount, spread = 1) {
+            const baseX = 150;
+            const baseY = 80;
+            const spacing = 150 * spread;
+            
+            return Array.from({ length: componentCount }, (_, i) => ({
+                x: baseX + (i % 3) * spacing,
+                y: baseY + Math.floor(i / 3) * spacing
+            }));
+        }
+
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        function initGame() {
+            currentStage = 0;
+            gameCompleted = false;
+            document.getElementById('feedback').style.display = 'none';
+            document.getElementById('hintBtn').disabled = false;
+            updateStageInfo();
+            updateQuestionCounter();
+            displayComponents();
+        }
+
+        function updateStageInfo() {
+            const stageTexts = [
+                '第一階段：觀察散落的部件，猜猜看是什麼字？',
+                '第二階段：部件稍微靠近了一些，再猜猜看！',
+                '第三階段：完整答案揭曉！'
+            ];
+            document.getElementById('stageInfo').textContent = stageTexts[currentStage];
+        }
+
+        function updateQuestionCounter() {
+            document.getElementById('questionCounter').textContent = `第 ${currentQuestion + 1} 題 / 共 ${questions.length} 題`;
+        }
+
+        function displayComponents() {
+            const gameArea = document.getElementById('gameArea');
+            const question = questions[currentQuestion];
+            
+            gameArea.innerHTML = '';
+
+            if (currentStage === 2) {
+                gameArea.innerHTML = `<div class="answer-display">${question.answer}</div>`;
+                return;
+            }
+
+            const positions = question.positions[currentStage];
+            const componentsToShow = question.components;
+            
+            componentsToShow.forEach((component, index) => {
+                const componentDiv = document.createElement('div');
+                componentDiv.className = currentStage === 0 ? 'component rotating' : 'component';
+                componentDiv.textContent = component;
+                componentDiv.style.left = positions[index].x + 'px';
+                componentDiv.style.top = positions[index].y + 'px';
+                gameArea.appendChild(componentDiv);
+            });
+        }
+
+        function nextHint() {
+            if (gameCompleted) return;
+            
+            if (currentStage < 2) {
+                currentStage++;
+                updateStageInfo();
+                displayComponents();
+                
+                if (currentStage === 2) {
+                    showFeedback(`答案是：${questions[currentQuestion].answer}`, 'correct');
+                    gameCompleted = true;
+                    document.getElementById('hintBtn').disabled = true;
+                }
+            }
+        }
+
+        function nextQuestion() {
+            currentQuestion = (currentQuestion + 1) % questions.length;
+            initGame();
+        }
+
+        function prevQuestion() {
+            currentQuestion = (currentQuestion - 1 + questions.length) % questions.length;
+            initGame();
+        }
+
+        function backToMenu() {
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('menuScreen').classList.remove('hidden');
+            currentLesson = null;
+        }
+
+        function showFeedback(message, type) {
+            const feedback = document.getElementById('feedback');
+            feedback.textContent = message;
+            feedback.className = `feedback ${type}`;
+            feedback.style.display = 'block';
+        }
+
+        // 初始化選單
+        initMenu();
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9d764ed164f98265',t:'MTc3MjY4NDIxNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
