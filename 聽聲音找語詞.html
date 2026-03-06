@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="zh-TW" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>聽聲音找語詞</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&amp;display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Noto Sans TC', sans-serif; }
+    
+    @keyframes bounce-in {
+      0% { transform: scale(0); opacity: 0; }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    @keyframes pulse-ring {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(1.5); opacity: 0; }
+    }
+    
+    @keyframes confetti {
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(400px) rotate(720deg); opacity: 0; }
+    }
+    
+    .bounce-in { animation: bounce-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+    .shake { animation: shake 0.5s ease-in-out; }
+    .float { animation: float 3s ease-in-out infinite; }
+    .pulse-ring { animation: pulse-ring 1s ease-out infinite; }
+    
+    .card-correct {
+      background: linear-gradient(135deg, #10b981, #059669) !important;
+      transform: scale(1.05);
+      box-shadow: 0 0 30px rgba(16, 185, 129, 0.5);
+    }
+    
+    .card-wrong {
+      background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+    }
+    
+    .speaker-btn {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      box-shadow: 0 8px 20px rgba(245, 158, 11, 0.4);
+      transition: all 0.3s ease;
+    }
+    
+    .speaker-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 12px 30px rgba(245, 158, 11, 0.5);
+    }
+    
+    .speaker-btn:active {
+      transform: scale(0.95);
+    }
+    
+    .game-card {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+    
+    .game-card:hover:not(.card-correct):not(.card-wrong) {
+      transform: translateY(-5px) scale(1.02);
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+    }
+    
+    .confetti-piece {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      animation: confetti 3s ease-out forwards;
+    }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full overflow-auto">
+  <div id="app" class="min-h-full w-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500"><!-- Page 1: Input Vocabulary -->
+   <div id="page1" class="min-h-full flex flex-col items-center justify-center p-6">
+    <div class="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 w-full max-w-2xl">
+     <div class="text-center mb-6">
+      <div class="text-6xl mb-4">
+       📚
+      </div>
+      <h1 id="main-title" class="text-3xl font-black text-indigo-600 mb-2">聽聲音找語詞</h1>
+      <p id="main-instruction" class="text-gray-500">請輸入語詞，每行一個語詞</p>
+     </div><textarea id="vocab-input" class="w-full h-64 p-4 border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none resize-none text-lg leading-relaxed" placeholder="例如：
+1. 蘋果
+2. 香蕉
+3. 西瓜
+或直接輸入：
+蘋果
+香蕉
+西瓜"></textarea> <button id="next-btn-1" class="w-full mt-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xl font-bold rounded-2xl hover:from-indigo-600 hover:to-purple-600 transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"> 下一步 ➜ </button>
+    </div>
+   </div><!-- Page 2: Select Card Count -->
+   <div id="page2" class="min-h-full flex flex-col items-center justify-center p-6 hidden">
+    <div class="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 w-full max-w-2xl">
+     <div class="text-center mb-8">
+      <div class="text-6xl mb-4">
+       🎴
+      </div>
+      <h2 class="text-3xl font-black text-purple-600 mb-2">選擇遊戲設定</h2>
+      <p class="text-gray-500">你輸入了 <span id="total-vocab" class="font-bold text-purple-600">0</span> 個語詞</p>
+     </div><!-- Questions Count Section -->
+     <div class="mb-8"><label class="block text-lg font-bold text-gray-700 mb-4">📋 選擇題目數量</label>
+      <div class="grid grid-cols-4 gap-2 mb-4" id="questions-options"><!-- Generated dynamically -->
+      </div>
+      <p class="text-sm text-gray-500 text-center">最多 <span id="max-questions" class="font-bold">0</span> 題</p>
+     </div><!-- Cards Count Section -->
+     <div class="mb-8"><label class="block text-lg font-bold text-gray-700 mb-4">🎯 選擇每題的語詞卡數量</label>
+      <div class="grid grid-cols-4 gap-2" id="count-options"><!-- Generated dynamically -->
+      </div>
+     </div>
+     <div class="flex gap-4"><button id="back-btn-2" class="flex-1 py-4 bg-gray-200 text-gray-700 text-xl font-bold rounded-2xl hover:bg-gray-300 transition-all duration-300 active:scale-95"> ← 返回 </button> <button id="start-btn" class="flex-1 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xl font-bold rounded-2xl hover:from-green-600 hover:to-emerald-600 transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed" disabled> 開始遊戲 🎮 </button>
+     </div>
+    </div>
+   </div><!-- Page 3: Game -->
+   <div id="page3" class="min-h-full flex flex-col p-4 hidden"><!-- Header -->
+    <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-4 mb-4">
+     <div class="flex items-center justify-between"><button id="back-btn-3" class="px-4 py-2 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-all active:scale-95"> ← 返回 </button>
+      <div class="flex items-center gap-4">
+       <div class="text-center">
+        <div class="text-sm text-gray-500">
+         進度
+        </div>
+        <div class="text-xl font-black text-purple-600"><span id="current-progress">0</span> / <span id="total-progress">0</span>
+        </div>
+       </div>
+       <div class="text-center">
+        <div class="text-sm text-gray-500">
+         答對
+        </div>
+        <div class="text-xl font-black text-green-600" id="correct-count">
+         0
+        </div>
+       </div>
+       <div class="text-center">
+        <div class="text-sm text-gray-500">
+         時間
+        </div>
+        <div class="text-xl font-black text-blue-600" id="elapsed-time">
+         0:00
+        </div>
+       </div>
+      </div>
+     </div>
+    </div><!-- Speaker Button and Controls -->
+    <div class="flex flex-col items-center gap-4 mb-6"><button id="speak-btn" class="speaker-btn w-24 h-24 rounded-full flex items-center justify-center text-white relative">
+      <div class="absolute inset-0 rounded-full bg-amber-400 pulse-ring"></div><span class="text-5xl relative z-10">🔊</span> </button>
+     <div class="bg-white/90 backdrop-blur-sm rounded-xl px-6 py-3 flex items-center gap-3"><label for="speech-rate" class="text-sm font-bold text-gray-700">語速：</label> <input type="range" id="speech-rate" min="0.1" max="2" step="0.1" value="0.5" class="w-32"> <span id="rate-display" class="text-sm font-bold text-gray-700 w-8">0.5x</span>
+     </div>
+    </div>
+    <p class="text-center text-white text-lg mb-4 font-medium drop-shadow-lg">點擊喇叭聽語詞，找出正確的卡片！</p><!-- Cards Grid -->
+    <div id="cards-container" class="flex-1 grid gap-4 p-2"><!-- Generated dynamically -->
+    </div><!-- Feedback Overlay -->
+    <div id="feedback-overlay" class="fixed inset-0 flex items-center justify-center pointer-events-none z-50 hidden">
+     <div id="feedback-icon" class="text-9xl bounce-in"></div>
+    </div>
+   </div><!-- Page 4: Victory -->
+   <div id="page4" class="min-h-full flex flex-col items-center justify-center p-6 hidden">
+    <div class="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 w-full max-w-md text-center">
+     <div class="text-8xl mb-4 float">
+      🏆
+     </div>
+     <h2 class="text-4xl font-black text-amber-500 mb-4">太棒了！</h2>
+     <p class="text-xl text-gray-600 mb-2">你完成了所有題目！</p>
+     <p class="text-2xl font-bold text-green-600 mb-8">答對 <span id="final-correct">0</span> 題</p>
+     <p class="text-2xl font-bold text-blue-600 mb-8">⏱️ <span id="final-time-display">0:00</span></p>
+     <div class="flex gap-4"><button id="restart-btn" class="flex-1 py-4 bg-gradient-to-r from-red-500 to-rose-500 text-white text-lg font-bold rounded-2xl hover:from-red-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"> 重新設置 🔄 </button> <button id="play-again-btn" class="flex-1 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-lg font-bold rounded-2xl hover:from-amber-600 hover:to-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"> 再玩一次 🎮 </button>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+    // Default configuration
+    const defaultConfig = {
+      game_title: '聽聲音找語詞',
+      instruction_text: '請輸入語詞，每行一個語詞'
+    };
+
+    // Game state
+    let allVocab = [];
+    let gameVocab = [];
+    let usedWords = new Set(); // Track words already asked in current game
+    let questionCount = 0;
+    let selectedCount = 0;
+    let correctCount = 0;
+    let speechRate = 0.5;
+    let currentWord = null;
+    let isAnimating = false; // Prevent speaker button clicks during animation
+    let gameStartTime = null;
+    let gameElapsedTime = 0;
+    let timerInterval = null;
+
+    // DOM Elements
+    const page1 = document.getElementById('page1');
+    const page2 = document.getElementById('page2');
+    const page3 = document.getElementById('page3');
+    const page4 = document.getElementById('page4');
+    const vocabInput = document.getElementById('vocab-input');
+    const totalVocabSpan = document.getElementById('total-vocab');
+    const questionOptionsDiv = document.getElementById('questions-options');
+    const maxQuestionsSpan = document.getElementById('max-questions');
+    const countOptions = document.getElementById('count-options');
+    const cardsContainer = document.getElementById('cards-container');
+    const speakBtn = document.getElementById('speak-btn');
+    const speechRateInput = document.getElementById('speech-rate');
+    const rateDisplay = document.getElementById('rate-display');
+    const feedbackOverlay = document.getElementById('feedback-overlay');
+    const feedbackIcon = document.getElementById('feedback-icon');
+    const currentProgressSpan = document.getElementById('current-progress');
+    const totalProgressSpan = document.getElementById('total-progress');
+    const correctCountSpan = document.getElementById('correct-count');
+    const finalCorrectSpan = document.getElementById('final-correct');
+    const elapsedTimeSpan = document.getElementById('elapsed-time');
+    const startBtn = document.getElementById('start-btn');
+    const mainTitle = document.getElementById('main-title');
+    const mainInstruction = document.getElementById('main-instruction');
+
+    // Speech rate adjustment
+    speechRateInput.addEventListener('change', (e) => {
+      speechRate = parseFloat(e.target.value);
+      rateDisplay.textContent = speechRate.toFixed(1) + 'x';
+    });
+
+    // Navigation
+    document.getElementById('next-btn-1').addEventListener('click', () => {
+      const text = vocabInput.value.trim();
+      if (!text) {
+        showInlineMessage('請先輸入語詞！');
+        return;
+      }
+      
+      allVocab = text.split('\n')
+        .map(line => {
+          // Extract first sequence of Traditional Chinese characters only
+          const match = line.match(/[\u4e00-\u9fff]+/);
+          return match ? match[0] : '';
+        })
+        .filter(line => line.length > 0);
+      
+      if (allVocab.length < 2) {
+        showInlineMessage('請至少輸入2個語詞！');
+        return;
+      }
+      
+      totalVocabSpan.textContent = allVocab.length;
+      generateCountOptions();
+      showPage(2);
+    });
+
+    document.getElementById('back-btn-2').addEventListener('click', () => showPage(1));
+    document.getElementById('back-btn-3').addEventListener('click', () => showPage(2));
+    document.getElementById('restart-btn').addEventListener('click', () => {
+      questionCount = 0;
+      selectedCount = 0;
+      correctCount = 0;
+      usedWords = new Set();
+      gameStartTime = null;
+      gameElapsedTime = 0;
+      if (timerInterval) clearInterval(timerInterval);
+      showPage(1);
+      vocabInput.value = '';
+    });
+
+    document.getElementById('play-again-btn').addEventListener('click', () => {
+      questionCount = 0;
+      selectedCount = 0;
+      correctCount = 0;
+      usedWords = new Set();
+      gameStartTime = null;
+      gameElapsedTime = 0;
+      if (timerInterval) clearInterval(timerInterval);
+      generateCountOptions();
+      showPage(2);
+    });
+
+    startBtn.addEventListener('click', () => {
+      if (selectedCount > 0) {
+        startGame();
+      }
+    });
+
+    speakBtn.addEventListener('click', () => {
+      if (currentWord && !isAnimating) {
+        speakWord(currentWord);
+      }
+    });
+
+    function showPage(num) {
+      [page1, page2, page3, page4].forEach((p, i) => {
+        p.classList.toggle('hidden', i + 1 !== num);
+      });
+    }
+
+    function showInlineMessage(msg) {
+      const existing = document.querySelector('.inline-message');
+      if (existing) existing.remove();
+      
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'inline-message fixed top-4 left-1/2 -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg z-50 font-bold';
+      msgDiv.textContent = msg;
+      document.body.appendChild(msgDiv);
+      
+      setTimeout(() => msgDiv.remove(), 2000);
+    }
+
+    function generateCountOptions() {
+      // Generate questions count options
+      questionOptionsDiv.innerHTML = '';
+      const maxQuestions = allVocab.length;
+      maxQuestionsSpan.textContent = maxQuestions;
+      
+      const questionOptions = [];
+      for (let i = 2; i <= Math.min(maxQuestions, 12); i++) {
+        questionOptions.push(i);
+      }
+      
+      questionOptions.forEach(num => {
+        const btn = document.createElement('button');
+        btn.className = 'question-option py-2 px-3 bg-gradient-to-br from-blue-100 to-cyan-100 text-blue-700 text-lg font-bold rounded-xl hover:from-blue-200 hover:to-cyan-200 transition-all duration-300 active:scale-95 border-4 border-transparent';
+        btn.textContent = num;
+        btn.addEventListener('click', () => selectQuestionCount(num, btn));
+        questionOptionsDiv.appendChild(btn);
+      });
+      
+      // Generate cards count options
+      countOptions.innerHTML = '';
+      const maxCount = Math.min(allVocab.length, 12);
+      const cardOptions = [];
+      
+      for (let i = 2; i <= maxCount; i++) {
+        if (i <= 6 || i === 8 || i === 9 || i === 10 || i === 12) {
+          cardOptions.push(i);
+        }
+      }
+      
+      cardOptions.forEach(num => {
+        const btn = document.createElement('button');
+        btn.className = 'count-option py-2 px-3 bg-gradient-to-br from-purple-100 to-indigo-100 text-purple-700 text-lg font-bold rounded-xl hover:from-purple-200 hover:to-indigo-200 transition-all duration-300 active:scale-95 border-4 border-transparent';
+        btn.textContent = num;
+        btn.addEventListener('click', () => selectCount(num, btn));
+        countOptions.appendChild(btn);
+      });
+    }
+
+    function selectQuestionCount(num, btn) {
+      document.querySelectorAll('.question-option').forEach(b => {
+        b.classList.remove('border-blue-500', 'bg-blue-200');
+        b.classList.add('border-transparent');
+      });
+      btn.classList.remove('border-transparent');
+      btn.classList.add('border-blue-500');
+      questionCount = num;
+      checkIfCanStart();
+    }
+
+    function selectCount(num, btn) {
+      document.querySelectorAll('.count-option').forEach(b => {
+        b.classList.remove('border-purple-500', 'bg-purple-200');
+        b.classList.add('border-transparent');
+      });
+      btn.classList.remove('border-transparent');
+      btn.classList.add('border-purple-500');
+      selectedCount = num;
+      checkIfCanStart();
+    }
+
+    function checkIfCanStart() {
+      startBtn.disabled = !(questionCount > 0 && selectedCount > 0);
+    }
+
+    function startGame() {
+      // Randomly select 'questionCount' vocabulary for this game session
+      const shuffled = [...allVocab].sort(() => Math.random() - 0.5);
+      gameVocab = shuffled.slice(0, questionCount);
+      correctCount = 0;
+      usedWords = new Set(); // Track words already asked
+      gameStartTime = Date.now();
+      gameElapsedTime = 0;
+      
+      totalProgressSpan.textContent = gameVocab.length;
+      currentProgressSpan.textContent = 0;
+      correctCountSpan.textContent = 0;
+      elapsedTimeSpan.textContent = '0:00';
+      
+      // Start timer
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(updateTimer, 100);
+      
+      pickNextWord();
+      generateCards();
+      showPage(3);
+    }
+
+    function updateTimer() {
+      if (gameStartTime) {
+        gameElapsedTime = Math.floor((Date.now() - gameStartTime) / 1000);
+        const minutes = Math.floor(gameElapsedTime / 60);
+        const seconds = gameElapsedTime % 60;
+        elapsedTimeSpan.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      }
+    }
+
+    function pickNextWord() {
+      // Pick a word that hasn't been asked yet
+      const availableWords = gameVocab.filter(w => !usedWords.has(w));
+      if (availableWords.length === 0) return; // All words asked
+      currentWord = availableWords[Math.floor(Math.random() * availableWords.length)];
+      usedWords.add(currentWord);
+    }
+
+    function generateCards() {
+      cardsContainer.innerHTML = '';
+      
+      // Ensure current word is always in the card options
+      let cardVocab = [];
+      
+      // First, add the current word
+      cardVocab.push(currentWord);
+      
+      // Then add random words from allVocab until we have selectedCount cards
+      const availableWords = allVocab.filter(w => w !== currentWord);
+      const shuffledAvailable = [...availableWords].sort(() => Math.random() - 0.5);
+      
+      for (let i = 0; i < selectedCount - 1 && i < shuffledAvailable.length; i++) {
+        cardVocab.push(shuffledAvailable[i]);
+      }
+      
+      // If we don't have enough words, fill with duplicates from gameVocab
+      while (cardVocab.length < selectedCount) {
+        const randomWord = gameVocab[Math.floor(Math.random() * gameVocab.length)];
+        if (!cardVocab.includes(randomWord)) {
+          cardVocab.push(randomWord);
+        }
+      }
+      
+      // Shuffle the order of cards
+      const shuffledVocab = [...cardVocab].sort(() => Math.random() - 0.5);
+      
+      // Determine grid layout
+      const count = shuffledVocab.length;
+      let cols = 2;
+      if (count >= 5) cols = 3;
+      if (count >= 10) cols = 4;
+      
+      cardsContainer.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      
+      shuffledVocab.forEach((word, index) => {
+        const card = document.createElement('div');
+        card.className = 'game-card bg-white rounded-2xl shadow-lg flex items-center justify-center p-4 min-h-[80px]';
+        card.dataset.word = word;
+        card.dataset.index = index;
+        
+        const text = document.createElement('span');
+        text.className = 'text-2xl md:text-3xl font-black text-gray-800';
+        text.textContent = word;
+        card.appendChild(text);
+        
+        card.addEventListener('click', () => handleCardClick(card, word));
+        cardsContainer.appendChild(card);
+      });
+    }
+
+    function pickNextWord() {
+      // Pick a word that hasn't been asked yet
+      const availableWords = gameVocab.filter(w => !usedWords.has(w));
+      if (availableWords.length === 0) return; // All words asked
+      currentWord = availableWords[Math.floor(Math.random() * availableWords.length)];
+      usedWords.add(currentWord);
+    }
+
+    function speakWord(word) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(word);
+        utterance.lang = 'zh-TW';
+        utterance.rate = speechRate;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+        
+        // Get voices and find Chinese voice
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+          // Priority: zh-TW > zh-CN > generic zh
+          const chineseVoice = voices.find(v => v.lang === 'zh-TW') ||
+                               voices.find(v => v.lang === 'zh-CN') ||
+                               voices.find(v => v.lang.startsWith('zh'));
+          
+          if (chineseVoice) {
+            utterance.voice = chineseVoice;
+          }
+        }
+        
+        window.speechSynthesis.speak(utterance);
+        
+        // Animate speaker button
+        speakBtn.classList.add('scale-110');
+        setTimeout(() => speakBtn.classList.remove('scale-110'), 300);
+      }
+    }
+
+    function playSuccessSound() {
+      // Use Web Audio API to create a success beep
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const now = audioContext.currentTime;
+      
+      // Create a pleasant success chord - three ascending beeps
+      const frequencies = [523.25, 659.25, 783.99]; // C5, E5, G5 notes
+      
+      frequencies.forEach((freq, i) => {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+        
+        gain.gain.setValueAtTime(0.3, now + i * 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.1 + 0.2);
+        
+        osc.start(now + i * 0.1);
+        osc.stop(now + i * 0.1 + 0.2);
+      });
+    }
+
+    function handleCardClick(card, word) {
+      if (card.classList.contains('card-correct') || isAnimating) return;
+      
+      if (word === currentWord) {
+        // Correct!
+        isAnimating = true; // Disable speaker button
+        card.classList.add('card-correct');
+        card.querySelector('span').classList.add('text-white');
+        showFeedback(true);
+        playSuccessSound();
+        
+        correctCount++;
+        correctCountSpan.textContent = correctCount;
+        currentProgressSpan.textContent = correctCount;
+        
+        // Next word after delay
+        setTimeout(() => {
+          if (correctCount < gameVocab.length) {
+            pickNextWord();
+            generateCards();
+            isAnimating = false; // Re-enable speaker button after cards are generated
+          } else {
+            showVictory();
+          }
+        }, 1500);
+      } else {
+        // Wrong!
+        isAnimating = true; // Temporarily disable speaker button
+        card.classList.add('card-wrong', 'shake');
+        card.querySelector('span').classList.add('text-white');
+        showFeedback(false);
+        
+        setTimeout(() => {
+          card.classList.remove('card-wrong', 'shake');
+          card.querySelector('span').classList.remove('text-white');
+          isAnimating = false; // Re-enable speaker button
+        }, 800);
+      }
+    }
+
+    function showFeedback(isCorrect) {
+      feedbackIcon.textContent = isCorrect ? '⭕' : '❌';
+      feedbackIcon.style.color = isCorrect ? '#10b981' : '#ef4444';
+      feedbackOverlay.classList.remove('hidden');
+      feedbackIcon.classList.remove('bounce-in');
+      void feedbackIcon.offsetWidth;
+      feedbackIcon.classList.add('bounce-in');
+      
+      setTimeout(() => {
+        feedbackOverlay.classList.add('hidden');
+      }, 1000);
+    }
+
+    function showVictory() {
+      if (timerInterval) clearInterval(timerInterval);
+      finalCorrectSpan.textContent = correctCount;
+      
+      // Display total time
+      const minutes = Math.floor(gameElapsedTime / 60);
+      const seconds = gameElapsedTime % 60;
+      const timeDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      
+      // Update victory page to show time
+      const existingTimeDisplay = document.getElementById('final-time-display');
+      if (existingTimeDisplay) {
+        existingTimeDisplay.textContent = timeDisplay;
+      }
+      
+      createConfetti();
+      showPage(4);
+    }
+
+    function createConfetti() {
+      const colors = ['#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#3b82f6'];
+      for (let i = 0; i < 50; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti-piece';
+        confetti.style.left = Math.random() * 100 + 'vw';
+        confetti.style.top = '-20px';
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+        confetti.style.animationDelay = Math.random() * 2 + 's';
+        document.body.appendChild(confetti);
+        
+        setTimeout(() => confetti.remove(), 5000);
+      }
+    }
+
+    // Initialize voices
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+    }
+
+    // Element SDK initialization
+    async function onConfigChange(config) {
+      mainTitle.textContent = config.game_title || defaultConfig.game_title;
+      mainInstruction.textContent = config.instruction_text || defaultConfig.instruction_text;
+    }
+
+    function mapToCapabilities(config) {
+      return {
+        recolorables: [],
+        borderables: [],
+        fontEditable: undefined,
+        fontSizeable: undefined
+      };
+    }
+
+    function mapToEditPanelValues(config) {
+      return new Map([
+        ['game_title', config.game_title || defaultConfig.game_title],
+        ['instruction_text', config.instruction_text || defaultConfig.instruction_text]
+      ]);
+    }
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities,
+        mapToEditPanelValues
+      });
+    }
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9d7d1f9b84944a5a',t:'MTc3Mjc1NTY4MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
