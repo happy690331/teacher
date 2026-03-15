@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="zh-TW" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>語詞聽力遊戲</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&amp;display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Noto Sans TC', sans-serif; }
+    
+    @keyframes bounce-in {
+      0% { transform: scale(0); opacity: 0; }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    @keyframes pulse-ring {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(1.5); opacity: 0; }
+    }
+    
+    @keyframes celebrate {
+      0% { transform: scale(1) rotate(0deg); }
+      25% { transform: scale(1.1) rotate(-5deg); }
+      50% { transform: scale(1.2) rotate(5deg); }
+      75% { transform: scale(1.1) rotate(-3deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+    
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+    
+    .bounce-in { animation: bounce-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+    .shake { animation: shake 0.5s ease-in-out; }
+    .float { animation: float 3s ease-in-out infinite; }
+    .celebrate { animation: celebrate 0.6s ease-in-out; }
+    .slide-in { animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+    
+    .card-grid { 
+      display: grid; 
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      width: 100%;
+      padding: 0 16px;
+      max-width: 100%;
+      align-content: center;
+      justify-content: center;
+    }
+    
+    .word-card {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      aspect-ratio: 4/3;
+      min-height: 90px;
+      min-width: 120px;
+    }
+    
+    .word-card:hover:not(.correct):not(.wrong) {
+      transform: translateY(-4px) scale(1.02);
+      box-shadow: 0 12px 24px -8px rgba(251, 146, 60, 0.4);
+    }
+    
+    .word-card.correct {
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
+      transform: scale(1.05);
+    }
+    
+    .word-card.wrong {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+    }
+    
+    .play-btn {
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .play-btn::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100%;
+      height: 100%;
+      background: rgba(255,255,255,0.3);
+      border-radius: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      transition: transform 0.5s;
+    }
+    
+    .play-btn:active::before {
+      transform: translate(-50%, -50%) scale(2);
+    }
+    
+    .progress-bar {
+      background: linear-gradient(90deg, #f97316 0%, #fb923c 50%, #fdba74 100%);
+      background-size: 200% 100%;
+      animation: shimmer 2s infinite;
+    }
+    
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    
+    .confetti {
+      position: fixed;
+      pointer-events: none;
+      z-index: 1000;
+    }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
+  <div id="app" class="h-full overflow-auto"><!-- Page 1: Input Words -->
+   <div id="page1" class="min-h-full flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-2xl">
+     <div class="text-center mb-8">
+      <div class="inline-block p-4 bg-gradient-to-br from-orange-400 to-amber-500 rounded-3xl shadow-xl mb-4 float"><span class="text-5xl">📚</span>
+      </div>
+      <h1 id="main-title" class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-amber-600 mb-2">康軒三下語詞聽力遊戲</h1>
+      <p class="text-orange-700/80 text-lg">選擇課程，開始挑戰！</p>
+     </div>
+     <div class="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-6 border border-orange-100">
+      <label class="block text-orange-800 font-bold text-lg mb-4"> <span class="mr-2">📖</span>請選擇課程（可複選） </label>
+      <div id="chapters-container" class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+       <!-- Chapters will be generated here -->
+      </div>
+      <div class="mb-4 p-4 bg-orange-50 rounded-2xl border border-orange-200">
+       <p class="text-orange-800 font-medium"><span class="mr-2">✓</span>已選擇: <span id="selected-summary" class="text-orange-600 font-bold">未選擇任何課程</span></p>
+       <p id="total-words-count" class="text-orange-700 text-sm mt-1">共 0 個語詞</p>
+      </div><button id="next-to-page2" class="w-full py-4 px-8 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xl font-bold rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" disabled> 下一步 <span class="ml-2">→</span> </button>
+     </div>
+    </div>
+   </div><!-- Page 2: Select Card Count and Question Count -->
+   <div id="page2" class="min-h-full flex flex-col items-center justify-center p-6 hidden">
+    <div class="w-full max-w-2xl">
+     <div class="text-center mb-8">
+      <div class="inline-block p-4 bg-gradient-to-br from-orange-400 to-amber-500 rounded-3xl shadow-xl mb-4"><span class="text-5xl">🎴</span>
+      </div>
+      <h2 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-amber-600 mb-2">遊戲設定</h2>
+      <p id="available-count" class="text-orange-700/80 text-lg"></p>
+     </div>
+     <div class="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-6 border border-orange-100 space-y-8">
+      <!-- Card Count Selection -->
+      <div>
+       <h3 class="text-xl font-bold text-orange-800 mb-4 flex items-center"><span class="mr-2">🎴</span>選擇卡片數量</h3>
+       <div id="count-options" class="grid grid-cols-2 md:grid-cols-5 gap-3"><!-- Options will be generated dynamically -->
+       </div>
+      </div><!-- Question Count Selection -->
+      <div>
+       <h3 class="text-xl font-bold text-orange-800 mb-4 flex items-center"><span class="mr-2">❓</span>選擇題目數量</h3>
+       <div id="question-count-options" class="grid grid-cols-2 md:grid-cols-5 gap-3"><!-- Options will be generated dynamically -->
+       </div>
+      </div>
+      <div class="flex gap-4">
+       <button id="back-to-page1" class="flex-1 py-4 px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 text-lg font-bold rounded-2xl transition-all duration-300"> <span class="mr-2">←</span> 返回 </button> <button id="start-game" class="flex-1 py-4 px-6 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-lg font-bold rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" disabled> 開始遊戲 <span class="ml-2">🎮</span> </button>
+      </div>
+     </div>
+    </div>
+   </div><!-- Page 3: Game -->
+   <div id="page3" class="h-full flex flex-col p-4 hidden overflow-hidden"><!-- Header Bar - All Info in One Row -->
+    <div class="flex-shrink-0 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-3 mb-4 border border-orange-100 overflow-x-auto">
+     <div class="flex items-center justify-between gap-3 whitespace-nowrap">
+      <div class="flex items-center gap-2 flex-shrink-0"><span class="text-xl">🎯</span> <span id="progress-text" class="text-orange-800 font-bold text-sm">第 1 題 / 共 4 題</span>
+      </div>
+      <div class="h-2 bg-orange-100 rounded-full overflow-hidden w-20 flex-shrink-0">
+       <div id="progress-bar" class="h-full progress-bar rounded-full transition-all duration-500" style="width: 0%"></div>
+      </div><button id="play-sound-btn" class="play-btn w-14 h-14 bg-gradient-to-br from-orange-400 to-amber-500 hover:from-orange-500 hover:to-amber-600 rounded-full shadow-lg flex items-center justify-center transform hover:scale-105 active:scale-95 transition-all duration-300 flex-shrink-0"> <span class="text-xl">🔊</span> </button>
+      <div class="flex items-center gap-1 flex-shrink-0"><label class="text-orange-700 font-medium text-xs">語速</label> <input type="range" id="speed-slider" min="0.1" max="1.6" step="0.1" value="0.8" class="h-2 bg-orange-200 rounded-lg appearance-none cursor-pointer w-14" style="accent-color: #fb923c;"> <span id="speed-display" class="text-orange-700 font-bold text-sm w-7 text-center">0.8x</span>
+      </div>
+      <div class="text-center flex-shrink-0">
+       <div id="elapsed-time" class="text-orange-700 font-bold text-sm">
+        00:00
+       </div>
+       <p class="text-orange-600 text-xs leading-tight">已用時間</p>
+      </div><button id="restart-btn" class="py-2 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-xs rounded-xl transition-all flex-shrink-0"> 🔄 重新開始 </button>
+     </div>
+    </div><!-- Cards Container - Full Remaining Space -->
+    <div class="flex-1 flex items-center justify-center overflow-auto">
+     <div id="cards-container" class="card-grid"><!-- Cards will be generated dynamically -->
+     </div>
+    </div><!-- Feedback Overlay -->
+    <div id="feedback-overlay" class="fixed inset-0 flex items-center justify-center pointer-events-none z-50 hidden">
+     <div id="feedback-icon" class="text-9xl bounce-in"></div>
+    </div>
+   </div><!-- Page 4: Complete -->
+   <div id="page4" class="min-h-full flex flex-col items-center justify-center p-6 hidden">
+    <div class="text-center">
+     <div class="inline-block p-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full shadow-2xl mb-6 celebrate"><span class="text-7xl">🏆</span>
+     </div>
+     <h2 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-amber-600 mb-4">太棒了！</h2>
+     <p class="text-orange-700 text-xl mb-2">你完成了所有題目！</p>
+     <p id="final-score" class="text-orange-600 text-lg mb-8"></p>
+     <div class="flex gap-4 justify-center"><button id="play-again-btn" class="py-4 px-8 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xl font-bold rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"> 🔄 再玩一次 </button> <button id="new-words-btn" class="py-4 px-8 bg-white hover:bg-gray-50 text-orange-600 text-xl font-bold rounded-2xl shadow-lg border-2 border-orange-200 hover:border-orange-300 transition-all duration-300"> 📝 換新語詞 </button>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+    // Default configuration
+    const defaultConfig = {
+      game_title: '康軒三下語詞聽力遊戲'
+    };
+    
+    // Chapter data
+    const chaptersData = [
+      { id: 1, name: '第一課　許願', words: ['許願', '晨光', '樹苗', '徐徐', '虔誠', '燦爛', '杜鵑花', '鮮豔', '耀眼', '飛翔'] },
+      { id: 2, name: '第二課　下雨的時候', words: ['輕紗', '屋簷', '垂掛', '一股', '清涼', '感覺', '舒服', '味道', '水溝', '連忙'] },
+      { id: 3, name: '第三課　遇見美如奶奶', words: ['短髮', '眼鏡', '書架', '收拾', '吵鬧', '麻雀', '魔法', '暗號', '腦子', '電腦', '科展', '魔術', '幫助', '特製'] },
+      { id: 4, name: '第四課　工匠之祖', words: ['工匠', '魯班', '王宮', '苦惱', '了解', '斧頭', '鋒利', '速度', '鋸子', '善於', '觀察', '思考', '曲尺'] },
+      { id: 5, name: '第五課　學田鼠開路', words: ['城市', '倫敦', '皮爾森', '解決', '糾紛', '律師', '改善', '擁擠', '設計', '市議會', '議員', '費用', '建議'] },
+      { id: 6, name: '第六課　神奇密碼', words: ['密碼', '校慶', '掃描', '節目', '流程', '連結', '資料', '影音', '車票', '周圍', '節省', '例如', '生產', '優待券', '錢包', '人類', '科技'] },
+      { id: 7, name: '第七課　油桐花．五月雪', words: ['油桐', '初夏', '山腰', '覆蓋', '抬頭', '枝椏', '樹梢', '禮服', '肩頭', '巴掌', '花瓣', '童話'] },
+      { id: 8, name: '第八課　大自然的美術館', words: ['野柳', '地質', '野柳岬', '烏龜', '仙女', '排列', '燭臺', '圓潤', '岩石', '香菇', '豆腐', '雕塑', '鬼斧神工'] },
+      { id: 9, name: '第九課　臺灣的山椒魚', words: ['臺灣', '山椒魚', '冰河', '陸地', '皮膚', '黏液', '保持', '敵人', '縫隙', '產卵', '砍伐', '地球'] },
+      { id: 10, name: '第十課　漁夫和金魚', words: ['漁夫', '夫婦', '水藻', '恩情', '回報', '波濤', '風暴', '僕人', '無聊', '轟隆'] },
+      { id: 11, name: '第十一課　聰明的鼠鹿', words: ['鼠鹿', '老虎', '布幕', '不夠', '威風', '晚餐', '道理', '獵人', '胃口', '逃跑'] },
+      { id: 12, name: '第十二課　還要跌幾次', words: ['村民', '驚慌失措', '歌謠', '提醒', '老伯', '跌跤', '千萬', '糟糕', '唉聲嘆氣', '毫無'] }
+    ];
+    
+    // Game state
+    let allWords = [];
+    let selectedWords = [];
+    let currentWordIndex = 0;
+    let currentTargetWord = '';
+    let answeredCorrectly = new Set();
+    let totalAttempts = 0;
+    let wrongAttempts = 0;
+    let selectedChapters = new Set();
+    let selectedCardCount = 0;
+    let selectedQuestionCount = 0;
+    
+    // DOM Elements
+    const page1 = document.getElementById('page1');
+    const page2 = document.getElementById('page2');
+    const page3 = document.getElementById('page3');
+    const page4 = document.getElementById('page4');
+    const chaptersContainer = document.getElementById('chapters-container');
+    const selectedSummary = document.getElementById('selected-summary');
+    const totalWordsCount = document.getElementById('total-words-count');
+    const countOptions = document.getElementById('count-options');
+    const questionCountOptions = document.getElementById('question-count-options');
+    const cardsContainer = document.getElementById('cards-container');
+    const progressText = document.getElementById('progress-text');
+    const progressBar = document.getElementById('progress-bar');
+    const feedbackOverlay = document.getElementById('feedback-overlay');
+    const feedbackIcon = document.getElementById('feedback-icon');
+    const availableCount = document.getElementById('available-count');
+    const mainTitle = document.getElementById('main-title');
+    
+    let currentSpeed = 0.8;
+    let successAudioContext = null;
+    let gameStartTime = null;
+    let gameTimer = null;
+    let gamePaused = false;
+    
+    // Initialize Element SDK
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange: async (config) => {
+          const title = config.game_title || defaultConfig.game_title;
+          mainTitle.textContent = title;
+          document.title = title;
+        },
+        mapToCapabilities: (config) => ({
+          recolorables: [],
+          borderables: [],
+          fontEditable: undefined,
+          fontSizeable: undefined
+        }),
+        mapToEditPanelValues: (config) => new Map([
+          ['game_title', config.game_title || defaultConfig.game_title]
+        ])
+      });
+    }
+    
+    // Parse words from input
+    function parseWords(text) {
+      return text
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0 && !/^\d+\.?\s*$/.test(line));
+    }
+    
+    // Generate chapter buttons
+    function generateChapterButtons() {
+      chaptersContainer.innerHTML = '';
+      chaptersData.forEach((chapter) => {
+        const btn = document.createElement('button');
+        const isSelected = selectedChapters.has(chapter.id);
+        btn.type = 'button';
+        const baseClasses = 'chapter-btn p-4 rounded-2xl text-center transition-all duration-300 border-2';
+        const selectedClasses = isSelected
+          ? 'border-orange-500 bg-orange-100 ring-4 ring-orange-200 shadow-lg'
+          : 'border-orange-200 bg-white hover:border-orange-400 hover:bg-orange-50';
+        btn.className = `${baseClasses} ${selectedClasses}`;
+        btn.innerHTML = `<span class="text-2xl block mb-1">${chapter.id}</span><span class="text-xs font-medium text-orange-700 line-clamp-2">${chapter.name}</span>`;
+        btn.dataset.chapterId = chapter.id;
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          toggleChapter(chapter.id);
+        });
+        chaptersContainer.appendChild(btn);
+      });
+    }
+    
+    // Toggle chapter selection
+    function toggleChapter(chapterId) {
+      if (selectedChapters.has(chapterId)) {
+        selectedChapters.delete(chapterId);
+      } else {
+        selectedChapters.add(chapterId);
+      }
+      updateChapterDisplay();
+      generateChapterButtons();
+    }
+    
+    // Update chapter display summary
+    function updateChapterDisplay() {
+      if (selectedChapters.size === 0) {
+        selectedSummary.textContent = '未選擇任何課程';
+        totalWordsCount.textContent = '共 0 個語詞';
+        document.getElementById('next-to-page2').disabled = true;
+      } else {
+        const chapterNames = Array.from(selectedChapters)
+          .sort((a, b) => a - b)
+          .map(id => chaptersData[id - 1].name.split('　')[0])
+          .join(', ');
+        selectedSummary.textContent = chapterNames;
+        
+        // Count total words
+        let totalWords = 0;
+        selectedChapters.forEach(id => {
+          totalWords += chaptersData[id - 1].words.length;
+        });
+        totalWordsCount.textContent = `共 ${totalWords} 個語詞`;
+        document.getElementById('next-to-page2').disabled = false;
+      }
+    }
+    
+    // Show page
+    function showPage(pageNum) {
+      [page1, page2, page3, page4].forEach((p, i) => {
+        p.classList.toggle('hidden', i !== pageNum - 1);
+      });
+    }
+    
+    // Generate count options (2-10)
+    function generateCountOptions(maxCount) {
+      countOptions.innerHTML = '';
+      const options = [];
+      
+      for (let i = 2; i <= Math.min(10, maxCount); i++) {
+        options.push(i);
+      }
+      
+      options.forEach(count => {
+        const btn = document.createElement('button');
+        btn.className = 'count-option py-4 px-3 bg-orange-50 hover:bg-orange-100 border-2 border-orange-200 hover:border-orange-400 rounded-2xl text-center transition-all duration-300';
+        btn.innerHTML = `
+          <span class="text-2xl block mb-1">🎴</span>
+          <span class="text-xl font-bold text-orange-700">${count}</span>
+        `;
+        btn.dataset.count = count;
+        btn.addEventListener('click', () => selectCardCount(count));
+        countOptions.appendChild(btn);
+      });
+    }
+    
+    // Generate question count options (2-10)
+    function generateQuestionCountOptions(maxCount) {
+      questionCountOptions.innerHTML = '';
+      const options = [];
+      
+      for (let i = 2; i <= Math.min(10, maxCount); i++) {
+        options.push(i);
+      }
+      
+      options.forEach(count => {
+        const btn = document.createElement('button');
+        btn.className = 'question-option py-4 px-3 bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 hover:border-blue-400 rounded-2xl text-center transition-all duration-300';
+        btn.innerHTML = `
+          <span class="text-2xl block mb-1">❓</span>
+          <span class="text-xl font-bold text-blue-700">${count}</span>
+        `;
+        btn.dataset.count = count;
+        btn.addEventListener('click', () => selectQuestionCount(count));
+        questionCountOptions.appendChild(btn);
+      });
+    }
+    
+    // Select card count
+    function selectCardCount(count) {
+      selectedCardCount = count;
+      document.querySelectorAll('.count-option').forEach(btn => {
+        const isSelected = parseInt(btn.dataset.count) === count;
+        btn.classList.toggle('border-orange-500', isSelected);
+        btn.classList.toggle('bg-orange-100', isSelected);
+        btn.classList.toggle('ring-4', isSelected);
+        btn.classList.toggle('ring-orange-200', isSelected);
+      });
+      checkPageReadiness();
+    }
+    
+    // Select question count
+    function selectQuestionCount(count) {
+      selectedQuestionCount = count;
+      document.querySelectorAll('.question-option').forEach(btn => {
+        const isSelected = parseInt(btn.dataset.count) === count;
+        btn.classList.toggle('border-blue-500', isSelected);
+        btn.classList.toggle('bg-blue-100', isSelected);
+        btn.classList.toggle('ring-4', isSelected);
+        btn.classList.toggle('ring-blue-200', isSelected);
+      });
+      checkPageReadiness();
+    }
+    
+    // Check if both options are selected
+    function checkPageReadiness() {
+      document.getElementById('start-game').disabled = selectedCardCount === 0 || selectedQuestionCount === 0;
+    }
+    
+    // Shuffle array
+    function shuffleArray(array) {
+      const shuffled = [...array];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
+    
+    // Generate word cards - always show selectedCardCount cards
+    function generateCards() {
+      cardsContainer.innerHTML = '';
+      const remainingWords = selectedWords.filter(w => !answeredCorrectly.has(w));
+      
+      // If remaining words are not enough, mix with answered words
+      let cardsToShow = [...remainingWords];
+      if (cardsToShow.length < selectedCardCount) {
+        const answeredWords = Array.from(answeredCorrectly);
+        const neededCount = selectedCardCount - cardsToShow.length;
+        // Randomly select from answered words to fill the gap
+        const additionalCards = shuffleArray(answeredWords).slice(0, neededCount);
+        cardsToShow = cardsToShow.concat(additionalCards);
+      }
+      
+      // Shuffle and take exactly selectedCardCount cards
+      cardsToShow = shuffleArray(cardsToShow).slice(0, selectedCardCount);
+      
+      cardsToShow.forEach((word, index) => {
+        const card = document.createElement('div');
+        card.className = `word-card p-4 rounded-2xl shadow-lg border-2 slide-in bg-gradient-to-br from-white to-orange-50 border-orange-200 hover:border-orange-400`;
+        card.innerHTML = `<span class="text-lg font-bold text-orange-800">${word}</span>`;
+        card.dataset.word = word;
+        card.style.animationDelay = `${index * 0.05}s`;
+        
+        card.addEventListener('click', () => handleCardClick(word, card));
+        cardsContainer.appendChild(card);
+      });
+    }
+    
+    // Select next target word
+    function selectNextTarget() {
+      const remainingWords = selectedWords.filter(w => !answeredCorrectly.has(w));
+      if (remainingWords.length === 0) {
+        showCompletePage();
+        return false;
+      }
+      currentTargetWord = remainingWords[Math.floor(Math.random() * remainingWords.length)];
+      return true;
+    }
+    
+    // Update progress display
+    function updateProgress() {
+      const answered = answeredCorrectly.size;
+      const total = selectedQuestionCount;
+      progressText.textContent = `第 ${answered + 1} 題 / 共 ${total} 題`;
+      progressBar.style.width = `${(answered / total) * 100}%`;
+    }
+    
+    // Speak word using Web Speech API
+    function speakWord(word) {
+      if ('speechSynthesis' in window) {
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(word);
+        utterance.lang = 'zh-TW';
+        utterance.rate = currentSpeed;
+        utterance.pitch = 1;
+        
+        // Try to find a Chinese voice
+        const voices = window.speechSynthesis.getVoices();
+        const chineseVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('cmn'));
+        if (chineseVoice) {
+          utterance.voice = chineseVoice;
+        }
+        
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+    
+    // Play success sound
+    function playSuccessSound() {
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const now = audioContext.currentTime;
+        
+        // Create a simple success sound (two beeps)
+        const osc1 = audioContext.createOscillator();
+        const osc2 = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(audioContext.destination);
+        
+        // First beep
+        osc1.frequency.value = 523.25; // C5
+        osc1.start(now);
+        osc1.stop(now + 0.1);
+        
+        // Second beep
+        osc2.frequency.value = 659.25; // E5
+        osc2.start(now + 0.15);
+        osc2.stop(now + 0.25);
+        
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.setValueAtTime(0, now + 0.3);
+      } catch (e) {
+        console.error('Failed to play sound:', e);
+      }
+    }
+    
+    // Show feedback
+    function showFeedback(isCorrect) {
+      feedbackIcon.textContent = isCorrect ? '⭕' : '❌';
+      feedbackIcon.className = 'text-9xl bounce-in';
+      feedbackOverlay.classList.remove('hidden');
+      
+      setTimeout(() => {
+        feedbackOverlay.classList.add('hidden');
+      }, 800);
+    }
+    
+    // Create confetti
+    function createConfetti() {
+      const colors = ['#f97316', '#fbbf24', '#22c55e', '#3b82f6', '#ec4899'];
+      for (let i = 0; i < 50; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.cssText = `
+          position: fixed;
+          width: 10px;
+          height: 10px;
+          background: ${colors[Math.floor(Math.random() * colors.length)]};
+          left: ${Math.random() * 100}vw;
+          top: -10px;
+          border-radius: ${Math.random() > 0.5 ? '50%' : '0'};
+          animation: fall ${2 + Math.random() * 2}s linear forwards;
+        `;
+        document.body.appendChild(confetti);
+        
+        setTimeout(() => confetti.remove(), 4000);
+      }
+      
+      // Add fall animation
+      if (!document.getElementById('confetti-style')) {
+        const style = document.createElement('style');
+        style.id = 'confetti-style';
+        style.textContent = `
+          @keyframes fall {
+            to {
+              transform: translateY(100vh) rotate(720deg);
+              opacity: 0;
+            }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    }
+    
+    // Handle card click
+    function handleCardClick(word, card) {
+      totalAttempts++;
+      
+      if (word === currentTargetWord) {
+        // Correct!
+        playSuccessSound();
+        showFeedback(true);
+        card.classList.add('correct');
+        answeredCorrectly.add(word);
+        
+        setTimeout(() => {
+          if (answeredCorrectly.size >= selectedQuestionCount) {
+            showCompletePage();
+          } else if (selectNextTarget()) {
+            updateProgress();
+            generateCards();
+          }
+        }, 800);
+      } else {
+        // Wrong
+        wrongAttempts++;
+        showFeedback(false);
+        card.classList.add('wrong', 'shake');
+        
+        setTimeout(() => {
+          card.classList.remove('wrong', 'shake');
+        }, 500);
+      }
+    }
+    
+    // Show complete page
+    function showCompletePage() {
+      gamePaused = true;
+      clearInterval(gameTimer);
+      
+      const elapsedMs = Date.now() - gameStartTime;
+      const elapsedSeconds = Math.floor(elapsedMs / 1000);
+      const minutes = Math.floor(elapsedSeconds / 60);
+      const seconds = elapsedSeconds % 60;
+      const timeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      
+      const accuracy = Math.round(((totalAttempts - wrongAttempts) / totalAttempts) * 100);
+      document.getElementById('final-score').textContent = `答對 ${answeredCorrectly.size} 題，正確率 ${accuracy}% | 用時 ${timeStr}`;
+      showPage(4);
+      createConfetti();
+    }
+    
+    // Start game
+    function startGame() {
+      selectedWords = shuffleArray(allWords).slice(0, selectedCardCount);
+      currentWordIndex = 0;
+      answeredCorrectly = new Set();
+      totalAttempts = 0;
+      wrongAttempts = 0;
+      gameStartTime = Date.now();
+      gamePaused = false;
+      
+      selectNextTarget();
+      updateProgress();
+      generateCards();
+      startTimer();
+      showPage(3);
+    }
+    
+    // Reset game (same words)
+    function resetGame() {
+      currentWordIndex = 0;
+      answeredCorrectly = new Set();
+      totalAttempts = 0;
+      wrongAttempts = 0;
+      gameStartTime = Date.now();
+      gamePaused = false;
+      
+      selectNextTarget();
+      updateProgress();
+      generateCards();
+      startTimer();
+      showPage(3);
+    }
+    
+    // Event Listeners
+    document.getElementById('next-to-page2').addEventListener('click', () => {
+      allWords = [];
+      selectedChapters.forEach(id => {
+        const chapter = chaptersData[id - 1];
+        allWords = allWords.concat(chapter.words);
+      });
+      
+      availableCount.textContent = `共有 ${allWords.length} 個語詞可選`;
+      generateCountOptions(allWords.length);
+      generateQuestionCountOptions(allWords.length);
+      selectedCardCount = 0;
+      selectedQuestionCount = 0;
+      document.getElementById('start-game').disabled = true;
+      showPage(2);
+    });
+    
+    document.getElementById('back-to-page1').addEventListener('click', () => {
+      showPage(1);
+    });
+    
+    document.getElementById('start-game').addEventListener('click', startGame);
+    
+    document.getElementById('play-sound-btn').addEventListener('click', () => {
+      if (currentTargetWord) {
+        const btn = document.getElementById('play-sound-btn');
+        btn.classList.add('scale-90');
+        setTimeout(() => btn.classList.remove('scale-90'), 150);
+        speakWord(currentTargetWord);
+      }
+    });
+    
+    document.getElementById('speed-slider').addEventListener('input', (e) => {
+      currentSpeed = parseFloat(e.target.value);
+      document.getElementById('speed-display').textContent = currentSpeed.toFixed(1) + 'x';
+    });
+    
+    document.getElementById('restart-btn').addEventListener('click', () => {
+      showPage(2);
+    });
+    
+    document.getElementById('play-again-btn').addEventListener('click', resetGame);
+    
+    document.getElementById('new-words-btn').addEventListener('click', () => {
+      gamePaused = true;
+      clearInterval(gameTimer);
+      selectedChapters = new Set();
+      updateChapterDisplay();
+      generateChapterButtons();
+      showPage(1);
+    });
+    
+    // Start timer function
+    function startTimer() {
+      if (gameTimer) clearInterval(gameTimer);
+      
+      gameTimer = setInterval(() => {
+        if (!gamePaused) {
+          const elapsedMs = Date.now() - gameStartTime;
+          const elapsedSeconds = Math.floor(elapsedMs / 1000);
+          const minutes = Math.floor(elapsedSeconds / 60);
+          const seconds = elapsedSeconds % 60;
+          document.getElementById('elapsed-time').textContent = 
+            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+      }, 100);
+    }
+    
+    // Load voices (needed for some browsers)
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+    }
+    
+    // Initialize chapter buttons on page load
+    generateChapterButtons();
+    updateChapterDisplay();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9dcb35990190a36d',t:'MTc3MzU3NDQ3MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
