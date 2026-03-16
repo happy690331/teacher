@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>森林語詞大冒險：塔防守護戰</title>
+    <style>
+        :root {
+            --forest-green: #2ecc71;
+            --dark-green: #27ae60;
+            --path-brown: #d3a676;
+            --castle-pink: #ff7979;
+            --ui-bg: rgba(44, 62, 80, 0.9);
+            --text-color: #ffffff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Comic Sans MS', 'Chalkboard SE', 'Microsoft JhengHei', sans-serif;
+            background-color: #1e272e;
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #game-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: scale(0.85);
+            transform-origin: top center;
+            margin-top: 5px;
+        }
+
+        #ui-layer {
+            width: 800px;
+            display: flex;
+            justify-content: space-around;
+            padding: 5px 10px;
+            background: var(--ui-bg);
+            border-bottom: 4px solid #34495e;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        .stat-box { text-align: center; }
+        .stat-label { font-size: 12px; opacity: 0.8; }
+        .stat-value { font-size: 18px; font-weight: bold; color: #f1c40f; }
+
+        #game-container {
+            position: relative;
+            margin-top: 10px;
+            border: 6px solid #3d3d3d;
+            border-radius: 15px;
+            overflow: hidden;
+            background-color: var(--forest-green);
+        }
+
+        canvas { display: block; cursor: crosshair; }
+
+        #quiz-container {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            color: #2d3436;
+            padding: 15px 20px;
+            border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+            text-align: center;
+            z-index: 100;
+            display: none;
+            border: 4px solid #f1c40f;
+            width: 85%;
+            max-width: 650px;
+        }
+
+        #quiz-question {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            text-align: left;
+            line-height: 1.4;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .option-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .option-btn:hover { background: #2980b9; }
+
+        #start-screen, #overlay-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(6px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+
+        #start-screen h1 { font-size: 32px; color: #f1c40f; margin-bottom: 5px; text-shadow: 2px 2px 4px #000; }
+        #start-screen p { margin-bottom: 15px; color: #ffffff; font-weight: bold; font-size: 18px; }
+        
+        .menu-grid { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 12px; 
+            width: 90%; 
+            max-width: 500px; 
+            margin-bottom: 25px; 
+        }
+
+        .mode-btn {
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            background: rgba(44, 62, 80, 0.9);
+            color: white;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .mode-btn.selected {
+            background: #27ae60;
+            border-color: #f1c40f;
+            box-shadow: 0 0 10px #27ae60;
+        }
+
+        #overlay-screen { display: none; }
+        #overlay-screen h2 { font-size: 40px; margin: 10px; color: #f1c40f; }
+
+        .btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #e67e22;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 5px;
+            box-shadow: 0 4px 0 #d35400;
+        }
+
+        .btn:hover:not(:disabled) { background: #d35400; transform: translateY(-2px); }
+        .btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 0 0; }
+        .btn:disabled { background: #7f8c8d; cursor: not-allowed; opacity: 0.6; }
+
+        .btn-green { background: #27ae60; box-shadow: 0 4px 0 #1e8449; }
+
+        #controls-container {
+            margin-top: 5px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .legend { font-size: 13px; color: #bdc3c7; margin-top: 5px; }
+
+        #ai-status {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(44, 62, 80, 0.8);
+            color: #f1c40f;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            display: none;
+            z-index: 50;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            border: 2px solid #f1c40f;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.7; transform: scale(0.98); }
+            50% { opacity: 1; transform: scale(1.02); }
+            100% { opacity: 0.7; transform: scale(0.98); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-wrapper">
+        <div id="ui-layer">
+            <div class="stat-box">
+                <div class="stat-label">積分</div>
+                <div id="score-val" class="stat-value">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">進度</div>
+                <div id="monster-progress-val" class="stat-value">0 / 60</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">可用大砲</div>
+                <div id="tower-count" class="stat-value">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">狀態</div>
+                <div id="mode-val" class="stat-value" style="color: #2ecc71;">待機</div>
+            </div>
+        </div>
+
+        <div id="game-container">
+            <!-- AI 生成提示 -->
+            <div id="ai-status">🤖 魔法精靈生成題目中...</div>
+
+            <canvas id="gameCanvas" width="800" height="480"></canvas>
+            
+            <!-- 設置選項選單 -->
+            <div id="start-screen">
+                <h1>森林語詞大冒險</h1>
+                <p>選擇要複習的課文範圍來守護城堡</p>
+                <div class="menu-grid">
+                    <div class="mode-btn" data-mode="1" onclick="toggleMode(this)">第一課</div>
+                    <div class="mode-btn" data-mode="2" onclick="toggleMode(this)">第二課</div>
+                    <div class="mode-btn" data-mode="3" onclick="toggleMode(this)">第三課</div>
+                    <div class="mode-btn" data-mode="4" onclick="toggleMode(this)">第四課</div>
+                    <div class="mode-btn" data-mode="5" onclick="toggleMode(this)">第五課</div>
+                    <div class="mode-btn" data-mode="6" onclick="toggleMode(this)">第六課</div>
+                    <div class="mode-btn" data-mode="7" onclick="toggleMode(this)">第七課</div>
+                    <div class="mode-btn" data-mode="8" onclick="toggleMode(this)">第八課</div>
+                    <div class="mode-btn" data-mode="9" onclick="toggleMode(this)">第九課</div>
+                </div>
+                <div style="display: flex; gap: 15px;">
+                    <button class="btn" style="width: 140px;" onclick="clearSelection()">重新選擇</button>
+                    <button id="start-game-btn" class="btn btn-green" style="width: 140px;" onclick="confirmStart()" disabled>開始遊戲</button>
+                </div>
+            </div>
+
+            <!-- 題目區域 -->
+            <div id="quiz-container">
+                <div id="quiz-question">準備出現題目...</div>
+                <div class="options-grid" id="quiz-options"></div>
+            </div>
+
+            <!-- 暫停與結算覆蓋層 -->
+            <div id="overlay-screen">
+                <h2 id="overlay-title">暫停中</h2>
+                <p id="overlay-desc" style="font-size: 18px;"></p>
+                <div id="overlay-btns">
+                    <button id="resume-btn" class="btn btn-green" onclick="togglePause()">回到遊戲</button>
+                    <button class="btn" onclick="backToMenu()">回到設置選單</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="controls-container">
+            <button id="pause-btn" class="btn" onclick="togglePause()">遊戲暫停</button>
+            <button class="btn" onclick="backToMenu()">回到遊戲設置</button>
+        </div>
+
+        <div class="legend">提示：回收大砲會導致該配額彈藥減半。答錯扣大砲配額並跳題。</div>
+    </div>
+
+    <script>
+        // 國語六下1到9課語詞資料庫 (ex 作為安全備援句)
+        const vocabData = {
+            "1": [
+                { word: "島嶼", ex: "時至今日，地球上仍有許多尚未開發的無人島嶼。" },
+                { word: "獨立", ex: "表哥成年後就離家生活，開始學習獨立。" },
+                { word: "心馳神往", ex: "這部武俠小說的俠義情節，讓他非常心馳神往。" },
+                { word: "輾轉", ex: "他因為孩子深夜未歸而輾轉難眠。" },
+                { word: "櫛比鱗次", ex: "大都會裡高樓大廈櫛比鱗次，好像一座水泥叢林。" },
+                { word: "錢幣", ex: "在外匯市場上可以自由買賣各國的錢幣。" },
+                { word: "村莊", ex: "這座村莊還保有許多舊式建築，十分難得。" },
+                { word: "瀕危", ex: "為了保護瀕危物種，我們需要加強對自然保護區的管理。" },
+                { word: "撒旦", ex: "在基督教裡，撒旦是魔鬼的化身，是黑暗的代表。" },
+                { word: "掠食者", ex: "獅子是非洲草原上的凶猛掠食者。" },
+                { word: "覓食", ex: "許多小鳥吱吱喳喳的在公園裡四處覓食。" },
+                { word: "紳士", ex: "他溫文儒雅的紳士風度，受到許多人的尊重。" },
+                { word: "迷濛", ex: "大雨滂沱的清晨，窗外一片迷濛。" },
+                { word: "高亢", ex: "他的歌聲激昂高亢，讓人聽了情緒也隨之昂揚。" },
+                { word: "凌駕", ex: "我國在經濟方面的成就，早已凌駕世界上先進國家之上。" },
+                { word: "岌岌可危", ex: "這棟房子在地震之後出現多處裂縫，隨時都有倒塌的可能，情況岌岌可危。" }
+            ],
+            "2": [
+                { word: "遺址", ex: "工人們在蓋房子時竟然挖出千年遺址，讓大家驚訝不已。" },
+                { word: "屏息", ex: "運動場上鴉雀無聲，每個人都屏息等待成績公布。" },
+                { word: "秘魯", ex: "秘魯的馬丘比丘已被聯合國教科文組織列為世界遺產。" },
+                { word: "璀璨", ex: "台北一○一大樓施放璀璨的煙火，吸引眾人的目光。" },
+                { word: "愜意", ex: "在自行車道騎車兜風，是一種非常愜意的休閒活動。" },
+                { word: "振奮", ex: "聽到班上獲得音樂比賽冠軍，大家都振奮不已。" },
+                { word: "氛圍", ex: "這家餐廳經常舉辦親子活動，讓用餐環境洋溢著歡樂喜悅的氛圍。" },
+                { word: "井然有序", ex: "他精明能幹，凡事都能處理得井然有序。" },
+                { word: "澎湃", ex: "颱風來襲，海面上波濤澎湃，讓人心生敬畏。" },
+                { word: "堆砌", ex: "表弟用積木堆砌一座城堡，贏得大家的讚賞。" },
+                { word: "梯田", ex: "從飛機窗口望出去，山谷間的梯田構成一幅美麗的幾何圖案。" },
+                { word: "玄妙", ex: "自然界中仍有許多玄妙的事情，是現今科學無法解釋的。" },
+                { word: "拴日石", ex: "拴日石是馬丘比丘著名景點之一。" },
+                { word: "興味盎然", ex: "五歲的小弟活潑好動，對新奇的事物都一副興味盎然的樣子。" },
+                { word: "回眸", ex: "在夕陽的映照下，他回眸看了一眼遠方的山脈，心中充滿了懷念。" }
+            ],
+            "3": [
+                { word: "佛萊堡", ex: "佛萊堡太陽能發展與技術領先其他地區，是德國太陽能應用最普及的城市。" },
+                { word: "瑞士", ex: "瑞士因為風景優美，吸引許多遊客，觀光事業很發達。" },
+                { word: "名列前茅", ex: "這項產品在今年銷售榜上名列前茅，公司決定提高產量，滿足市場需求。" },
+                { word: "唯一", ex: "這條小路是通往山頂的唯一道路。" },
+                { word: "爆發", ex: "火山爆發時，噴出的岩漿造成鄰近地區災情慘重。" },
+                { word: "供應", ex: "明天的社區活動，主辦單位將免費供應餐點。" },
+                { word: "政府", ex: "有廉能的政府，才有公平與安定的社會。" },
+                { word: "收購", ex: "財團到處收購土地，準備興建大型溫泉旅館，許多環保人士多方奔走阻攔。" },
+                { word: "騎士", ex: "那位自行車騎士穿著鮮豔的服裝，穿梭在城市的街道上。" },
+                { word: "駕駛", ex: "這位公車駕駛已有十幾年的經驗，技術相當純熟。" },
+                { word: "冰箱", ex: "冰箱不要貯存過多食物，以免降低冷藏效果。" },
+                { word: "嬉戲", ex: "這群小朋友在廣闊的草地上追逐嬉戲，歡笑聲不絕於耳。" },
+                { word: "乒乓球", ex: "這次乒乓球比賽，本校除獲得個人組冠軍外，更奪得團體組的金牌。" },
+                { word: "輕鬆自在", ex: "問題解決後，他的心情感到無比的輕鬆自在。" },
+                { word: "護欄", ex: "為了避免車輛從懸崖上翻覆，有關單位在此設立護欄，以提高行車安全。" }
+            ],
+            "4": [
+                { word: "蕭蕭", ex: "我們在秋天的森林裡散步，聽著風吹落葉的蕭蕭聲。" },
+                { word: "清澈", ex: "那條溪非常清澈，可以看見水中的魚兒游來游去。" },
+                { word: "辭別", ex: "他交代完所有的事情後，就向大家辭別，出發前往機場了。" },
+                { word: "橫臥", ex: "他走進大廳一看，赫然發現一個醉漢橫臥在地上。" },
+                { word: "行蹤", ex: "他自從退休後，行蹤飄忽不定，恐怕不容易找到他。" },
+                { word: "重逢", ex: "想不到在多年之後，居然還能與老朋友重逢，令他驚喜萬分。" },
+                { word: "抒發", ex: "那名登山客藉著一篇篇的日記，抒發自己登山時的心路歷程。" },
+                { word: "漂泊", ex: "他因為工作的關係長年漂泊海外，很少回家。" },
+                { word: "餘暉", ex: "落日的餘暉，把眼前的油桐花染成一片金黃，真的好美！" },
+                { word: "真摯", ex: "經過這次事件後，讓我見證真摯的友誼是歷久彌堅的。" },
+                { word: "情誼", ex: "他們兄弟倆情誼深厚，不管什麼事都會第一個想到對方。" }
+            ],
+            "5": [
+                { word: "靠攏", ex: "攝影師請全班同學向中間靠攏，全部的人才能入鏡。" },
+                { word: "笨拙", ex: "我的動作笨拙，連穿針引線都得試好幾次才能完成。" },
+                { word: "疲憊", ex: "哥哥每天上完排球隊的訓練課程後，都疲憊不堪。" },
+                { word: "鈔票", ex: "媽媽從皮包裡取出幾張鈔票來結帳。" },
+                { word: "包裹", ex: "姐姐到郵局寄送限時包裹給堂妹，祝賀她的十歲生日。" },
+                { word: "巡視", ex: "巡守隊每天都會在大街小巷巡視，查看是否有可疑人士出沒。" },
+                { word: "甦醒", ex: "經過醫護人員緊急搶救，病患終於甦醒了。" },
+                { word: "豎立", ex: "園遊會場地豎立了許多旗幟，讓攤位更加醒目。" },
+                { word: "媒體", ex: "媒體傳播資訊十分快速，人們經常可以接收即時發生的訊息。" },
+                { word: "沸騰", ex: "這個快煮壺的功能很強，短短一分鐘便能讓水沸騰。" },
+                { word: "宛如", ex: "陣陣寒風吹在身上，宛如針刺刀割。" }
+            ],
+            "6": [
+                { word: "扶疏", ex: "奶奶家的院子花木扶疏，還有休息的搖椅，是家人談心的地方。" },
+                { word: "鳳凰木", ex: "每到六月，鳳凰木的紅色花朵便會盛開，為畢業季增添美麗的色彩。" },
+                { word: "山巔", ex: "清晨太陽露出山巔，為大地鋪上一大片金黃色的地毯。" },
+                { word: "戀戀不捨", ex: "我們在海灘玩了一整天，直到傍晚，才戀戀不捨的離開。" },
+                { word: "綠蔭", ex: "由於天氣實在太熱了，大家都躲在綠蔭下休息避暑。" },
+                { word: "紡車", ex: "紡車是中國古代就開始運用的紡織工具。" },
+                { word: "經緯", ex: "地球儀上畫出的經緯線只是虛擬的線條，讓我們可以判別各地的位置。" },
+                { word: "纖纖", ex: "傍晚時，看見家家戶戶纖纖裊裊的炊煙，總會讓我想起老家村落的模樣。" },
+                { word: "裊裊", ex: "古廟的鐘聲在山谷間迴盪，餘音裊裊。" },
+                { word: "袖珍", ex: "這間餐廳的老闆收藏許多袖珍工藝品，吸引客人的目光。" },
+                { word: "工廠", ex: "老師帶我們參觀醬油工廠，了解醬油的製作過程。" },
+                { word: "喜孜孜", ex: "哥哥喜孜孜的跟我們說，他提出的國外大學申請書已經核准了。" },
+                { word: "猶在", ex: "他移民國外多年，然而心中的鄉愁猶在，時常想念著家鄉的親人。" },
+                { word: "光陰", ex: "老師提醒我們要珍惜光陰，不要把時間浪費在不重要的事情上。" },
+                { word: "飛逝", ex: "時光飛逝，一轉眼我已經要從國小畢業了。" },
+                { word: "雀斑", ex: "夏天要留意皮膚保養，隨時注意防晒，以免形成雀斑。" }
+            ],
+            "7": [
+                { word: "閣樓", ex: "他將閣樓闢為儲藏室，收放一些不常用的家具。" },
+                { word: "匱乏", ex: "我國經濟發達，民生物質不虞匱乏。" },
+                { word: "舊書攤", ex: "他閒來無事時喜歡逛逛舊書攤挖寶貝。" },
+                { word: "冥冥之中", ex: "他們兩人之間的緣分冥冥之中似乎早已注定。" },
+                { word: "帳篷", ex: "帳篷是游牧民族逐水草而居的必要配備。" },
+                { word: "徒步", ex: "表哥每天徒步上學，幾年下來已鍛鍊出腳力了。" },
+                { word: "籌備", ex: "經過幾年的籌備，這家公司終於開張了。" },
+                { word: "埡口", ex: "根據山友的經驗，許多高山埡口都是容易形成雲海的地方。" },
+                { word: "山脈", ex: "他對臺灣各大山脈都非常熟悉，如果要登山，可以請教他。" },
+                { word: "紮營", ex: "這塊空地背山面水，非常適合紮營。" },
+                { word: "窸窸窣窣", ex: "風一來，堤岸旁的蘆葦就發出窸窸窣窣的聲音。" },
+                { word: "背誦", ex: "老師要同學背誦這篇文章。" },
+                { word: "宇宙", ex: "宇宙萬物十分奧妙，值得我們去探索。" },
+                { word: "浩瀚", ex: "看到大海的浩瀚，令人更加覺得自己的渺小。" }
+            ],
+            "8": [
+                { word: "瞻前顧後", ex: "做事若瞻前顧後，顧忌太多便無法如期完成。" },
+                { word: "汲取", ex: "爺爺不斷的汲取新知，好學不倦的精神不輸給年輕人。" },
+                { word: "富庶", ex: "全民同心齊力的奮鬥使國家富庶，人民生活水準提高。" },
+                { word: "鍥而不捨", ex: "經過警方鍥而不捨的追查，終於找出了真凶。" },
+                { word: "嶄新", ex: "他開了一部嶄新的轎車，引來許多羨慕的眼光。" },
+                { word: "一輩子", ex: "他將一輩子都奉獻教育，培育了許多傑出的人才。" },
+                { word: "全力以赴", ex: "國家籃球代表隊誓言將全力以赴爭取最高榮譽。" },
+                { word: "構築", ex: "軍方在邊境構築了許多防禦堡壘，以確保國家的安全。" },
+                { word: "諺語", ex: "諺語雖是精簡的句子，但卻是古人長遠累積的智慧。" },
+                { word: "羊羹", ex: "媽媽準備了親手做的紅豆羊羹，來款待賓客。" },
+                { word: "公斤", ex: "他買了一公斤的牛肉，準備燉湯。" },
+                { word: "全神貫注", ex: "他全神貫注的聆聽音樂，連門鈴響了也不知道。" },
+                { word: "拓展", ex: "閱讀可以拓展我們的知識和想像力。" }
+            ],
+            "9": [
+                { word: "恭喜", ex: "大家都開心的恭喜哥哥考上研究所。" },
+                { word: "荊棘", ex: "即使人生的旅途布滿了荊棘，我們也要勇敢的走下去。" },
+                { word: "俗話", ex: "俗話說：﹁萬事起頭難。﹂創業之初，辛苦一點是必然的。" },
+                { word: "窘境", ex: "因為父親驟然逝世，使得他們全家的生活頓時陷入了窘境。" },
+                { word: "溝通", ex: "我們在開會時充分溝通意見，達成共識。" },
+                { word: "生涯", ex: "他對自己的生涯已經做了妥善的規畫，現在正一步步的朝目標與理想邁進。" },
+                { word: "曙光", ex: "清晨第一道曙光出現前，許多人就已經展開一天的工作了。" }
+            ]
+        };
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('start-screen');
+        const startGameBtn = document.getElementById('start-game-btn');
+        const quizContainer = document.getElementById('quiz-container');
+        const quizQuestion = document.getElementById('quiz-question');
+        const quizOptions = document.getElementById('quiz-options');
+        const scoreDisplay = document.getElementById('score-val');
+        const monsterProgressDisplay = document.getElementById('monster-progress-val');
+        const towerDisplay = document.getElementById('tower-count');
+        const modeDisplay = document.getElementById('mode-val');
+        const overlayScreen = document.getElementById('overlay-screen');
+        const overlayTitle = document.getElementById('overlay-title');
+        const overlayDesc = document.getElementById('overlay-desc');
+        const pauseBtn = document.getElementById('pause-btn');
+        const aiStatusBadge = document.getElementById('ai-status');
+
+        const MAX_MONSTERS = 60;
+        let score = 0;
+        let availableTowers = 0;
+        let isGameOver = false;
+        let isPaused = true;
+        let monstersSpawned = 0;
+        let monstersDefeated = 0;
+        let selectedModes = []; 
+        let penalizedAmmoQueue = []; 
+        let currentWordPool = []; 
+        
+        let monsters = [];
+        let towers = [];
+        let bullets = [];
+        let decorativeTrees = [];
+        
+        let quizTimer = null;
+        let spawnTimer = null;
+        let isGeneratingQuiz = false;
+
+        const path = [
+            {x: -50, y: 100}, {x: 150, y: 100}, {x: 150, y: 220}, {x: 50, y: 220},
+            {x: 50, y: 400}, {x: 350, y: 400}, {x: 350, y: 50}, {x: 600, y: 50},
+            {x: 600, y: 320}, {x: 850, y: 320}
+        ];
+
+        // API 呼叫函數，自動進行不同造句
+        async function fetchSentenceWithAI(word, fallbackSentence) {
+            const apiKey = ""; // 執行環境會自動提供 API Key
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const prompt = `請用「${word}」造一個通順、適合小學六年級程度的日常短句(25字以內)。只需回傳句子本身，不要包含其他說明、引號或多餘文字，且句子中務必包含「${word}」這個詞。`;
+            
+            // 實作指數退避重試機制
+            const delays = [1000, 2000, 4000, 8000, 16000];
+            
+            for (let i = 0; i < delays.length + 1; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            systemInstruction: { parts: [{ text: "你是一位精通中文的國小國語老師。請直接給出造句結果，不要引號，不要多餘文字。" }] }
+                        })
+                    });
+                    
+                    if (!response.ok) throw new Error('API Error');
+                    
+                    const data = await response.json();
+                    let generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+                    
+                    if (generatedText) {
+                        // 確保生成的句子包含該語詞，如果沒有則觸發錯誤以進入重試或降級
+                        if (generatedText.includes(word)) {
+                            return generatedText;
+                        }
+                    }
+                    throw new Error('Invalid Output');
+                } catch (error) {
+                    if (i === delays.length) {
+                        return fallbackSentence; // 全部重試失敗，降級使用本地備用句
+                    }
+                    await new Promise(resolve => setTimeout(resolve, delays[i]));
+                }
+            }
+            return fallbackSentence;
+        }
+
+        function initDecorations() {
+            decorativeTrees = [];
+            for(let i=0; i<25; i++) {
+                let tx, ty;
+                do { tx = Math.random() * canvas.width; ty = Math.random() * canvas.height; }
+                while (isPointOnPath(tx, ty));
+                decorativeTrees.push({x: tx, y: ty, size: 8 + Math.random()*12});
+            }
+        }
+
+        function isPointOnPath(x, y) {
+            const pWidth = 60;
+            for (let i = 0; i < path.length - 1; i++) {
+                const p1 = path[i]; const p2 = path[i+1];
+                const minX = Math.min(p1.x, p2.x) - pWidth/2;
+                const maxX = Math.max(p1.x, p2.x) + pWidth/2;
+                const minY = Math.min(p1.y, p2.y) - pWidth/2;
+                const maxY = Math.max(p1.y, p2.y) + pWidth/2;
+                if (x >= minX && x <= maxX && y >= minY && y <= maxY) return true;
+            }
+            return false;
+        }
+
+        function drawDinosaur(x, y, hp, maxHp, isBoss) {
+            ctx.save();
+            ctx.translate(x, y);
+            const scale = isBoss ? 1.4 : 1.0;
+            ctx.scale(scale, scale);
+            ctx.fillStyle = isBoss ? "#e74c3c" : "#2ecc71";
+            ctx.beginPath(); ctx.ellipse(0, 0, 18, 12, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(12, -10, 10, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(15, -12, 3, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "black"; ctx.beginPath(); ctx.arc(16, -12, 1.5, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+            const barW = 40 * scale;
+            ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(x - barW/2, y - 35, barW, 6);
+            ctx.fillStyle = "#e74c3c"; ctx.fillRect(x - barW/2, y - 35, (hp / maxHp) * barW, 6);
+        }
+
+        function drawCannon(x, y, angle, shotsRemaining) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.fillStyle = "white"; ctx.font = "bold 11px Arial"; ctx.textAlign = "center";
+            ctx.fillText(shotsRemaining, 0, 26);
+            ctx.fillStyle = "#34495e"; ctx.beginPath(); ctx.arc(0, 5, 18, Math.PI, 0); ctx.fill();
+            ctx.rotate(angle || 0);
+            ctx.fillStyle = "#2c3e50"; ctx.fillRect(0, -8, 26, 16);
+            ctx.strokeStyle = "#bdc3c7"; ctx.lineWidth = 2; ctx.strokeRect(0, -8, 26, 16);
+            ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        }
+
+        function drawCastle(x, y) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.fillStyle = "#ecf0f1"; ctx.fillRect(-25, -20, 50, 40);
+            ctx.fillStyle = "#bdc3c7"; ctx.fillRect(-35, -40, 15, 40); ctx.fillRect(20, -40, 15, 40);
+            ctx.fillStyle = "#ff7979"; 
+            ctx.beginPath(); ctx.moveTo(-35,-40); ctx.lineTo(-27.5,-55); ctx.lineTo(-20,-40); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(20,-40); ctx.lineTo(27.5,-55); ctx.lineTo(35,-40); ctx.fill();
+            ctx.restore();
+        }
+
+        class Monster {
+            constructor(hp, speed, isBoss = false) {
+                this.x = path[0].x; this.y = path[0].y; this.targetIndex = 1;
+                this.speed = speed; this.hp = hp; this.maxHp = hp; this.isBoss = isBoss;
+            }
+            update() {
+                if (isPaused || isGameOver) return;
+                const target = path[this.targetIndex];
+                if (!target) { endGame(); return; }
+                const dx = target.x - this.x; const dy = target.y - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < this.speed) {
+                    this.targetIndex++;
+                    if (this.targetIndex >= path.length) endGame();
+                } else {
+                    this.x += (dx / dist) * this.speed;
+                    this.y += (dy / dist) * this.speed;
+                }
+            }
+            draw() { drawDinosaur(this.x, this.y, this.hp, this.maxHp, this.isBoss); }
+        }
+
+        class Tower {
+            constructor(x, y, maxAmmo = 50) {
+                this.x = x; this.y = y; this.range = 140; this.cooldown = 0; 
+                this.fireRate = 40; this.angle = 0;
+                this.shotsFired = 0; 
+                this.maxShots = maxAmmo; 
+            }
+            update() {
+                if (isPaused || isGameOver) return;
+                if (this.cooldown > 0) this.cooldown--;
+                let target = null; let minDist = this.range;
+                monsters.forEach(m => {
+                    const d = Math.sqrt((m.x-this.x)**2 + (m.y-this.y)**2);
+                    if (d < minDist) { minDist = d; target = m; }
+                });
+                if (target) {
+                    this.angle = Math.atan2(target.y - this.y, target.x - this.x);
+                    if (this.cooldown <= 0) {
+                        bullets.push(new Bullet(this.x, this.y, target));
+                        this.cooldown = this.fireRate;
+                        this.shotsFired++;
+                        if (this.shotsFired >= this.maxShots) {
+                            const tIdx = towers.indexOf(this);
+                            if (tIdx > -1) towers.splice(tIdx, 1);
+                        }
+                    }
+                }
+            }
+            draw() { drawCannon(this.x, this.y, this.angle, this.maxShots - this.shotsFired); }
+        }
+
+        class Bullet {
+            constructor(x, y, target) {
+                this.x = x; this.y = y; this.target = target; this.speed = 7; this.finished = false;
+            }
+            update() {
+                if (isPaused || isGameOver) return;
+                const dx = this.target.x - this.x; const dy = this.target.y - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < this.speed) {
+                    this.target.hp--;
+                    this.finished = true;
+                    if (this.target.hp <= 0) {
+                        const idx = monsters.indexOf(this.target);
+                        if (idx > -1) {
+                            monsters.splice(idx, 1); score += 2; monstersDefeated++;
+                            scoreDisplay.innerText = score; updateProgress();
+                        }
+                    }
+                } else { this.x += (dx/dist)*this.speed; this.y += (dy/dist)*this.speed; }
+            }
+            draw() { ctx.fillStyle = "#2c3e50"; ctx.beginPath(); ctx.arc(this.x, this.y, 4, 0, Math.PI*2); ctx.fill(); }
+        }
+
+        function toggleMode(element) {
+            const mode = element.getAttribute('data-mode');
+            if (selectedModes.includes(mode)) {
+                selectedModes = selectedModes.filter(m => m !== mode);
+                element.classList.remove('selected');
+            } else {
+                selectedModes.push(mode);
+                element.classList.add('selected');
+            }
+            startGameBtn.disabled = selectedModes.length === 0;
+        }
+
+        function confirmStart() {
+            if (selectedModes.length === 0) return;
+            startGame();
+        }
+
+        function clearSelection() {
+            selectedModes = [];
+            const modeBtns = document.querySelectorAll('.mode-btn');
+            modeBtns.forEach(btn => btn.classList.remove('selected'));
+            startGameBtn.disabled = true;
+        }
+
+        function startGame() {
+            isPaused = false; isGameOver = false;
+            isGeneratingQuiz = false;
+            startScreen.style.display = 'none';
+            overlayScreen.style.display = 'none';
+            aiStatusBadge.style.display = 'none';
+            pauseBtn.innerText = "遊戲暫停";
+            
+            modeDisplay.innerText = selectedModes.length > 1 ? "混合課文" : `第 ${selectedModes[0]} 課`;
+
+            score = 0; availableTowers = 3; monstersSpawned = 0; monstersDefeated = 0; 
+            penalizedAmmoQueue = []; 
+            
+            // 初始化不重複題庫
+            currentWordPool = [];
+            selectedModes.forEach(mode => {
+                if (vocabData[mode]) {
+                    currentWordPool = currentWordPool.concat(vocabData[mode]);
+                }
+            });
+
+            monsters = []; towers = []; bullets = [];
+            scoreDisplay.innerText = "0"; towerDisplay.innerText = "3"; updateProgress();
+            
+            clearInterval(quizTimer);
+            clearInterval(spawnTimer);
+            // 改為每 1 秒鐘執行一次檢查，確保玩家答題後 1 秒鐘即能觸發新題目
+            quizTimer = setInterval(generateQuiz, 1000);
+            spawnTimer = setInterval(spawnMonster, 5000);
+        }
+
+        function updateProgress() {
+            monsterProgressDisplay.innerText = `${monstersDefeated} / ${MAX_MONSTERS}`;
+        }
+
+        function spawnMonster() {
+            if (isGameOver || isPaused || monstersSpawned >= MAX_MONSTERS) return;
+            monstersSpawned++;
+            let hp = 3; let speed = 1.3; let isBoss = false;
+            
+            if (monstersSpawned > 50) { hp = 20; speed = 1.8; }
+            else if (monstersSpawned === 50) { hp = 100; speed = 1.0; isBoss = true; }
+            else if (monstersSpawned === 30) { hp = 70; speed = 1.1; isBoss = true; }
+            else if (monstersSpawned % 10 === 0) { hp = 50; speed = 1.2; isBoss = true; }
+            else if (monstersSpawned > 20) { speed = 1.8; }
+
+            monsters.push(new Monster(hp, speed, isBoss));
+            
+            if (monstersSpawned === 20) {
+                clearInterval(spawnTimer);
+                spawnTimer = setInterval(spawnMonster, 1000);
+            }
+            if (monstersSpawned >= MAX_MONSTERS) clearInterval(spawnTimer);
+        }
+
+        async function generateQuiz() {
+            if (isGameOver || isPaused || quizContainer.style.display === 'block' || isGeneratingQuiz) return;
+            
+            // 建立完整的選項池，用來抽取錯誤的干擾選項
+            let fullWordPool = [];
+            selectedModes.forEach(mode => {
+                if (vocabData[mode]) {
+                    fullWordPool = fullWordPool.concat(vocabData[mode]);
+                }
+            });
+
+            if (fullWordPool.length === 0) return;
+
+            // 如果題目已經全部出過一輪，則重新補充題庫洗牌
+            if (currentWordPool.length === 0) {
+                currentWordPool = [...fullWordPool];
+            }
+
+            // 鎖定狀態，開始向 AI 請求造句
+            isGeneratingQuiz = true;
+            aiStatusBadge.style.display = 'block';
+
+            // 從「尚未出過」的題庫中隨機挑選一個正確解答
+            const correctIndex = Math.floor(Math.random() * currentWordPool.length);
+            const correctItem = currentWordPool[correctIndex];
+            const correctWord = correctItem.word;
+            
+            // 將該題從待出題庫中移除，確保題目不重複出現
+            currentWordPool.splice(correctIndex, 1);
+            
+            // 呼叫 AI 即時生成句子 (帶有重試和自動降級機制)
+            let dynamicSentence = await fetchSentenceWithAI(correctWord, correctItem.ex);
+            
+            // 如果在生成期間遊戲結束或暫停，就放棄顯示這一題
+            if (isGameOver || isPaused) {
+                isGeneratingQuiz = false;
+                aiStatusBadge.style.display = 'none';
+                return;
+            }
+
+            // 將句子裡的語詞挖空變成 (  )
+            const questionSentence = dynamicSentence.split(correctWord).join("(    )");
+            quizQuestion.innerText = `請填空：\n${questionSentence}`;
+
+            // 產生 1 個正確選項 + 3 個錯誤選項 (從 fullWordPool 隨機挑選增加難度)
+            let choices = [correctWord];
+            let attempts = 0;
+            while(choices.length < 4 && attempts < 50) {
+                attempts++;
+                const randomWrongItem = fullWordPool[Math.floor(Math.random() * fullWordPool.length)];
+                if(!choices.includes(randomWrongItem.word)) {
+                    choices.push(randomWrongItem.word);
+                }
+            }
+            
+            // 打亂選項
+            choices.sort(() => Math.random() - 0.5);
+            quizOptions.innerHTML = "";
+            
+            // 渲染按鈕
+            choices.forEach(c => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn"; btn.innerText = c;
+                btn.onclick = () => {
+                    if (c === correctWord) {
+                        availableTowers++; towerDisplay.innerText = availableTowers;
+                    } else {
+                        // 懲罰機制：答錯扣除一個大砲並立刻跳題
+                        if (availableTowers > 0) availableTowers--;
+                        towerDisplay.innerText = availableTowers;
+                    }
+                    
+                    // 隱藏題目面板，等待 setInterval 1 秒後的自動觸發
+                    quizContainer.style.display = "none";
+                };
+                quizOptions.appendChild(btn);
+            });
+            
+            // 隱藏生成提示，顯示題目面板
+            aiStatusBadge.style.display = 'none';
+            quizContainer.style.display = "block";
+            isGeneratingQuiz = false;
+        }
+
+        function togglePause() {
+            if (isGameOver || startScreen.style.display === 'flex') return;
+            isPaused = !isPaused;
+            overlayScreen.style.display = isPaused ? "flex" : "none";
+            overlayTitle.innerText = "遊戲暫停中";
+            pauseBtn.innerText = isPaused ? "回到遊戲" : "遊戲暫停";
+            if (isPaused) {
+                aiStatusBadge.style.display = 'none';
+            } else if (isGeneratingQuiz) {
+                aiStatusBadge.style.display = 'block';
+            }
+        }
+
+        function backToMenu() {
+            isPaused = true; isGameOver = false;
+            clearInterval(quizTimer); clearInterval(spawnTimer);
+            monsters = []; towers = []; bullets = [];
+            score = 0; availableTowers = 0; monstersSpawned = 0; monstersDefeated = 0; 
+            penalizedAmmoQueue = []; 
+            scoreDisplay.innerText = "0"; towerDisplay.innerText = "0";
+            updateProgress();
+            modeDisplay.innerText = "待機"; pauseBtn.innerText = "遊戲暫停";
+            overlayScreen.style.display = "none";
+            startScreen.style.display = "flex";
+            quizContainer.style.display = "none";
+            aiStatusBadge.style.display = "none";
+            isGeneratingQuiz = false;
+        }
+
+        function winGame() {
+            if (isGameOver) return;
+            isGameOver = true;
+            overlayTitle.innerText = "森林大獲全勝！";
+            overlayDesc.innerText = `大成功！最終得分：${score}`;
+            overlayScreen.style.display = "flex";
+            document.getElementById('resume-btn').style.display = "none";
+            clearInterval(quizTimer); clearInterval(spawnTimer);
+            aiStatusBadge.style.display = "none";
+        }
+
+        function endGame() {
+            if (isGameOver) return;
+            isGameOver = true;
+            overlayTitle.innerText = "森林失守了！";
+            overlayDesc.innerText = `恐龍入侵。擊退：${monstersDefeated} 隻。`;
+            overlayScreen.style.display = "flex";
+            document.getElementById('resume-btn').style.display = "none";
+            clearInterval(quizTimer); clearInterval(spawnTimer);
+            aiStatusBadge.style.display = "none";
+        }
+
+        canvas.addEventListener('click', (e) => {
+            if (isGameOver || isPaused) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const mx = (e.clientX - rect.left) * scaleX;
+            const my = (e.clientY - rect.top) * scaleY;
+            
+            const tIdx = towers.findIndex(t => Math.sqrt((t.x-mx)**2 + (t.y-my)**2) < 30);
+            if (tIdx > -1) {
+                const recycledTower = towers[tIdx];
+                const nextLimit = Math.floor(recycledTower.maxShots / 2);
+                penalizedAmmoQueue.push(nextLimit); 
+
+                towers.splice(tIdx, 1);
+                availableTowers++;
+                towerDisplay.innerText = availableTowers;
+                return;
+            }
+            
+            if (availableTowers > 0 && !isPointOnPath(mx, my)) {
+                let ammoLimit = 50;
+                if (penalizedAmmoQueue.length > 0) {
+                    ammoLimit = penalizedAmmoQueue.shift();
+                }
+                
+                towers.push(new Tower(mx, my, ammoLimit));
+                availableTowers--;
+                towerDisplay.innerText = availableTowers;
+            }
+        });
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#2ecc71"; ctx.fillRect(0, 0, 800, 480);
+            decorativeTrees.forEach(t => { ctx.fillStyle="#196f3d"; ctx.beginPath(); ctx.arc(t.x, t.y, t.size, 0, Math.PI*2); ctx.fill(); });
+            ctx.strokeStyle = "#c09060"; ctx.lineWidth = 60; ctx.lineCap="round"; ctx.lineJoin="round";
+            ctx.beginPath(); ctx.moveTo(path[0].x, path[0].y);
+            for(let i=1; i<path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+            ctx.stroke(); ctx.strokeStyle = "#d3a676"; ctx.lineWidth = 45; ctx.stroke();
+            drawCastle(path[path.length-1].x - 60, path[path.length-1].y);
+            if (!isPaused) {
+                monsters.forEach(m => m.update());
+                towers.forEach(t => t.update());
+                for(let i=bullets.length-1; i>=0; i--) { bullets[i].update(); if(bullets[i].finished) bullets.splice(i, 1); }
+            }
+            monsters.forEach(m => m.draw());
+            towers.forEach(t => t.draw());
+            bullets.forEach(b => b.draw());
+            if (!isGameOver && monstersSpawned === MAX_MONSTERS && monsters.length === 0) winGame();
+            requestAnimationFrame(gameLoop);
+        }
+
+        initDecorations();
+        gameLoop();
+    </script>
+</body>
+</html>
