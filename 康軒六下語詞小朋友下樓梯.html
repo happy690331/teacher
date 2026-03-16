@@ -1,0 +1,849 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Play, RotateCcw, List, Pause, ArrowLeft, ArrowRight } from 'lucide-react';
+
+// 整理後的六下一到九課語詞資料庫 (已去除數字編號與例句)
+const LESSON_DATA = {
+  1: [
+    { word: "島嶼", desc: "四周被水圍繞的小面積陸地。" },
+    { word: "獨立", desc: "不倚靠他人而能自立。獨自站立。指國家有完全自主權，不受外來力量干涉。" },
+    { word: "心馳神往", desc: "心神專注、嚮往於事物上。" },
+    { word: "輾轉", desc: "間接的。翻來覆去。" },
+    { word: "櫛比鱗次", desc: "比喻緊密的連接排列。" },
+    { word: "錢幣", desc: "錢。多指金屬貨幣。" },
+    { word: "村莊", desc: "鄉民聚集居住的地方。" },
+    { word: "瀕危", desc: "接近危險的境地。多指人病危將死，或物種即將滅絕。" },
+    { word: "撒旦", desc: "基督教稱魔鬼為「撒旦」，原指反抗上帝而誘人犯罪的惡魔，他是善的仇敵，是上帝和人類的敵對者。" },
+    { word: "掠食者", desc: "捕食他種生物而藉以生存的動物。" },
+    { word: "覓食", desc: "尋找食物。" },
+    { word: "紳士", desc: "舊時多指地主或退職的官員。現泛指地方上有聲望的人或是舉止斯文有禮的人。" },
+    { word: "迷濛", desc: "形容景物朦朧不清。" },
+    { word: "高亢", desc: "態度高傲亢直或聲調、情緒高昂激動。" },
+    { word: "凌駕", desc: "超越、勝過。" },
+    { word: "岌岌可危", desc: "形容非常危險。" }
+  ],
+  2: [
+    { word: "遺址", desc: "古代人類活動的地方。由此挖掘出來的古物和化石可供考古學家研究人類發展的歷史。" },
+    { word: "屏息", desc: "抑止呼吸，止住聲息。" },
+    { word: "秘魯", desc: "國名。位於南美洲西部。為西班牙語Peru的譯音。" },
+    { word: "璀璨", desc: "光采鮮明的樣子。" },
+    { word: "愜意", desc: "滿意、舒適。" },
+    { word: "振奮", desc: "振作奮發。" },
+    { word: "氛圍", desc: "周圍的氣氛和情調。" },
+    { word: "井然有序", desc: "條理分明而有秩序。" },
+    { word: "澎湃", desc: "引申有聲勢浩大，氣勢壯闊之意。波濤互相撞擊的聲音或氣勢。" },
+    { word: "堆砌", desc: "將物體層疊累積。在文章中使用大量華麗而與內容無關的詞藻。" },
+    { word: "梯田", desc: "山坡上呈階梯狀的田地。階與階之間以矮埂相隔，有利於耕作及蓄水。" },
+    { word: "玄妙", desc: "深奧微妙。" },
+    { word: "拴日石", desc: "馬丘比丘景點之一，是一塊巨大石雕。印加人相信拴日石能拴住太陽，使其依時序繞行天空。" },
+    { word: "興味盎然", desc: "興趣很高昂的樣子。" },
+    { word: "回眸", desc: "回過頭看。" }
+  ],
+  3: [
+    { word: "佛萊堡", desc: "位於德國西南部，是一座著名的生態城市。" },
+    { word: "瑞士", desc: "國名，位於歐洲中部，為一永久中立國。" },
+    { word: "名列前茅", desc: "前茅，古代行軍打仗時，前行兵士所拿作為旗幟的茅草。名列前茅比喻名次排在前面。" },
+    { word: "唯一", desc: "獨一無二。" },
+    { word: "爆發", desc: "事情突然發生或被揭露。情緒突然而猛烈的發作。火山內部岩漿突然衝破地殼，向四方迸出。" },
+    { word: "供應", desc: "供給需要的錢財或物品。" },
+    { word: "政府", desc: "國家統治機關的總稱，為近代國家構成要素之一。凡具有制定法律及執行法律之權力的政治組織，稱為「政府」。" },
+    { word: "收購", desc: "收買購置。" },
+    { word: "騎士", desc: "騎機車的人。在本課是指騎自行車的人。" },
+    { word: "駕駛", desc: "操控車船或飛機的人。操控車船、飛機等交通工具。" },
+    { word: "冰箱", desc: "一種冷藏食物的電器用品。以降低溫度來製冰或保存食品，使之保鮮不敗壞。" },
+    { word: "嬉戲", desc: "遊戲玩耍。" },
+    { word: "乒乓球", desc: "桌球的別名，一種球類運動。乒乓球比賽所使用的球。為圓形，直徑三點八公分，重二點五公克，以賽璐珞或類似的塑料製成，呈白色或黃色，無光澤。" },
+    { word: "輕鬆自在", desc: "愉快適意。" },
+    { word: "護欄", desc: "設置於路邊、河岸等地的鐵柵或水泥柱等實物體。目的在防止超出範圍，發生危險。" }
+  ],
+  4: [
+    { word: "蕭蕭", desc: "摹聲詞，形容馬鳴聲、風聲或落葉聲。本課是形容馬鳴聲。" },
+    { word: "清澈", desc: "澄淨透明。" },
+    { word: "辭別", desc: "辭行、告別。" },
+    { word: "橫臥", desc: "平躺。" },
+    { word: "行蹤", desc: "出現或來去的蹤跡。" },
+    { word: "重逢", desc: "再度相逢。" },
+    { word: "抒發", desc: "表達、發洩。" },
+    { word: "漂泊", desc: "比喻生活不固定，居無定所。" },
+    { word: "餘暉", desc: "夕照。" },
+    { word: "真摯", desc: "真實誠懇。" },
+    { word: "情誼", desc: "人與人之間彼此關愛的情感。" }
+  ],
+  5: [
+    { word: "靠攏", desc: "靠近、聚攏。" },
+    { word: "笨拙", desc: "反應遲鈍、不靈巧。" },
+    { word: "疲憊", desc: "極為疲勞困倦。" },
+    { word: "鈔票", desc: "紙幣。" },
+    { word: "包裹", desc: "包紮起來。包紮成件的東西。行李。" },
+    { word: "巡視", desc: "巡行視察。" },
+    { word: "甦醒", desc: "從昏迷中醒過來。" },
+    { word: "豎立", desc: "物體垂直地面立起來。" },
+    { word: "媒體", desc: "傳播資料訊息的工具。如電視、廣播、報章雜誌等。" },
+    { word: "沸騰", desc: "渲染、高漲。液體加熱至一定的溫度時，發生上湧汽化的現象。" },
+    { word: "宛如", desc: "彷彿。" }
+  ],
+  6: [
+    { word: "扶疏", desc: "枝葉繁茂，四處伸展的樣子。" },
+    { word: "鳳凰木", desc: "植物名。蘇木科鳳凰木屬，落葉中喬木。夏季盛開，花瓣五片，焰紅色，雄蕊十枚，莢果扁平、木質。主供觀賞、為極佳的行道樹及庭園樹，木材亦可供為薪炭之用。" },
+    { word: "山巔", desc: "山的頂端。" },
+    { word: "戀戀不捨", desc: "十分留戀，捨不得離開。" },
+    { word: "綠蔭", desc: "樹蔭。" },
+    { word: "紡車", desc: "舊時稱有輪可轉動的紡紗器具。" },
+    { word: "經緯", desc: "編織物品的直線與橫線。指地球上通過南北兩極的經線及與赤道平行的緯線。" },
+    { word: "纖纖", desc: "微細。" },
+    { word: "裊裊", desc: "縈迴繚繞、搖曳不定的樣子。音調悠揚不絕。" },
+    { word: "袖珍", desc: "形容小型的或小巧的。" },
+    { word: "工廠", desc: "將原料或半成品製成成品的地方。" },
+    { word: "喜孜孜", desc: "歡喜的樣子。" },
+    { word: "猶在", desc: "還存在。" },
+    { word: "光陰", desc: "時間。" },
+    { word: "飛逝", desc: "快速消逝。" },
+    { word: "雀斑", desc: "皮膚表面所生的褐色細點，是因體質及日晒所引起的局部黑色素積集現象。" }
+  ],
+  7: [
+    { word: "閣樓", desc: "建築於屋內的夾層矮樓。" },
+    { word: "匱乏", desc: "貧乏。" },
+    { word: "舊書攤", desc: "買賣過期的書報雜誌的店鋪或攤子。" },
+    { word: "冥冥之中", desc: "人無法預測、理解、控制的狀況。" },
+    { word: "帳篷", desc: "可拆卸自由搬運的組合式住宅。由支架及可折疊的皮革、布、塑膠等組合而成，除用於游牧、狩獵外，亦應用在露營登山、馬戲團等。" },
+    { word: "徒步", desc: "步行。" },
+    { word: "籌備", desc: "事先預備計畫。" },
+    { word: "埡口", desc: "狹窄的山口。" },
+    { word: "山脈", desc: "山巒相連並依一定方向起伏延伸，狀似脈絡而成系統的山群。" },
+    { word: "紮營", desc: "屯駐營寨。" },
+    { word: "窸窸窣窣", desc: "摹聲詞。摹擬斷續的細碎聲音。" },
+    { word: "背誦", desc: "熟記文句後能不看文句就能誦讀。" },
+    { word: "宇宙", desc: "時間與空間的總稱，即天地。" },
+    { word: "浩瀚", desc: "廣大繁多的樣子。水勢盛大的樣子。" }
+  ],
+  8: [
+    { word: "瞻前顧後", desc: "形容做事顧慮太多，猶豫不決。指做事謹慎周密，能夠首尾兼顧。" },
+    { word: "汲取", desc: "吸取、吸收。" },
+    { word: "富庶", desc: "物資豐富，人口眾多。" },
+    { word: "鍥而不捨", desc: "比喻有恆心、毅力，堅持到底。" },
+    { word: "嶄新", desc: "全新、極新。" },
+    { word: "一輩子", desc: "一生、一世。" },
+    { word: "全力以赴", desc: "投入全部的心力以達成目的。" },
+    { word: "構築", desc: "建造修築。" },
+    { word: "諺語", desc: "民間流傳的俗語。句形簡短、音調和諧。" },
+    { word: "羊羹", desc: "一種用豆沙、麵粉及糖等材料做成的甜食。本課所指的羊羹材料略有不同，是「紅豆、砂糖、寒天」。" },
+    { word: "公斤", desc: "量詞。計算重量的單位。公制一公斤等於一千公克。" },
+    { word: "全神貫注", desc: "將心思和精神完全集中在某事物上。" },
+    { word: "拓展", desc: "開拓發展。" }
+  ],
+  9: [
+    { word: "恭喜", desc: "向人表示慶賀之敬詞。" },
+    { word: "荊棘", desc: "比喻困難、險境。叢生而多刺的灌木。" },
+    { word: "俗話", desc: "流行通俗的語句。" },
+    { word: "窘境", desc: "艱難貧困的處境。" },
+    { word: "溝通", desc: "彼此間意見的交流或疏通。" },
+    { word: "生涯", desc: "原指人的生命有止境。今用以指所過的生活或經歷的人生。" },
+    { word: "曙光", desc: "比喻轉機的希望。清晨大地初現的亮光。" }
+  ]
+};
+
+export default function App() {
+  const canvasRef = useRef(null);
+  const [gameState, setGameState] = useState('start'); // 'start', 'playing', 'end'
+  const [finalScore, setFinalScore] = useState(0);
+  const [selectedLessons, setSelectedLessons] = useState([1]); // 預設選擇第一課
+  const [showQuestion, setShowQuestion] = useState(null);
+  const [popupFeedback, setPopupFeedback] = useState(null);
+  const [isManualPause, setIsManualPause] = useState(false); // 新增：手動暫停狀態
+
+  // 將遊戲高頻變化的狀態儲存在 useRef，避免 React 不斷重新渲染導致卡頓
+  const state = useRef({
+    hp: 10,
+    score: 0,
+    gameSpeed: 1.0, // 初始速度減半 (原為 2.0)
+    player: { x: 185, y: 160, width: 30, height: 30, vx: 0, vy: 0, color: '#fcd34d', hurtTimer: 0 },
+    platforms: [],
+    floatingTexts: [], // 用來顯示扣分飄字
+    keys: { left: false, right: false },
+    currentQuestionIndex: 0,
+    questionsPool: [],
+    currentQuestion: null,
+    isPaused: false,
+    isManualPaused: false, // 新增：物理引擎用的手動暫停標記
+  });
+
+  // 切換課數選擇
+  const toggleLesson = (lessonNum) => {
+    setSelectedLessons(prev => {
+      if (prev.includes(lessonNum)) {
+        return prev.filter(n => n !== lessonNum); // 取消選擇
+      } else {
+        return [...prev, lessonNum].sort((a, b) => a - b); // 加入選擇並排序
+      }
+    });
+  };
+
+  // 根據選擇的課數建立題庫
+  const buildQuestionPool = () => {
+    let rawWords = [];
+    selectedLessons.forEach(num => {
+      if (LESSON_DATA[num]) {
+        rawWords = rawWords.concat(LESSON_DATA[num]);
+      }
+    });
+
+    // 轉換成遊戲需要的格式 { q: 題目(解釋), a: 正確答案(語詞), wrong: [錯誤選項...] }
+    const pool = rawWords.map(item => {
+      // 從同一個池子中隨機挑選 3 個錯誤答案 (誘答)
+      let availableWrongs = rawWords.filter(w => w.word !== item.word);
+      availableWrongs.sort(() => Math.random() - 0.5); // 洗牌
+      let wrongs = availableWrongs.slice(0, 3).map(w => w.word);
+
+      // 如果選擇的詞庫太小(小於4個詞)，補一些固定的錯誤答案防呆 (通常不會發生，因為每課都有不少詞)
+      while(wrongs.length < 3) {
+        wrongs.push("干擾詞" + Math.floor(Math.random()*100));
+      }
+
+      return {
+        q: item.desc,
+        a: item.word,
+        wrong: wrongs
+      };
+    });
+
+    // 打亂題庫順序
+    pool.sort(() => Math.random() - 0.5);
+    return pool;
+  };
+
+  // 初始化遊戲設定
+  const initGame = () => {
+    const newPool = buildQuestionPool();
+    
+    state.current = {
+      hp: 10,
+      score: 0,
+      gameSpeed: 1.0, // 初始速度減半 (原為 2.0)
+      player: { x: 185, y: 160, width: 30, height: 30, vx: 0, vy: 0, color: '#fcd34d', hurtTimer: 0 },
+      platforms: [
+        // 初始安全平台 (增加初始數量，讓開局更簡單)
+        { x: 150, y: 280, width: 120, height: 18, text: "", type: 'normal', consumed: false, broken: false, color: null },
+        { x: 30, y: 400, width: 100, height: 18, text: "", type: 'normal', consumed: false, broken: false, color: null },
+        { x: 230, y: 400, width: 100, height: 18, text: "", type: 'normal', consumed: false, broken: false, color: null },
+        { x: 60, y: 520, width: 100, height: 18, text: "", type: 'normal', consumed: false, broken: false, color: null },
+        { x: 260, y: 520, width: 100, height: 18, text: "", type: 'normal', consumed: false, broken: false, color: null },
+      ],
+      floatingTexts: [],
+      keys: { left: false, right: false },
+      currentQuestionIndex: 0,
+      questionsPool: newPool,
+      currentQuestion: newPool[0],
+      isPaused: false,
+      isManualPaused: false, // 初始化重置暫停
+    };
+    setIsManualPause(false); // 重置 UI 暫停狀態
+  };
+
+  const startGame = () => {
+    if (selectedLessons.length === 0) {
+        alert("請至少選擇一課題庫！");
+        return;
+    }
+    initGame();
+    setGameState('playing');
+  };
+
+  // 處理鍵盤事件
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowLeft') state.current.keys.left = true;
+      if (e.key === 'ArrowRight') state.current.keys.right = true;
+    };
+    const handleKeyUp = (e) => {
+      if (e.key === 'ArrowLeft') state.current.keys.left = false;
+      if (e.key === 'ArrowRight') state.current.keys.right = false;
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
+  // 設定 Canvas 高解析度
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = 400 * dpr;
+      canvas.height = 600 * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+    }
+  }, []);
+
+  // 遊戲主迴圈
+  useEffect(() => {
+    if (gameState !== 'playing') return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    let animationFrameId;
+
+    const gameLoop = () => {
+      updatePhysics();
+      draw(ctx);
+      animationFrameId = requestAnimationFrame(gameLoop);
+    };
+
+    gameLoop();
+
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [gameState]);
+
+  // 切換手動暫停
+  const togglePause = () => {
+    if (gameState !== 'playing' || showQuestion) return; // 答題中不允許暫停
+    const nextPauseState = !isManualPause;
+    setIsManualPause(nextPauseState);
+    state.current.isManualPaused = nextPauseState;
+  };
+
+  // 處理玩家選擇答案
+  const handleAnswer = (selectedOption) => {
+    const s = state.current;
+    if (selectedOption === showQuestion.a) {
+      s.score += 5;
+      s.hp = Math.min(10, s.hp + 1); // 答對稍微補血
+      setPopupFeedback({ type: 'correct', text: '答對了！ +5分' });
+    } else {
+      s.score -= 3;
+      setPopupFeedback({ type: 'wrong', text: `答錯了！ -3分 (正確: ${showQuestion.a})` });
+    }
+    
+    setTimeout(() => {
+      setPopupFeedback(null);
+      setShowQuestion(null);
+      
+      // 準備下一題
+      s.currentQuestionIndex++;
+      if (s.currentQuestionIndex >= s.questionsPool.length) {
+        s.currentQuestionIndex = 0; 
+        s.gameSpeed = Math.min(2.5, s.gameSpeed + 0.15); // 稍微加速
+      }
+      s.currentQuestion = s.questionsPool[s.currentQuestionIndex];
+      
+      s.isPaused = false; // 恢復遊戲物理
+    }, 1500);
+  };
+
+  // 更新物理邏輯與遊戲狀態
+  const updatePhysics = () => {
+    const s = state.current;
+    if (s.isPaused || s.isManualPaused) return; // 暫停時不更新物理
+
+    const canvasWidth = 400;
+    const canvasHeight = 600;
+    const topLimit = 80; // 頂部碰撞界線恢復
+
+    // --- 1. 玩家水平移動 ---
+    if (s.keys.left) s.player.vx -= 1;
+    else if (s.keys.right) s.player.vx += 1;
+    else s.player.vx *= 0.8; // 摩擦力
+
+    // 限制最高水平速度
+    if (s.player.vx > 6) s.player.vx = 6;
+    if (s.player.vx < -6) s.player.vx = -6;
+
+    s.player.x += s.player.vx;
+
+    // 碰壁處理
+    if (s.player.x < 0) {
+      s.player.x = 0;
+      s.player.vx = 0;
+    } else if (s.player.x + s.player.width > canvasWidth) {
+      s.player.x = canvasWidth - s.player.width;
+      s.player.vx = 0;
+    }
+
+    // --- 2. 玩家垂直移動 (重力) ---
+    s.player.vy += 0.4; // 重力加速度
+    if (s.player.vy > 12) s.player.vy = 12; // 終端速度
+    s.player.y += s.player.vy;
+
+    // --- 3. 平台移動與生成 ---
+    let lowestY = 0;
+    s.platforms.forEach(p => {
+      p.y -= s.gameSpeed;
+      if (p.y > lowestY) lowestY = p.y;
+      
+      // 暫時樓層板倒數邏輯
+      if (p.type === 'temporary' && p.activated && !p.broken) {
+        p.tempTimer--;
+        if (p.tempTimer <= 0) {
+          p.broken = true; // 時間到，板子碎裂
+        }
+      }
+    });
+
+    // 飄字動畫更新
+    for (let i = s.floatingTexts.length - 1; i >= 0; i--) {
+      s.floatingTexts[i].y -= 1;
+      s.floatingTexts[i].life--;
+      if (s.floatingTexts[i].life <= 0) {
+        s.floatingTexts.splice(i, 1);
+      }
+    }
+
+    // 移除超出畫面上方的平台
+    s.platforms = s.platforms.filter(p => p.y > 0);
+
+    // 當最底部的平台高度小於設定值時，生成新平台 (改為 75，讓板子更密集)
+    if (lowestY < canvasHeight - 75) {
+      // 75% 機率在同一層產生兩個板子，大幅降低難度
+      const numPlatforms = Math.random() < 0.75 ? 2 : 1; 
+
+      for (let i = 0; i < numPlatforms; i++) {
+        const typeRoll = Math.random();
+        let pType = 'normal';
+        
+        // 隨機決定板子類型，並稍微降低陷阱機率：30%知識節點、20%暫時板、10%尖刺板、40%一般板
+        if (typeRoll < 0.30) pType = 'node';
+        else if (typeRoll < 0.50) pType = 'temporary';
+        else if (typeRoll < 0.60) pType = 'spike';
+
+        let pWidth, px;
+        if (numPlatforms === 2) {
+            // 如果有兩個板子，一個放左半部，一個放右半部避免重疊
+            pWidth = 80 + Math.random() * 30; // 寬度 80~110
+            if (i === 0) {
+                px = Math.random() * (190 - pWidth); // 左半部
+            } else {
+                px = 210 + Math.random() * (190 - pWidth); // 右半部
+            }
+        } else {
+            // 如果只有單個板子，讓它稍微寬一點更容易踩
+            pWidth = 100 + Math.random() * 40; // 寬度 100~140
+            px = Math.random() * (canvasWidth - pWidth);
+        }
+
+        s.platforms.push({
+          x: px,
+          y: canvasHeight + 20,
+          width: pWidth,
+          height: 18,
+          text: pType === 'node' ? "知識節點" : "",
+          type: pType,
+          consumed: false,
+          broken: false,
+          activated: false,   // 暫時板是否被踩到
+          tempTimer: 120,     // 暫時板壽命: 2秒 (120幀)
+          color: pType === 'node' ? '#f59e0b' : null
+        });
+      }
+    }
+
+    // --- 4. 碰撞偵測 (只在角色往下掉時判定) ---
+    if (s.player.vy > 0) {
+      for (let p of s.platforms) {
+        if (p.broken) continue;
+
+        if (s.player.x + s.player.width > p.x &&
+            s.player.x < p.x + p.width &&
+            s.player.y + s.player.height >= p.y &&
+            s.player.y + s.player.height <= p.y + s.player.vy + 3) {
+            
+            // 尖刺板特殊判定：扣分、稍微扣血並彈開
+            if (p.type === 'spike') {
+               if (s.player.hurtTimer <= 0) {
+                   s.score -= 2;
+                   s.hp -= 0.5; // 稍微扣血
+                   s.player.hurtTimer = 30; // 無敵時間
+                   s.player.vy = -5; // 往上彈開
+                   s.player.y = p.y - s.player.height;
+                   // 加入飄字
+                   s.floatingTexts.push({ x: s.player.x + 10, y: s.player.y, text: "-2", life: 40, color: '#ef4444' });
+               } else {
+                   // 若在無敵時間內碰到尖刺，一樣會彈開避免卡住
+                   s.player.vy = -5;
+                   s.player.y = p.y - s.player.height;
+               }
+               break;
+            }
+
+            // 成功降落在一般、節點或暫時平台上
+            s.player.y = p.y - s.player.height;
+            s.player.vy = -s.gameSpeed;
+            
+            // 判斷問答邏輯
+            if (p.type === 'node' && !p.consumed) {
+              p.consumed = true;
+              p.text = "✔️"; 
+              p.color = '#22c55e'; 
+              
+              s.isPaused = true; // 暫停遊戲物理
+              
+              const currentQ = s.currentQuestion;
+              const options = [currentQ.a, ...currentQ.wrong].sort(() => Math.random() - 0.5);
+              
+              setShowQuestion({
+                q: currentQ.q,
+                a: currentQ.a,
+                options: options
+              });
+            }
+            // 觸發暫時樓層板
+            else if (p.type === 'temporary' && !p.activated) {
+              p.activated = true;
+            }
+
+            break; 
+        }
+      }
+    }
+
+    // --- 5. 傷害與死亡判定 ---
+    // 碰到上方尖刺
+    if (s.player.y < topLimit) {
+      s.player.y = topLimit;
+      s.player.vy = 2; // 被往下推
+      s.hp -= 0.2; // 持續扣血
+      s.player.hurtTimer = 10;
+    }
+
+    // 掉出畫面下方
+    if (s.player.y > canvasHeight) {
+      s.hp = 0;
+    }
+
+    // 遊戲結束
+    if (s.hp <= 0) {
+      setFinalScore(s.score);
+      setGameState('end');
+    }
+  };
+
+  // 文字自動換行繪製函式
+  const wrapText = (ctx, text, x, y, maxWidth, lineHeight) => {
+    const chars = text.split('');
+    let line = '';
+    let lines = [];
+    
+    for(let n = 0; n < chars.length; n++) {
+      let testLine = line + chars[n];
+      let metrics = ctx.measureText(testLine);
+      let testWidth = metrics.width;
+      if (testWidth > maxWidth && n > 0) {
+        lines.push(line);
+        line = chars[n];
+      }
+      else {
+        line = testLine;
+      }
+    }
+    lines.push(line);
+    
+    // 計算總高度以進行垂直置中
+    let totalHeight = lines.length * lineHeight;
+    let startY = y - totalHeight / 2 + (lineHeight / 2);
+    
+    for(let i=0; i<lines.length; i++) {
+      ctx.fillText(lines[i], x, startY + (i * lineHeight));
+    }
+  };
+
+  // 繪製遊戲畫面
+  const draw = (ctx) => {
+    const s = state.current;
+    const canvasWidth = 400;
+    const canvasHeight = 600;
+
+    // 1. 清除背景
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+    // 2. 畫頂部提示區
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(0, 0, canvasWidth, 60);
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 18px "Microsoft JhengHei", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText("往下跳躍尋找【知識節點】！", canvasWidth / 2, 30);
+
+    // 3. 畫頂部尖刺
+    ctx.fillStyle = '#94a3b8';
+    for (let i = 0; i < canvasWidth; i += 20) {
+      ctx.beginPath();
+      ctx.moveTo(i, 60);
+      ctx.lineTo(i + 10, 80);
+      ctx.lineTo(i + 20, 60);
+      ctx.fill();
+    }
+
+    // 4. 畫平台
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    s.platforms.forEach(p => {
+      if (p.broken) return;
+      
+      // 暫時板閃爍效果 (每隔 10 幀切換透明度)
+      if (p.type === 'temporary' && p.activated) {
+        if (Math.floor(p.tempTimer / 10) % 2 === 0) {
+          ctx.globalAlpha = 0.4;
+        }
+      }
+
+      // 決定板子顏色
+      ctx.fillStyle = p.color ? p.color : (
+        p.type === 'temporary' ? '#38bdf8' : // 淺藍色 (暫時板)
+        p.type === 'spike' ? '#64748b' :     // 鐵灰色 (尖刺板底座)
+        '#8b5cf6'                            // 紫色 (一般板)
+      );
+
+      ctx.beginPath();
+      if(ctx.roundRect) {
+        ctx.roundRect(p.x, p.y, p.width, p.height, 6);
+      } else {
+        ctx.fillRect(p.x, p.y, p.width, p.height);
+      }
+      ctx.fill();
+      ctx.globalAlpha = 1.0; // 恢復透明度
+
+      // 畫尖刺板上的刺
+      if (p.type === 'spike') {
+        ctx.fillStyle = '#ef4444'; // 紅色尖刺
+        for (let i = 4; i < p.width - 4; i += 14) {
+          ctx.beginPath();
+          ctx.moveTo(p.x + i, p.y);
+          ctx.lineTo(p.x + i + 7, p.y - 12);
+          ctx.lineTo(p.x + i + 14, p.y);
+          ctx.fill();
+        }
+      }
+      
+      if (p.text) {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 16px "Microsoft JhengHei", sans-serif';
+        ctx.fillText(p.text, p.x + p.width / 2, p.y + p.height / 2);
+      }
+    });
+
+    // 5. 畫玩家角色
+    if (s.player.hurtTimer > 0) {
+      ctx.fillStyle = s.player.hurtTimer % 10 < 5 ? '#ef4444' : s.player.color;
+      s.player.hurtTimer--;
+    } else {
+      ctx.fillStyle = s.player.color;
+    }
+    
+    ctx.beginPath();
+    if(ctx.roundRect) {
+        ctx.roundRect(s.player.x, s.player.y, s.player.width, s.player.height, 8);
+    } else {
+        ctx.fillRect(s.player.x, s.player.y, s.player.width, s.player.height);
+    }
+    ctx.fill();
+
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.arc(s.player.x + 8, s.player.y + 10, 3, 0, Math.PI * 2);
+    ctx.arc(s.player.x + 22, s.player.y + 10, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 畫飄浮文字 (如扣分提示)
+    s.floatingTexts.forEach(ft => {
+      ctx.fillStyle = ft.color;
+      ctx.font = 'bold 24px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(ft.text, ft.x, ft.y);
+    });
+
+    // 6. 畫血條與分數 (位置下移避免擋到尖刺)
+    const uiY = 90;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(10, uiY, 100, 12);
+    ctx.fillStyle = s.hp > 3 ? '#22c55e' : '#ef4444';
+    ctx.fillRect(10, uiY, (Math.max(0, s.hp) / 10) * 100, 12);
+    
+    ctx.fillStyle = '#fcd34d';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(`分數: ${s.score}`, canvasWidth - 10, uiY + 8);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-2 sm:p-4 touch-none select-none">
+      <div className="relative w-full max-w-[400px] aspect-[2/3] bg-black rounded-xl overflow-hidden shadow-2xl shadow-indigo-500/20 ring-4 ring-slate-700">
+        
+        {/* Canvas 畫布 */}
+        <canvas 
+          ref={canvasRef}
+          style={{ width: '100%', height: '100%', display: 'block' }}
+        />
+
+        {/* 手機觸控隱形按鈕區 */}
+        {gameState === 'playing' && !showQuestion && !isManualPause && (
+          <div className="absolute inset-0 z-10 flex pointer-events-auto">
+            <div 
+              className="w-1/2 h-full opacity-0 hover:bg-white/5 active:bg-white/10 transition-colors"
+              onTouchStart={(e) => { e.preventDefault(); state.current.keys.left = true; }}
+              onTouchEnd={(e) => { e.preventDefault(); state.current.keys.left = false; }}
+              onMouseDown={() => state.current.keys.left = true}
+              onMouseUp={() => state.current.keys.left = false}
+              onMouseLeave={() => state.current.keys.left = false}
+            />
+            <div 
+              className="w-1/2 h-full opacity-0 hover:bg-white/5 active:bg-white/10 transition-colors"
+              onTouchStart={(e) => { e.preventDefault(); state.current.keys.right = true; }}
+              onTouchEnd={(e) => { e.preventDefault(); state.current.keys.right = false; }}
+              onMouseDown={() => state.current.keys.right = true}
+              onMouseUp={() => state.current.keys.right = false}
+              onMouseLeave={() => state.current.keys.right = false}
+            />
+          </div>
+        )}
+
+        {/* 底部實體操作按鈕區 (平板/手機適用) */}
+        {gameState === 'playing' && !showQuestion && (
+          <div className="absolute bottom-6 left-0 w-full flex justify-between items-center px-6 z-20 pointer-events-none">
+            <button 
+              className="pointer-events-auto bg-slate-800/70 hover:bg-slate-700/80 active:bg-slate-600 text-white p-4 rounded-full backdrop-blur-sm transition-colors shadow-lg shadow-black/40 border border-slate-500/50"
+              onMouseDown={() => state.current.keys.left = true}
+              onMouseUp={() => state.current.keys.left = false}
+              onMouseLeave={() => state.current.keys.left = false}
+              onTouchStart={(e) => { e.preventDefault(); state.current.keys.left = true; }}
+              onTouchEnd={(e) => { e.preventDefault(); state.current.keys.left = false; }}
+            >
+              <ArrowLeft size={32} />
+            </button>
+            
+            <button 
+              className={`pointer-events-auto text-white p-4 rounded-full backdrop-blur-sm transition-colors shadow-lg shadow-black/40 border ${isManualPause ? 'bg-emerald-600/80 border-emerald-400/50 hover:bg-emerald-500/90' : 'bg-indigo-600/80 border-indigo-400/50 hover:bg-indigo-500/90'}`}
+              onClick={togglePause}
+            >
+              {isManualPause ? <Play size={32} /> : <Pause size={32} />}
+            </button>
+
+            <button 
+              className="pointer-events-auto bg-slate-800/70 hover:bg-slate-700/80 active:bg-slate-600 text-white p-4 rounded-full backdrop-blur-sm transition-colors shadow-lg shadow-black/40 border border-slate-500/50"
+              onMouseDown={() => state.current.keys.right = true}
+              onMouseUp={() => state.current.keys.right = false}
+              onMouseLeave={() => state.current.keys.right = false}
+              onTouchStart={(e) => { e.preventDefault(); state.current.keys.right = true; }}
+              onTouchEnd={(e) => { e.preventDefault(); state.current.keys.right = false; }}
+            >
+              <ArrowRight size={32} />
+            </button>
+          </div>
+        )}
+
+        {/* 手動暫停時的遮罩畫面 */}
+        {isManualPause && !showQuestion && (
+          <div className="absolute inset-0 z-15 bg-slate-900/60 flex flex-col items-center justify-center backdrop-blur-sm pointer-events-none">
+            <h2 className="text-5xl font-black text-white tracking-widest drop-shadow-lg mb-4 animate-pulse">遊戲暫停</h2>
+            <p className="text-slate-200 text-lg font-bold">點擊下方播放鍵繼續</p>
+          </div>
+        )}
+
+        {/* 問答彈出視窗 */}
+        {showQuestion && (
+          <div className="absolute inset-0 z-30 bg-slate-900/90 flex flex-col items-center justify-center p-4">
+            <div className="bg-slate-800 border-2 border-indigo-500 rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-200">
+              <h3 className="text-xl font-black text-indigo-400 mb-4 text-center">語詞解釋</h3>
+              <p className="text-slate-100 text-lg font-medium mb-6 leading-relaxed text-center">
+                {showQuestion.q}
+              </p>
+              
+              {!popupFeedback ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {showQuestion.options.map((opt, idx) => (
+                    <button 
+                      key={idx}
+                      onClick={() => handleAnswer(opt)}
+                      className="bg-slate-700 hover:bg-indigo-600 text-slate-100 py-3 px-2 rounded-lg font-bold transition-colors shadow-md active:scale-95 text-sm sm:text-base break-words"
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className={`text-2xl font-black text-center py-6 animate-pulse ${popupFeedback.type === 'correct' ? 'text-green-400' : 'text-red-400'}`}>
+                  {popupFeedback.text}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 首頁開始畫面 - 課數選擇 */}
+        {gameState === 'start' && (
+          <div className="absolute inset-0 z-20 bg-slate-900 flex flex-col items-center justify-center p-6 text-center overflow-y-auto">
+            <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 mb-2 drop-shadow-md tracking-wider">
+              六下一到九課語詞解釋
+            </h1>
+            <p className="text-slate-400 text-sm mb-6">點擊左右兩側移動，找出解釋對應的語詞</p>
+            
+            <div className="w-full bg-slate-800 p-4 rounded-xl mb-6 border border-slate-700 shadow-inner">
+              <p className="text-slate-200 font-bold mb-3 flex items-center justify-center">
+                <List size={18} className="mr-2 text-indigo-400"/> 請選擇測驗課數 (可複選)
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                  <button
+                    key={num}
+                    onClick={() => toggleLesson(num)}
+                    className={`py-2 rounded-lg font-bold transition-all ${
+                      selectedLessons.includes(num)
+                        ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30 ring-2 ring-indigo-300'
+                        : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                    }`}
+                  >
+                    第 {num} 課
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button 
+              onClick={startGame}
+              disabled={selectedLessons.length === 0}
+              className={`flex items-center px-10 py-3 font-bold rounded-full text-lg transition-transform shadow-lg ${
+                  selectedLessons.length > 0 
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white active:scale-95 shadow-emerald-600/50' 
+                  : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+              }`}
+            >
+              <Play className="mr-2" /> 進入遊戲
+            </button>
+          </div>
+        )}
+
+        {/* 遊戲結束畫面 */}
+        {gameState === 'end' && (
+          <div className="absolute inset-0 z-20 bg-slate-900/95 flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-300">
+            <h2 className="text-4xl font-black text-red-500 mb-2 drop-shadow-md">測驗結束</h2>
+            
+            <div className="bg-slate-800 rounded-2xl p-6 mb-8 mt-4 border border-slate-700 w-full max-w-xs shadow-xl">
+              <p className="text-slate-400 text-sm mb-1">最終分數</p>
+              <p className="text-6xl font-black text-yellow-400">{finalScore}</p>
+            </div>
+
+            <div className="flex flex-col space-y-3 w-full max-w-[250px]">
+                <button 
+                onClick={startGame}
+                className="flex items-center justify-center px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-full transition-transform active:scale-95 shadow-lg shadow-emerald-600/50"
+                >
+                <RotateCcw className="mr-2" size={20} /> 再試一次
+                </button>
+
+                <button 
+                onClick={() => setGameState('start')}
+                className="flex items-center justify-center px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-full transition-transform active:scale-95 shadow-lg shadow-indigo-600/50"
+                >
+                <List className="mr-2" size={20} /> 重新選擇語詞課數
+                </button>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
