@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>康軒六下語詞打磚塊</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Press+Start+2P&display=swap');
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            touch-action: none;
+            background-color: #111827;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .retro-font {
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        .neon-text {
+            text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #ff00de, 0 0 30px #ff00de;
+        }
+        
+        canvas {
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+            background: radial-gradient(circle at center, #1a1a2e 0%, #000000 100%);
+        }
+
+        .modal-enter {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        .modal-enter-active {
+            opacity: 1;
+            transform: scale(1);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        
+        .settings-scroll::-webkit-scrollbar { width: 8px; }
+        .settings-scroll::-webkit-scrollbar-track { background: #1f2937; border-radius: 4px; }
+        .settings-scroll::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+
+        button {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+        }
+
+        .powerup-icon {
+            animation: bounce 1s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex items-center justify-center text-white">
+
+    <!-- Game Container -->
+    <div class="relative w-full max-w-4xl h-full md:h-auto md:aspect-[4/3] bg-gray-900 rounded-xl overflow-hidden shadow-2xl border-4 border-gray-700 flex flex-col">
+        
+        <!-- HEADER / SCOREBOARD -->
+        <div class="h-12 bg-gray-800 flex justify-between items-center px-4 z-10 border-b border-gray-600 shrink-0">
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-heart text-red-500"></i>
+                    <span id="livesDisplay" class="retro-font text-yellow-400 text-sm">3</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-blue-300">LEVEL</span>
+                    <span id="levelDisplay" class="retro-font text-blue-400 text-sm">1</span>
+                </div>
+            </div>
+            
+            <div class="retro-font text-cyan-400 text-sm tracking-wider hidden sm:block">VOCAB BREAKOUT</div>
+            
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-400">SCORE</span>
+                <span id="scoreDisplay" class="retro-font text-green-400 text-sm">000</span>
+            </div>
+        </div>
+
+        <!-- CANVAS LAYER -->
+        <div class="relative flex-1 w-full bg-black overflow-hidden">
+            <canvas id="gameCanvas" class="block w-full h-full"></canvas>
+            
+            <!-- Message Overlay -->
+            <div id="msgOverlay" class="hidden absolute top-10 left-1/2 transform -translate-x-1/2 bg-black/70 px-6 py-2 rounded-full border border-white/20 z-20 pointer-events-none">
+                <span id="msgText" class="retro-font text-yellow-400 text-sm">LEVEL UP!</span>
+            </div>
+
+            <!-- START MENU SCREEN -->
+            <div id="startScreen" class="absolute inset-0 bg-gray-900/95 z-30 flex flex-col items-center justify-center p-4 space-y-4">
+                <h1 class="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500 retro-font text-center leading-relaxed mb-2">
+                    康軒國語六下<br>語詞打磚塊
+                </h1>
+                
+                <div class="bg-gray-800 p-4 rounded-lg border border-gray-600 w-full max-w-2xl shadow-lg flex flex-col max-h-[60vh] overflow-hidden">
+                    <h2 class="text-lg font-bold text-cyan-300 mb-2 border-b border-gray-700 pb-2 flex justify-between items-center shrink-0">
+                        <span><i class="fas fa-book-open mr-2"></i>課別設定 (點選啟用)</span>
+                        <button id="selectAllBtn" class="text-xs bg-gray-700 px-3 py-1 rounded hover:bg-gray-600 text-white border border-gray-500 transition-colors">切換全選</button>
+                    </h2>
+                    
+                    <div class="overflow-y-auto settings-scroll pr-2">
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 w-full">
+                            <label class="cursor-pointer relative group flex h-full">
+                                <input type="checkbox" name="lessonType" value="lesson_1" checked class="peer sr-only">
+                                <div class="w-full p-2 rounded border border-gray-600 bg-gray-700 text-gray-300 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-400 transition-all text-center flex flex-col items-center justify-center shadow-sm hover:bg-gray-600">
+                                    <span class="font-bold text-sm md:text-base">第一課</span>
+                                    <span class="text-xs mt-0.5 opacity-80">馬達加斯加，出發！</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer relative group flex h-full">
+                                <input type="checkbox" name="lessonType" value="lesson_2" class="peer sr-only">
+                                <div class="w-full p-2 rounded border border-gray-600 bg-gray-700 text-gray-300 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-400 transition-all text-center flex flex-col items-center justify-center shadow-sm hover:bg-gray-600">
+                                    <span class="font-bold text-sm md:text-base">第二課</span>
+                                    <span class="text-xs mt-0.5 opacity-80">沉睡的天空之城</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer relative group flex h-full">
+                                <input type="checkbox" name="lessonType" value="lesson_3" class="peer sr-only">
+                                <div class="w-full p-2 rounded border border-gray-600 bg-gray-700 text-gray-300 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-400 transition-all text-center flex flex-col items-center justify-center shadow-sm hover:bg-gray-600">
+                                    <span class="font-bold text-sm md:text-base">第三課</span>
+                                    <span class="text-xs mt-0.5 opacity-80">走進太陽之城</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer relative group flex h-full">
+                                <input type="checkbox" name="lessonType" value="lesson_4" class="peer sr-only">
+                                <div class="w-full p-2 rounded border border-gray-600 bg-gray-700 text-gray-300 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-400 transition-all text-center flex flex-col items-center justify-center shadow-sm hover:bg-gray-600">
+                                    <span class="font-bold text-sm md:text-base">第四課</span>
+                                    <span class="text-xs mt-0.5 opacity-80">送友人</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer relative group flex h-full">
+                                <input type="checkbox" name="lessonType" value="lesson_5" class="peer sr-only">
+                                <div class="w-full p-2 rounded border border-gray-600 bg-gray-700 text-gray-300 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-400 transition-all text-center flex flex-col items-center justify-center shadow-sm hover:bg-gray-600">
+                                    <span class="font-bold text-sm md:text-base">第五課</span>
+                                    <span class="text-xs mt-0.5 opacity-80">蚵鄉風情</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer relative group flex h-full">
+                                <input type="checkbox" name="lessonType" value="lesson_6" class="peer sr-only">
+                                <div class="w-full p-2 rounded border border-gray-600 bg-gray-700 text-gray-300 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-400 transition-all text-center flex flex-col items-center justify-center shadow-sm hover:bg-gray-600">
+                                    <span class="font-bold text-sm md:text-base">第六課</span>
+                                    <span class="text-xs mt-0.5 opacity-80">童年˙夏日˙棉花糖</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer relative group flex h-full">
+                                <input type="checkbox" name="lessonType" value="lesson_7" class="peer sr-only">
+                                <div class="w-full p-2 rounded border border-gray-600 bg-gray-700 text-gray-300 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-400 transition-all text-center flex flex-col items-center justify-center shadow-sm hover:bg-gray-600">
+                                    <span class="font-bold text-sm md:text-base">第七課</span>
+                                    <span class="text-xs mt-0.5 opacity-80">我的少年夢</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer relative group flex h-full">
+                                <input type="checkbox" name="lessonType" value="lesson_8" class="peer sr-only">
+                                <div class="w-full p-2 rounded border border-gray-600 bg-gray-700 text-gray-300 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-400 transition-all text-center flex flex-col items-center justify-center shadow-sm hover:bg-gray-600">
+                                    <span class="font-bold text-sm md:text-base">第八課</span>
+                                    <span class="text-xs mt-0.5 opacity-80">如何張開追夢的翅膀</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer relative group flex h-full">
+                                <input type="checkbox" name="lessonType" value="lesson_9" class="peer sr-only">
+                                <div class="w-full p-2 rounded border border-gray-600 bg-gray-700 text-gray-300 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-400 transition-all text-center flex flex-col items-center justify-center shadow-sm hover:bg-gray-600">
+                                    <span class="font-bold text-sm md:text-base">第九課</span>
+                                    <span class="text-xs mt-0.5 opacity-80">成為人生的開拓者</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="errorMsg" class="text-red-400 text-xs text-center mt-3 hidden bg-red-900/50 p-1 rounded">請至少選擇一課</div>
+                </div>
+
+                <button id="startBtn" class="group relative px-10 py-3 bg-blue-600 hover:bg-blue-500 rounded-full font-bold text-lg shadow-[0_0_15px_rgba(59,130,246,0.5)] transition-all transform hover:scale-105 active:scale-95 shrink-0 mt-2">
+                    <span class="retro-font">START GAME</span>
+                    <div class="absolute inset-0 rounded-full bg-white opacity-0 group-hover:opacity-20 transition-opacity"></div>
+                </button>
+            </div>
+
+            <!-- VOCAB QUESTION MODAL -->
+            <div id="vocabModal" class="hidden absolute inset-0 bg-black/80 z-40 flex items-center justify-center p-4 backdrop-blur-sm">
+                <div class="bg-gray-800 border-2 border-yellow-500 rounded-xl p-6 w-full max-w-lg shadow-2xl transform transition-all scale-100 relative">
+                    <div class="absolute -top-3 -left-3 bg-yellow-500 text-black font-bold p-1 px-3 rounded shadow-lg text-sm transform -rotate-6">知識節點!</div>
+                    <div class="text-center space-y-4">
+                        <p class="text-gray-400 text-sm">回答正確: +5分 & 消磚<br>回答錯誤: <span class="text-red-400">-3分 & 磚塊+5</span></p>
+                        <div class="bg-gray-900 p-6 rounded-lg border border-gray-700 shadow-inner max-h-48 overflow-y-auto settings-scroll">
+                            <span id="questionText" class="text-lg md:text-xl font-bold text-white tracking-wide leading-relaxed">題目載入中...</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 mt-4" id="answerOptions"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GAME OVER / WIN MODAL -->
+            <div id="endScreen" class="hidden absolute inset-0 bg-black/90 z-50 flex flex-col items-center justify-center text-center p-6">
+                <h2 id="endTitle" class="text-4xl font-bold retro-font mb-4 text-red-500 neon-text">GAME OVER</h2>
+                <p class="text-gray-300 mb-6 text-xl">最終得分: <span id="finalScore" class="text-yellow-400 font-bold">0</span></p>
+                <button id="restartBtn" class="px-6 py-2 bg-white text-black font-bold rounded hover:bg-gray-200 transition retro-font">MAIN MENU</button>
+            </div>
+            
+             <!-- PAUSE OVERLAY -->
+            <div id="pauseOverlay" class="hidden absolute inset-0 bg-black/60 z-35 flex items-center justify-center backdrop-blur-sm">
+                <h2 class="text-4xl font-bold retro-font text-white tracking-widest animate-pulse">PAUSED</h2>
+            </div>
+        </div>
+
+        <!-- FOOTER CONTROLS -->
+        <div id="gameFooter" class="hidden h-24 bg-gray-800 border-t border-gray-600 shrink-0 flex items-center justify-between px-3 py-2 z-10 gap-3">
+            <button id="btnLeft" class="h-full flex-1 bg-gray-700/80 hover:bg-gray-600 active:bg-blue-600 rounded-xl border-2 border-gray-600 shadow-lg active:shadow-inner transition-all flex items-center justify-center group touch-manipulation">
+                <i class="fas fa-arrow-left text-3xl text-cyan-400 group-active:text-white pointer-events-none"></i>
+            </button>
+            <div class="flex flex-col h-full gap-2 w-20 shrink-0">
+                <button id="pauseBtn" class="flex-1 bg-yellow-900/40 border border-yellow-600/50 hover:bg-yellow-900/60 rounded-lg flex items-center justify-center active:scale-95 transition">
+                    <i id="pauseIcon" class="fas fa-pause text-yellow-400 text-lg"></i>
+                </button>
+                <button id="menuBtn" class="flex-1 bg-red-900/40 border border-red-600/50 hover:bg-red-900/60 rounded-lg flex items-center justify-center active:scale-95 transition">
+                    <i class="fas fa-home text-red-400 text-lg"></i>
+                </button>
+            </div>
+            <button id="btnRight" class="h-full flex-1 bg-gray-700/80 hover:bg-gray-600 active:bg-blue-600 rounded-xl border-2 border-gray-600 shadow-lg active:shadow-inner transition-all flex items-center justify-center group touch-manipulation">
+                <i class="fas fa-arrow-right text-3xl text-cyan-400 group-active:text-white pointer-events-none"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /** 康軒國語六下 語詞與解釋資料 */
+        const vocabularyData = {
+            'lesson_1': [
+                { word: '島嶼', def: '四周被水圍繞的小面積陸地。' },
+                { word: '獨立', def: '不倚靠他人而能自立；獨自站立；指國家有完全自主權，不受外來力量干涉。' },
+                { word: '心馳神往', def: '心神專注、嚮往於事物上。' },
+                { word: '輾轉', def: '間接的；翻來覆去。' },
+                { word: '櫛比鱗次', def: '比喻緊密的連接排列。' },
+                { word: '錢幣', def: '錢。多指金屬貨幣。' },
+                { word: '村莊', def: '鄉民聚集居住的地方。' },
+                { word: '瀕危', def: '接近危險的境地。多指人病危將死，或物種即將滅絕。' },
+                { word: '撒旦', def: '基督教稱魔鬼為「撒旦」，原指反抗上帝而誘人犯罪的惡魔，他是善的仇敵，是上帝和人類的敵對者。' },
+                { word: '掠食者', def: '捕食他種生物而藉以生存的動物。' },
+                { word: '覓食', def: '尋找食物。' },
+                { word: '紳士', def: '舊時多指地主或退職的官員。現泛指地方上有聲望的人或是舉止斯文有禮的人。' },
+                { word: '迷濛', def: '形容景物朦朧不清。' },
+                { word: '高亢', def: '態度高傲亢直或聲調、情緒高昂激動。' },
+                { word: '凌駕', def: '超越、勝過。' },
+                { word: '岌岌可危', def: '形容非常危險。' }
+            ],
+            'lesson_2': [
+                { word: '遺址', def: '古代人類活動的地方。由此挖掘出來的古物和化石可供考古學家研究人類發展的歷史。' },
+                { word: '屏息', def: '抑止呼吸，止住聲息。' },
+                { word: '秘魯', def: '國名。位於南美洲西部。' },
+                { word: '璀璨', def: '光采鮮明的樣子。' },
+                { word: '愜意', def: '滿意、舒適。' },
+                { word: '振奮', def: '振作奮發。' },
+                { word: '氛圍', def: '周圍的氣氛和情調。' },
+                { word: '井然有序', def: '條理分明而有秩序。' },
+                { word: '澎湃', def: '引申有聲勢浩大，氣勢壯闊之意；波濤互相撞擊的聲音或氣勢。' },
+                { word: '堆砌', def: '將物體層疊累積；在文章中使用大量華麗而與內容無關的詞藻。' },
+                { word: '梯田', def: '山坡上呈階梯狀的田地。階與階之間以矮埂相隔，有利於耕作及蓄水。' },
+                { word: '玄妙', def: '深奧微妙。' },
+                { word: '拴日石', def: '馬丘比丘景點之一，是一塊巨大石雕。印加人相信能拴住太陽，使其依時序繞行天空。' },
+                { word: '興味盎然', def: '興趣很高昂的樣子。' },
+                { word: '回眸', def: '回過頭看。' }
+            ],
+            'lesson_3': [
+                { word: '佛萊堡', def: '位於德國西南部，是一座著名的生態城市。' },
+                { word: '瑞士', def: '國名，位於歐洲中部，為一永久中立國。' },
+                { word: '名列前茅', def: '前茅，古代行軍打仗時，前行兵士所拿作為旗幟的茅草。比喻名次排在前面。' },
+                { word: '唯一', def: '獨一無二。' },
+                { word: '爆發', def: '事情突然發生或被揭露；情緒突然而猛烈的發作；火山內部岩漿突然衝破地殼，向四方迸出。' },
+                { word: '供應', def: '供給需要的錢財或物品。' },
+                { word: '政府', def: '國家統治機關的總稱。凡具有制定法律及執行法律之權力的政治組織。' },
+                { word: '收購', def: '收買購置。' },
+                { word: '騎士', def: '騎機車的人。在本課是指騎自行車的人。' },
+                { word: '駕駛', def: '操控車船或飛機的人；操控車船、飛機等交通工具。' },
+                { word: '冰箱', def: '一種冷藏食物的電器用品。以降低溫度來製冰或保存食品，使之保鮮不敗壞。' },
+                { word: '嬉戲', def: '遊戲玩耍。' },
+                { word: '乒乓球', def: '桌球的別名。為圓形，以賽璐珞或類似的塑料製成，呈白色或黃色，無光澤。' },
+                { word: '輕鬆自在', def: '愉快適意。' },
+                { word: '護欄', def: '設置於路邊、河岸等地的鐵柵或水泥柱等實物體。目的在防止超出範圍，發生危險。' }
+            ],
+            'lesson_4': [
+                { word: '蕭蕭', def: '摹聲詞，形容馬鳴聲、風聲或落葉聲。' },
+                { word: '清澈', def: '澄淨透明。' },
+                { word: '辭別', def: '辭行、告別。' },
+                { word: '橫臥', def: '平躺。' },
+                { word: '行蹤', def: '出現或來去的蹤跡。' },
+                { word: '重逢', def: '再度相逢。' },
+                { word: '抒發', def: '表達、發洩。' },
+                { word: '漂泊', def: '比喻生活不固定，居無定所。' },
+                { word: '餘暉', def: '夕照。' },
+                { word: '真摯', def: '真實誠懇。' },
+                { word: '情誼', def: '人與人之間彼此關愛的情感。' }
+            ],
+            'lesson_5': [
+                { word: '靠攏', def: '靠近、聚攏。' },
+                { word: '笨拙', def: '反應遲鈍、不靈巧。' },
+                { word: '疲憊', def: '極為疲勞困倦。' },
+                { word: '鈔票', def: '紙幣。' },
+                { word: '包裹', def: '包紮起來；包紮成件的東西；行李。' },
+                { word: '巡視', def: '巡行視察。' },
+                { word: '甦醒', def: '從昏迷中醒過來。' },
+                { word: '豎立', def: '物體垂直地面立起來。' },
+                { word: '媒體', def: '傳播資料訊息的工具。如電視、廣播、報章雜誌等。' },
+                { word: '沸騰', def: '渲染、高漲；液體加熱至一定的溫度時，發生上湧汽化的現象。' },
+                { word: '宛如', def: '彷彿。' }
+            ],
+            'lesson_6': [
+                { word: '扶疏', def: '枝葉繁茂，四處伸展的樣子。' },
+                { word: '鳳凰木', def: '落葉中喬木。夏季盛開焰紅色花朵，主供觀賞、為極佳的行道樹及庭園樹。' },
+                { word: '山巔', def: '山的頂端。' },
+                { word: '戀戀不捨', def: '十分留戀，捨不得離開。' },
+                { word: '綠蔭', def: '樹蔭。' },
+                { word: '紡車', def: '舊時稱有輪可轉動的紡紗器具。' },
+                { word: '經緯', def: '編織物品的直線與橫線；指地球上通過南北兩極的經線及與赤道平行的緯線。' },
+                { word: '纖纖', def: '微細。' },
+                { word: '裊裊', def: '縈迴繚繞、搖曳不定的樣子；音調悠揚不絕。' },
+                { word: '袖珍', def: '形容小型的或小巧的。' },
+                { word: '工廠', def: '將原料或半成品製成成品的地方。' },
+                { word: '喜孜孜', def: '歡喜的樣子。' },
+                { word: '猶在', def: '還存在。' },
+                { word: '光陰', def: '時間。' },
+                { word: '飛逝', def: '快速消逝。' },
+                { word: '雀斑', def: '皮膚表面所生的褐色細點，是因體質及日晒所引起的局部黑色素積集現象。' }
+            ],
+            'lesson_7': [
+                { word: '閣樓', def: '建築於屋內的夾層矮樓。' },
+                { word: '匱乏', def: '貧乏。' },
+                { word: '舊書攤', def: '買賣過期的書報雜誌的店鋪或攤子。' },
+                { word: '冥冥之中', def: '人無法預測、理解、控制的狀況。' },
+                { word: '帳篷', def: '可拆卸自由搬運的組合式住宅。' },
+                { word: '徒步', def: '步行。' },
+                { word: '籌備', def: '事先預備計畫。' },
+                { word: '埡口', def: '狹窄的山口。' },
+                { word: '山脈', def: '山巒相連並依一定方向起伏延伸，狀似脈絡而成系統的山群。' },
+                { word: '紮營', def: '屯駐營寨。' },
+                { word: '窸窸窣窣', def: '摹擬斷續的細碎聲音。' },
+                { word: '背誦', def: '熟記文句後能不看文句就能誦讀。' },
+                { word: '宇宙', def: '時間與空間的總稱，即天地。' },
+                { word: '浩瀚', def: '廣大繁多的樣子；水勢盛大的樣子。' }
+            ],
+            'lesson_8': [
+                { word: '瞻前顧後', def: '形容做事顧慮太多，猶豫不決；指做事謹慎周密，能夠首尾兼顧。' },
+                { word: '汲取', def: '吸取、吸收。' },
+                { word: '富庶', def: '物資豐富，人口眾多。' },
+                { word: '鍥而不捨', def: '比喻有恆心、毅力，堅持到底。' },
+                { word: '嶄新', def: '全新、極新。' },
+                { word: '一輩子', def: '一生、一世。' },
+                { word: '全力以赴', def: '投入全部的心力以達成目的。' },
+                { word: '構築', def: '建造修築。' },
+                { word: '諺語', def: '民間流傳的俗語。句形簡短、音調和諧。' },
+                { word: '羊羹', def: '一種用豆沙、麵粉及糖等材料做成的甜食。' },
+                { word: '公斤', def: '量詞。計算重量的單位。公制一公斤等於一千公克。' },
+                { word: '全神貫注', def: '將心思和精神完全集中在某事物上。' },
+                { word: '拓展', def: '開拓發展。' }
+            ],
+            'lesson_9': [
+                { word: '恭喜', def: '向人表示慶賀之敬詞。' },
+                { word: '荊棘', def: '比喻困難、險境；叢生而多刺的灌木。' },
+                { word: '俗話', def: '流行通俗的語句。' },
+                { word: '窘境', def: '艱難貧困的處境。' },
+                { word: '溝通', def: '彼此間意見的交流或疏通。' },
+                { word: '生涯', def: '原指人的生命有止境。今用以指所過的生活或經歷的人生。' },
+                { word: '曙光', def: '比喻轉機的希望；清晨大地初現的亮光。' }
+            ]
+        };
+
+        /** STATE & CONFIG */
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // DOM Elements
+        const screens = {
+            start: document.getElementById('startScreen'),
+            gameFooter: document.getElementById('gameFooter'),
+            end: document.getElementById('endScreen'),
+            modal: document.getElementById('vocabModal'),
+            pause: document.getElementById('pauseOverlay'),
+            overlay: document.getElementById('msgOverlay')
+        };
+        const display = {
+            score: document.getElementById('scoreDisplay'),
+            lives: document.getElementById('livesDisplay'),
+            level: document.getElementById('levelDisplay'),
+            question: document.getElementById('questionText'),
+            options: document.getElementById('answerOptions'),
+            msg: document.getElementById('msgText'),
+            error: document.getElementById('errorMsg')
+        };
+
+        let isGameRunning = false;
+        let isPaused = false;
+        let animationId;
+        
+        // Game Progression
+        let score = 0;
+        let lives = 3;
+        let level = 1;
+        let selectedTypes = ['lesson_1'];
+        
+        // Game Entities
+        let balls = [];
+        let bricks = [];
+        let paddle = { x: 0, width: 0, height: 15, baseWidth: 0 };
+        
+        // Power-up Timers (frames)
+        let paddleTimer = 0;
+        let bigBallTimer = 0;
+
+        // Constants
+        const BASE_BALL_SPEED = 4;
+        const BASE_BALL_RADIUS = 5;
+        const BIG_BALL_RADIUS = 10;
+        const BRICK_ROW_COUNT = 6;
+        const BRICK_COLUMN_COUNT = 14; 
+        const BRICK_PADDING = 4;
+        const BRICK_OFFSET_TOP = 50;
+        const BRICK_OFFSET_LEFT = 10;
+        const POWERUP_DURATION = 600; 
+
+        // Control Flags
+        let rightPressed = false;
+        let leftPressed = false;
+
+        // Question State
+        let currentQuestion = null;
+        let targetBrick = null;
+
+        /** INITIALIZATION */
+        function initGame(resetLevel = true) {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            
+            if (resetLevel) {
+                score = 0;
+                lives = 3;
+                level = 1;
+                selectedTypes = getSelectedTypes();
+                if(selectedTypes.length === 0) selectedTypes = ['lesson_1']; 
+            }
+            
+            paddle.baseWidth = canvas.width * 0.2;
+            paddle.width = paddle.baseWidth;
+            paddle.x = (canvas.width - paddle.width) / 2;
+            
+            resetBalls();
+            initBricks();
+            updateUI();
+            
+            isPaused = false;
+            paddleTimer = 0;
+            bigBallTimer = 0;
+        }
+
+        function getSelectedTypes() {
+            const checkboxes = document.querySelectorAll('input[name="lessonType"]:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        function resetBalls() {
+            balls = [{
+                x: canvas.width / 2,
+                y: canvas.height - 40,
+                dx: (Math.random() * 4 - 2) * 1.2 || 2,
+                dy: -BASE_BALL_SPEED,
+                radius: BASE_BALL_RADIUS
+            }];
+        }
+
+        function initBricks() {
+            bricks = [];
+            const brickWidth = (canvas.width - (BRICK_OFFSET_LEFT * 2) - (BRICK_PADDING * (BRICK_COLUMN_COUNT - 1))) / BRICK_COLUMN_COUNT;
+            const brickHeight = 18;
+
+            let totalBricks = BRICK_ROW_COUNT * BRICK_COLUMN_COUNT;
+            let indices = Array.from({length: totalBricks}, (_, i) => i);
+            
+            // Shuffle
+            for (let i = indices.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [indices[i], indices[j]] = [indices[j], indices[i]];
+            }
+
+            // Determine Count based on Level
+            const knowledgeCount = 6 + (level - 1) * 5;
+            const powerUpCount = 6; // 2 of each type
+
+            const knowledgeIndices = new Set(indices.slice(0, knowledgeCount));
+            const powerUpIndices = new Set(indices.slice(knowledgeCount, knowledgeCount + powerUpCount));
+            
+            // Assign specific powerups
+            let pUpTypes = ['multiball', 'multiball', 'longpaddle', 'longpaddle', 'bigball', 'bigball'];
+            let pUpMap = {};
+            let pIdx = 0;
+            indices.slice(knowledgeCount, knowledgeCount + powerUpCount).forEach(idx => {
+                pUpMap[idx] = pUpTypes[pIdx++];
+            });
+
+            let count = 0;
+            for(let c=0; c<BRICK_COLUMN_COUNT; c++) {
+                bricks[c] = [];
+                for(let r=0; r<BRICK_ROW_COUNT; r++) {
+                    const isKnowledge = knowledgeIndices.has(count);
+                    const powerUpType = powerUpIndices.has(count) ? pUpMap[count] : null;
+                    
+                    // Colors
+                    let color = `hsl(${r * 40}, 70%, 50%)`;
+                    if(isKnowledge) color = "#FFD700"; // Gold
+                    else if(powerUpType === 'multiball') color = "#FF00FF"; // Magenta
+                    else if(powerUpType === 'longpaddle') color = "#00FFFF"; // Cyan
+                    else if(powerUpType === 'bigball') color = "#FFA500"; // Orange
+
+                    bricks[c][r] = { 
+                        x: 0, y: 0, 
+                        status: 1, 
+                        isKnowledge: isKnowledge,
+                        powerUp: powerUpType,
+                        color: color,
+                        width: brickWidth,
+                        height: brickHeight
+                    };
+                    count++;
+                }
+            }
+        }
+
+        /** LOGIC & PHYSICS */
+        function update() {
+            if(!isGameRunning) return;
+            if(isPaused) { requestAnimationFrame(update); return; }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Powerup Timers
+            if(paddleTimer > 0) {
+                paddleTimer--;
+                if(paddleTimer === 0) paddle.width = paddle.baseWidth;
+            }
+            if(bigBallTimer > 0) {
+                bigBallTimer--;
+                if(bigBallTimer === 0) balls.forEach(b => b.radius = BASE_BALL_RADIUS);
+            }
+
+            drawBricks();
+            drawPaddle();
+            drawBalls();
+            drawParticles();
+            
+            movePaddle();
+            moveBalls();
+            collisionDetection();
+
+            requestAnimationFrame(update);
+        }
+
+        function movePaddle() {
+            if(rightPressed && paddle.x < canvas.width - paddle.width) paddle.x += 8;
+            else if(leftPressed && paddle.x > 0) paddle.x -= 8;
+        }
+
+        function moveBalls() {
+            for(let i = balls.length - 1; i >= 0; i--) {
+                let b = balls[i];
+                b.x += b.dx;
+                b.y += b.dy;
+
+                // Wall Collision
+                if(b.x + b.dx > canvas.width - b.radius || b.x + b.dx < b.radius) b.dx = -b.dx;
+                if(b.y + b.dy < b.radius) b.dy = -b.dy;
+                
+                // Paddle Collision
+                else if(b.y + b.dy > canvas.height - b.radius - paddle.height + 5) {
+                    if(b.x > paddle.x && b.x < paddle.x + paddle.width) {
+                        b.dy = -Math.abs(b.dy); // Force up
+                        let hitPoint = b.x - (paddle.x + paddle.width/2);
+                        b.dx = hitPoint * 0.15; // Angular reflection
+                    } else if(b.y + b.dy > canvas.height) {
+                        // Ball lost
+                        balls.splice(i, 1);
+                    }
+                }
+            }
+
+            if(balls.length === 0) {
+                lives--;
+                updateUI();
+                if(lives <= 0) gameOver(false);
+                else {
+                    resetBalls();
+                    paddleTimer = 0; 
+                    bigBallTimer = 0;
+                    paddle.width = paddle.baseWidth;
+                }
+            }
+        }
+
+        function collisionDetection() {
+            for(let c=0; c<BRICK_COLUMN_COUNT; c++) {
+                for(let r=0; r<BRICK_ROW_COUNT; r++) {
+                    let b = bricks[c][r];
+                    if(b.status === 1) {
+                        balls.forEach(ball => {
+                            if(ball.x > b.x && ball.x < b.x + b.width && ball.y > b.y && ball.y < b.y + b.height) {
+                                ball.dy = -ball.dy;
+                                
+                                if(b.isKnowledge) {
+                                    triggerQuestion(b);
+                                } else {
+                                    b.status = 0;
+                                    score++;
+                                    createParticles(b.x + b.width/2, b.y + b.height/2, b.color);
+                                    
+                                    if(b.powerUp) activatePowerUp(b.powerUp);
+                                    updateUI();
+                                    checkWin();
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
+        function activatePowerUp(type) {
+            showMsg(type.toUpperCase() + "!", "#fff");
+            if(type === 'multiball') {
+                if(balls.length < 10) { 
+                    let base = balls[0];
+                    balls.push({ ...base, dx: -2, dy: -4 });
+                    balls.push({ ...base, dx: 2, dy: -4 });
+                }
+            } else if(type === 'longpaddle') {
+                paddle.width = paddle.baseWidth * 2;
+                paddleTimer = POWERUP_DURATION;
+            } else if(type === 'bigball') {
+                balls.forEach(b => b.radius = BIG_BALL_RADIUS);
+                bigBallTimer = POWERUP_DURATION;
+            }
+        }
+
+        function checkWin() {
+            let activeBricks = 0;
+            bricks.forEach(col => col.forEach(b => { if(b.status === 1) activeBricks++; }));
+            if(activeBricks === 0) {
+                if(level >= 3) {
+                    gameOver(true);
+                } else {
+                    level++;
+                    showMsg("LEVEL UP!", "#FFD700");
+                    updateUI();
+                    
+                    setTimeout(() => {
+                        initGame(false); 
+                    }, 1000);
+                }
+            }
+        }
+
+        function addPenaltyBricks() {
+            let restored = 0;
+            let candidates = [];
+            for(let c=0; c<BRICK_COLUMN_COUNT; c++) {
+                for(let r=0; r<BRICK_ROW_COUNT; r++) {
+                    if(bricks[c][r].status === 0) candidates.push(bricks[c][r]);
+                }
+            }
+            
+            // Shuffle and restore up to 5
+            for (let i = candidates.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+            }
+            
+            candidates.slice(0, 5).forEach(b => {
+                b.status = 1;
+                b.isKnowledge = false;
+                b.powerUp = null;
+                b.color = "#666"; 
+                createParticles(b.x + b.width/2, b.y + b.height/2, "#fff"); 
+            });
+        }
+
+        /** VOCAB SYSTEM */
+        function triggerQuestion(brick) {
+            isPaused = true;
+            targetBrick = brick;
+            generateAndShowQuestion();
+        }
+
+        function generateAndShowQuestion() {
+            currentQuestion = generateVocabProblem();
+            display.question.textContent = currentQuestion.text;
+            display.options.innerHTML = '';
+            
+            const options = generateOptions(currentQuestion.answer);
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "bg-gray-700 hover:bg-blue-600 text-white font-bold py-3 px-2 rounded transition border border-gray-600 text-lg md:text-xl";
+                btn.textContent = opt;
+                btn.onclick = () => handleAnswer(opt);
+                display.options.appendChild(btn);
+            });
+
+            screens.modal.classList.remove('hidden');
+            screens.modal.querySelector('div').classList.add('modal-enter');
+            setTimeout(() => screens.modal.querySelector('div').classList.add('modal-enter-active'), 10);
+        }
+
+        function handleAnswer(selected) {
+            if(selected === currentQuestion.answer) {
+                // Correct
+                score += 5;
+                targetBrick.status = 0;
+                createParticles(targetBrick.x + targetBrick.width/2, targetBrick.y + targetBrick.height/2, "#FFD700");
+                screens.modal.classList.add('hidden');
+                isPaused = false;
+                targetBrick = null;
+                updateUI();
+            } else {
+                // Incorrect
+                score = Math.max(0, score - 3);
+                showMsg("WRONG! -3 PTS", "#EF4444");
+                addPenaltyBricks();
+                updateUI();
+                
+                generateAndShowQuestion();
+            }
+        }
+
+        function generateVocabProblem() {
+            let pool = [];
+            selectedTypes.forEach(type => {
+                if(vocabularyData[type]) {
+                    pool = pool.concat(vocabularyData[type]);
+                }
+            });
+            
+            if(pool.length === 0) pool = vocabularyData['lesson_1']; 
+            
+            let target = pool[Math.floor(Math.random() * pool.length)];
+            return { text: target.def, answer: target.word };
+        }
+
+        function generateOptions(ans) {
+            let s = new Set([ans]);
+            let allWords = [];
+            Object.values(vocabularyData).forEach(lessonWords => {
+                lessonWords.forEach(item => allWords.push(item.word));
+            });
+            
+            while(s.size < 4) {
+                let randomWord = allWords[Math.floor(Math.random() * allWords.length)];
+                s.add(randomWord);
+            }
+            return Array.from(s).sort(() => Math.random() - 0.5);
+        }
+
+        /** RENDERING */
+        function drawBalls() {
+            balls.forEach(b => {
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI*2);
+                ctx.fillStyle = "#fff";
+                ctx.fill();
+                ctx.shadowBlur = 10; ctx.shadowColor = "#fff";
+                ctx.closePath();
+                ctx.shadowBlur = 0;
+            });
+        }
+        function drawPaddle() {
+            ctx.beginPath();
+            ctx.rect(paddle.x, canvas.height - paddle.height - 5, paddle.width, paddle.height);
+            ctx.fillStyle = "#00FFFF";
+            ctx.shadowBlur = 10; ctx.shadowColor = "#00FFFF";
+            ctx.fill();
+            ctx.closePath();
+            ctx.shadowBlur = 0;
+        }
+        function drawBricks() {
+            for(let c=0; c<BRICK_COLUMN_COUNT; c++) {
+                for(let r=0; r<BRICK_ROW_COUNT; r++) {
+                    let b = bricks[c][r];
+                    if(b.status === 1) {
+                        let bx = (c * (b.width + BRICK_PADDING)) + BRICK_OFFSET_LEFT;
+                        let by = (r * (b.height + BRICK_PADDING)) + BRICK_OFFSET_TOP;
+                        b.x = bx; b.y = by;
+                        
+                        ctx.beginPath();
+                        ctx.rect(bx, by, b.width, b.height);
+                        ctx.fillStyle = b.color;
+                        ctx.fill();
+                        
+                        // Indicators
+                        ctx.fillStyle = "#000";
+                        ctx.font = "bold 10px sans-serif";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        if(b.isKnowledge) ctx.fillText("?", bx + b.width/2, by + b.height/2);
+                        else if(b.powerUp === 'multiball') ctx.fillText("x3", bx + b.width/2, by + b.height/2);
+                        else if(b.powerUp === 'longpaddle') ctx.fillText("↔", bx + b.width/2, by + b.height/2);
+                        else if(b.powerUp === 'bigball') ctx.fillText("O", bx + b.width/2, by + b.height/2);
+                        
+                        ctx.closePath();
+                    }
+                }
+            }
+        }
+        
+        /** UI & UTILS */
+        function updateUI() {
+            display.score.textContent = score.toString().padStart(3, '0');
+            display.lives.textContent = lives;
+            display.level.textContent = level;
+        }
+        
+        function showMsg(text, color) {
+            display.msg.textContent = text;
+            display.msg.style.color = color;
+            screens.overlay.classList.remove('hidden');
+            screens.overlay.classList.add('animate-bounce');
+            setTimeout(() => screens.overlay.classList.add('hidden'), 2000);
+        }
+
+        function gameOver(win) {
+            isGameRunning = false;
+            const title = document.getElementById('endTitle');
+            if (win) {
+                title.textContent = "全數通關！";
+                title.className = "text-4xl font-bold retro-font mb-4 text-green-500 neon-text";
+            } else {
+                title.textContent = "GAME OVER";
+                title.className = "text-4xl font-bold retro-font mb-4 text-red-500 neon-text";
+            }
+            document.getElementById('finalScore').textContent = score;
+            screens.end.classList.remove('hidden');
+        }
+
+        /** INPUTS */
+        const handleBtn = (dir, press) => { if(dir==='left') leftPressed=press; if(dir==='right') rightPressed=press; };
+        document.addEventListener("keydown", e => {
+            if(e.key==="Right"||e.key==="ArrowRight") rightPressed=true;
+            if(e.key==="Left"||e.key==="ArrowLeft") leftPressed=true;
+            if(e.key.toLowerCase()==="p") togglePause();
+        });
+        document.addEventListener("keyup", e => {
+            if(e.key==="Right"||e.key==="ArrowRight") rightPressed=false;
+            if(e.key==="Left"||e.key==="ArrowLeft") leftPressed=false;
+        });
+        
+        // Touch/Mouse Buttons
+        ['btnLeft', 'btnRight'].forEach(id => {
+            let el = document.getElementById(id);
+            let dir = id === 'btnLeft' ? 'left' : 'right';
+            el.addEventListener('mousedown', ()=>handleBtn(dir,true));
+            el.addEventListener('mouseup', ()=>handleBtn(dir,false));
+            el.addEventListener('touchstart', (e)=>{e.preventDefault();handleBtn(dir,true)});
+            el.addEventListener('touchend', (e)=>{e.preventDefault();handleBtn(dir,false)});
+        });
+
+        // Menu Logic
+        document.getElementById('startBtn').addEventListener('click', () => {
+            if(!document.querySelector('input[name="lessonType"]:checked')) {
+                display.error.classList.remove('hidden'); return;
+            }
+            screens.start.classList.add('hidden');
+            screens.gameFooter.classList.remove('hidden');
+            setTimeout(() => { initGame(true); isGameRunning = true; update(); }, 50);
+        });
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            screens.end.classList.add('hidden');
+            screens.start.classList.remove('hidden');
+            screens.gameFooter.classList.add('hidden');
+        });
+        document.getElementById('selectAllBtn').addEventListener('click', () => {
+             const cbs = document.querySelectorAll('input[name="lessonType"]');
+             const all = Array.from(cbs).every(c => c.checked);
+             cbs.forEach(c => c.checked = !all);
+        });
+        document.getElementById('pauseBtn').addEventListener('click', togglePause);
+        document.getElementById('menuBtn').addEventListener('click', () => {
+            if(confirm("回主選單? 進度將消失")) {
+                isGameRunning = false; isPaused = false;
+                screens.start.classList.remove('hidden');
+                screens.gameFooter.classList.add('hidden');
+                screens.modal.classList.add('hidden');
+                screens.pause.classList.add('hidden');
+            }
+        });
+
+        function togglePause() {
+            if(!isGameRunning) return;
+            isPaused = !isPaused;
+            screens.pause.classList.toggle('hidden', !isPaused);
+            document.getElementById('pauseIcon').className = isPaused ? "fas fa-play text-lg" : "fas fa-pause text-lg";
+        }
+
+        // Particles
+        let particles = [];
+        function createParticles(x, y, color) {
+            for(let i=0; i<8; i++) particles.push({x, y, dx:(Math.random()-.5)*4, dy:(Math.random()-.5)*4, life:1, color});
+        }
+        function drawParticles() {
+            for(let i=0; i<particles.length; i++) {
+                let p = particles[i];
+                ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
+                p.x += p.dx; p.y += p.dy; p.life -= 0.05;
+            }
+            ctx.globalAlpha = 1; particles = particles.filter(p => p.life > 0);
+        }
+
+        window.addEventListener('resize', () => {
+            if(!isGameRunning) return;
+            let oldW = canvas.width;
+            canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight;
+            paddle.x = (paddle.x / oldW) * canvas.width;
+            paddle.baseWidth = canvas.width * 0.2;
+        });
+
+    </script>
+</body>
+</html>
