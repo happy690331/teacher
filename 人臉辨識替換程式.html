@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>臉部 Emoji 替換器 (高精度側臉版)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Face-api.js -->
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <!-- JSZip for batch download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .emoji-btn {
+            transition: all 0.2s;
+            opacity: 0.6;
+            transform: scale(0.9);
+        }
+        .emoji-btn:hover {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .emoji-btn.active {
+            background-color: #dbeafe;
+            border-color: #3b82f6;
+            opacity: 1;
+            transform: scale(1.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        /* Loading Spinner */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-10 px-4">
+
+    <!-- Header -->
+    <header class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-gray-800 mb-2">😎 臉部 Emoji 替換器</h1>
+        <p class="text-gray-600">高精度版：強化側臉辨識 (支援批次處理)</p>
+    </header>
+
+    <!-- Main Card -->
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-6xl">
+        
+        <!-- Model Status -->
+        <div id="status-bar" class="flex items-center justify-center space-x-2 mb-6 p-3 bg-blue-50 text-blue-700 rounded-lg">
+            <div class="loader"></div>
+            <span id="status-text" class="font-medium">正在載入高精度 AI 模型 (SSD MobileNet)，請稍候...</span>
+        </div>
+
+        <!-- Controls -->
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">1. 選擇要使用的 Emoji (可複選)：</label>
+            <div class="flex flex-wrap gap-3 justify-center" id="emoji-container">
+                <!-- Emojis will be injected here -->
+            </div>
+            <p class="text-xs text-center text-gray-500 mt-2">提示：您可以點選多個 Emoji，系統將會隨機分配給偵測到的人臉。</p>
+        </div>
+
+        <!-- Upload Area -->
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">2. 上傳照片 (最多 30 張)：</label>
+            <div class="flex items-center justify-center w-full mb-4">
+                <label for="dropzone-file" class="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition relative overflow-hidden">
+                    
+                    <!-- Upload Placeholder -->
+                    <div id="upload-placeholder" class="flex flex-col items-center justify-center pt-5 pb-6">
+                        <svg class="w-10 h-10 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                        <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">點擊選擇</span> 或將照片拖曳至此</p>
+                        <p class="text-xs text-gray-500">支援 JPG, PNG (單次限制 30 張)</p>
+                    </div>
+
+                    <!-- Progress Overlay (Hidden by default) -->
+                    <div id="progress-overlay" class="hidden absolute inset-0 bg-white bg-opacity-90 flex flex-col items-center justify-center z-10">
+                        <div class="loader mb-3"></div>
+                        <p id="progress-text" class="text-blue-600 font-bold">正在處理...</p>
+                    </div>
+
+                    <input id="dropzone-file" type="file" class="hidden" accept="image/*" multiple disabled />
+                </label>
+            </div>
+        </div>
+
+        <!-- Results Gallery -->
+        <div id="results-area" class="hidden">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-lg font-bold text-gray-800">處理結果</h3>
+                <button id="download-all-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold py-2 px-4 rounded-lg transition shadow flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    下載全部 (ZIP)
+                </button>
+            </div>
+            
+            <!-- Grid for images -->
+            <div id="gallery-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Image cards injected here -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Configuration
+        const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+        const EMOJI_LIST = ['😎', '😂', '😍', '🤡', '🐱', '💩', '😷', '🌸', '👽', '🙈'];
+        
+        // 修改：改為陣列來儲存多個選取的 Emoji
+        let selectedEmojis = ['😎'];
+        let isModelLoaded = false;
+        
+        // Store processed results: { fileName, dataUrl, blob }
+        let processedImages = [];
+
+        // DOM Elements
+        const statusBar = document.getElementById('status-bar');
+        const fileInput = document.getElementById('dropzone-file');
+        const uploadPlaceholder = document.getElementById('upload-placeholder');
+        const progressOverlay = document.getElementById('progress-overlay');
+        const progressText = document.getElementById('progress-text');
+        const resultsArea = document.getElementById('results-area');
+        const galleryGrid = document.getElementById('gallery-grid');
+        const downloadAllBtn = document.getElementById('download-all-btn');
+        const emojiContainer = document.getElementById('emoji-container');
+
+        // 1. Initialize Emojis (支援複選)
+        function initEmojis() {
+            EMOJI_LIST.forEach(emoji => {
+                const btn = document.createElement('button');
+                // 預設選取第一個
+                const isActive = selectedEmojis.includes(emoji);
+                btn.className = `emoji-btn w-12 h-12 text-2xl border-2 border-gray-200 rounded-full flex items-center justify-center bg-white ${isActive ? 'active' : ''}`;
+                btn.textContent = emoji;
+                
+                btn.onclick = () => {
+                    const index = selectedEmojis.indexOf(emoji);
+                    if (index > -1) {
+                        // 如果已經選取，且不是最後一個，則取消選取
+                        if (selectedEmojis.length > 1) {
+                            selectedEmojis.splice(index, 1);
+                            btn.classList.remove('active');
+                        } else {
+                            // 防止取消最後一個
+                            alert("至少需要選擇一個 Emoji 喔！");
+                        }
+                    } else {
+                        // 如果未選取，則加入
+                        selectedEmojis.push(emoji);
+                        btn.classList.add('active');
+                    }
+                };
+                emojiContainer.appendChild(btn);
+            });
+        }
+
+        // 2. Load Face API Models
+        async function loadModels() {
+            try {
+                // 使用 SSD MobileNet V1 模型
+                await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+                
+                isModelLoaded = true;
+                statusBar.className = "flex items-center justify-center space-x-2 mb-6 p-3 bg-green-50 text-green-700 rounded-lg";
+                statusBar.innerHTML = `
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    <span class="font-medium">高精度模型載入完成！請上傳照片。</span>
+                `;
+                fileInput.disabled = false;
+            } catch (error) {
+                console.error("Model load error:", error);
+                statusBar.className = "flex items-center justify-center space-x-2 mb-6 p-3 bg-red-50 text-red-700 rounded-lg";
+                statusBar.innerHTML = `<span class="font-medium">模型載入失敗，請檢查網路連線或重新整理頁面。</span>`;
+            }
+        }
+
+        // 3. Handle File Upload (Batch)
+        fileInput.addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+
+            if (files.length > 30) {
+                alert("為了效能考量，一次最多只能處理 30 張照片！");
+                fileInput.value = "";
+                return;
+            }
+
+            // Reset UI
+            processedImages = [];
+            galleryGrid.innerHTML = '';
+            resultsArea.classList.add('hidden');
+            progressOverlay.classList.remove('hidden');
+            
+            try {
+                // Process files sequentially
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    progressText.textContent = `正在處理第 ${i + 1} / ${files.length} 張照片...`;
+                    
+                    const result = await processSingleImage(file);
+                    processedImages.push(result);
+                    
+                    addImageToGallery(result);
+                }
+
+                // Finish
+                progressOverlay.classList.add('hidden');
+                resultsArea.classList.remove('hidden');
+                fileInput.value = ""; 
+            } catch (err) {
+                console.error(err);
+                alert("處理過程中發生錯誤，請重試。");
+                progressOverlay.classList.add('hidden');
+            }
+        });
+
+        // 4. Process Single Image Logic (隨機 Emoji)
+        async function processSingleImage(file) {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    const img = await faceapi.bufferToImage(file);
+                    
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    
+                    ctx.drawImage(img, 0, 0);
+
+                    // minConfidence: 0.25
+                    const detections = await faceapi.detectAllFaces(img, new faceapi.SsdMobilenetv1Options({
+                        minConfidence: 0.25 
+                    }));
+
+                    // 準備 Emoji 分配列表
+                    // 邏輯：在數量足夠的情況下，確保每個選取的 Emoji 至少出現一次
+                    let assignedEmojis = [];
+                    if (detections.length > 0 && selectedEmojis.length > 0) {
+                        // 1. 建立候選池 (複製一份選取的 Emoji)
+                        let pool = [...selectedEmojis];
+                        
+                        // 2. 先確保每個選取的 Emoji 盡可能被選到
+                        while (assignedEmojis.length < detections.length && pool.length > 0) {
+                            // 從 pool 中隨機取出一個 (確保不重複直到 pool 用完)
+                            const randIndex = Math.floor(Math.random() * pool.length);
+                            assignedEmojis.push(pool[randIndex]);
+                            pool.splice(randIndex, 1);
+                        }
+
+                        // 3. 如果人臉比 Emoji 種類多，剩下的位置隨機填補
+                        while (assignedEmojis.length < detections.length) {
+                             const randomEmoji = selectedEmojis[Math.floor(Math.random() * selectedEmojis.length)];
+                             assignedEmojis.push(randomEmoji);
+                        }
+
+                        // 4. 將分配好的 Emoji 列表洗牌 (Fisher-Yates Shuffle)，確保分佈位置隨機
+                        for (let i = assignedEmojis.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [assignedEmojis[i], assignedEmojis[j]] = [assignedEmojis[j], assignedEmojis[i]];
+                        }
+                    }
+
+                    // Draw emojis
+                    detections.forEach((detection, i) => {
+                        const { x, y, width, height } = detection.box;
+                        const fontSize = Math.max(width, height) * 0.8;
+                        const centerX = x + width / 2;
+                        const centerY = y + height / 2;
+
+                        // 使用預先分配並打散後的 Emoji
+                        // 如果出現意外情況 (如 detections 為空)，給個預設值
+                        const emojiToUse = assignedEmojis[i] || selectedEmojis[0];
+
+                        ctx.font = `${fontSize}px sans-serif`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(emojiToUse, centerX, centerY + (fontSize * 0.1));
+                    });
+
+                    canvas.toBlob((blob) => {
+                        const dataUrl = canvas.toDataURL('image/png');
+                        resolve({
+                            fileName: file.name,
+                            dataUrl: dataUrl,
+                            blob: blob,
+                            originalName: file.name.replace(/\.[^/.]+$/, "") 
+                        });
+                    }, 'image/png');
+
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        }
+
+        // 5. Render Gallery Item
+        function addImageToGallery(item) {
+            const card = document.createElement('div');
+            card.className = "bg-gray-50 rounded-lg p-3 shadow border border-gray-200 flex flex-col";
+            
+            const imgContainer = document.createElement('div');
+            imgContainer.className = "h-48 flex items-center justify-center bg-gray-200 rounded mb-3 overflow-hidden";
+            
+            const img = document.createElement('img');
+            img.src = item.dataUrl;
+            img.className = "h-full w-full object-contain";
+            
+            imgContainer.appendChild(img);
+            
+            const infoRow = document.createElement('div');
+            infoRow.className = "mt-auto flex justify-between items-center";
+            
+            const name = document.createElement('span');
+            name.className = "text-xs text-gray-500 truncate max-w-[120px]";
+            name.textContent = item.fileName;
+            
+            const btn = document.createElement('a');
+            btn.href = item.dataUrl;
+            btn.download = `emoji-${item.fileName}`;
+            btn.className = "text-xs bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded transition";
+            btn.textContent = "下載";
+
+            infoRow.appendChild(name);
+            infoRow.appendChild(btn);
+            
+            card.appendChild(imgContainer);
+            card.appendChild(infoRow);
+            
+            galleryGrid.appendChild(card);
+            
+            resultsArea.classList.remove('hidden');
+        }
+
+        // 6. Download All (ZIP)
+        downloadAllBtn.addEventListener('click', async () => {
+            if (processedImages.length === 0) return;
+            
+            const zip = new JSZip();
+            const folder = zip.folder("emoji_photos");
+
+            processedImages.forEach((item, index) => {
+                folder.file(`emoji-${item.originalName}-${index + 1}.png`, item.blob);
+            });
+
+            const content = await zip.generateAsync({ type: "blob" });
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = "emoji-photos-batch.zip";
+            link.click();
+            
+            setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        });
+
+        initEmojis();
+        loadModels();
+
+    </script>
+</body>
+</html>
