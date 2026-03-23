@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>騎士國語防禦戰</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #1a1a1a;
+            touch-action: none; /* 防止手機瀏覽器預設手勢 */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none; /* 防止選取文字影響遊戲體驗 */
+        }
+        canvas {
+            display: block;
+        }
+        /* UI 覆蓋層共用樣式 */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 30;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .panel {
+            background: #2d3748;
+            border: 4px solid #4a5568;
+            border-radius: 1rem;
+            padding: 2rem;
+            color: white;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            max-width: 95%;
+            width: 650px; /* 加寬以容納句子與長標題 */
+        }
+        /* 虛擬搖桿畫布 */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+        /* 客製化核取方塊樣式 */
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 1.05rem;
+        }
+        .checkbox-label input {
+            margin-right: 0.5rem;
+            width: 1.2rem;
+            height: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 遊戲主要畫布 -->
+    <canvas id="gameCanvas"></canvas>
+    
+    <!-- UI 畫布 (用於畫搖桿等不隨鏡頭移動的元素) -->
+    <canvas id="ui-layer"></canvas>
+
+    <!-- 遊戲內抬頭顯示器 -->
+    <div id="hud" class="absolute top-0 left-0 w-full p-4 pointer-events-none z-10 hidden flex justify-between items-start text-white font-bold drop-shadow-md">
+        <div class="text-xl">
+            <div class="text-red-400">HP: <span id="hp-display">100</span></div>
+            <div class="text-yellow-400">武器數: <span id="weapon-display">1</span></div>
+        </div>
+        
+        <!-- 上方控制按鈕 -->
+        <div class="flex gap-3 pointer-events-auto">
+            <button id="pause-btn" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-full font-bold shadow-lg border-2 border-blue-400 transition transform active:scale-95">
+                暫停
+            </button>
+            <button id="reselect-btn" class="bg-purple-600 hover:bg-purple-500 text-white px-5 py-2 rounded-full font-bold shadow-lg border-2 border-purple-400 transition transform active:scale-95">
+                重選課文
+            </button>
+        </div>
+
+        <div class="text-right text-xl">
+            <div class="text-green-400">關卡: <span id="level-display">1</span></div>
+            <div>擊殺: <span id="score-display">0</span> <span id="level-target" class="text-sm text-gray-300">/ 30</span></div>
+        </div>
+    </div>
+
+    <!-- 開始選單 -->
+    <div id="start-menu" class="overlay">
+        <div class="panel flex flex-col max-h-screen overflow-y-auto">
+            <h1 class="text-3xl font-bold text-center mb-6 text-yellow-400 tracking-wider">騎士國語防禦戰</h1>
+            <p class="text-gray-300 mb-4 text-center">選擇你要挑戰的知識節點（可複選）：</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6 bg-gray-800 p-4 rounded-lg">
+                <label class="checkbox-label"><input type="checkbox" value="L1" checked> 第一課 馬達加斯加，出發！</label>
+                <label class="checkbox-label"><input type="checkbox" value="L2"> 第二課 沉睡的天空之城</label>
+                <label class="checkbox-label"><input type="checkbox" value="L3"> 第三課 走進太陽之城</label>
+                <label class="checkbox-label"><input type="checkbox" value="L4"> 第四課 送友人</label>
+                <label class="checkbox-label"><input type="checkbox" value="L5"> 第五課 蚵鄉風情</label>
+                <label class="checkbox-label"><input type="checkbox" value="L6"> 第六課 童年˙夏日˙棉花糖</label>
+                <label class="checkbox-label"><input type="checkbox" value="L7"> 第七課 我的少年夢</label>
+                <label class="checkbox-label"><input type="checkbox" value="L8"> 第八課 如何張開追夢的翅膀</label>
+                <label class="checkbox-label"><input type="checkbox" value="L9"> 第九課 成為人生的開拓者</label>
+            </div>
+
+            <div class="mb-6 bg-gray-800 p-4 rounded-lg flex flex-col items-center">
+                <p class="text-gray-300 mb-2">專屬騎士頭像 (拍照或上傳，選填)：</p>
+                <div class="flex items-center gap-4">
+                    <label class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg cursor-pointer transition transform active:scale-95">
+                        選擇照片 / 拍照
+                        <input type="file" id="player-img-upload" accept="image/*" class="hidden">
+                    </label>
+                    <img id="player-img-preview" class="w-16 h-16 rounded-full object-cover hidden border-2 border-yellow-400">
+                </div>
+            </div>
+
+            <p id="start-error" class="text-red-400 text-sm mb-2 text-center hidden">請至少選擇一課！</p>
+            
+            <button id="start-btn" class="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-6 rounded-lg text-xl transition transform hover:scale-105 active:scale-95">
+                開始戰鬥
+            </button>
+        </div>
+    </div>
+
+    <!-- 暫停選單 -->
+    <div id="pause-modal" class="overlay hidden">
+        <div class="panel flex flex-col items-center">
+            <h2 class="text-3xl font-bold text-white mb-6">遊戲暫停</h2>
+            <button id="resume-btn" class="w-full bg-green-500 hover:bg-green-400 text-white font-bold py-3 px-4 rounded-lg text-xl mb-4 transition transform active:scale-95">
+                繼續遊戲
+            </button>
+            <button id="restart-from-pause-btn" class="w-full bg-red-500 hover:bg-red-400 text-white font-bold py-3 px-4 rounded-lg text-xl transition transform active:scale-95">
+                放棄並重新開始
+            </button>
+        </div>
+    </div>
+
+    <!-- 國語問題彈窗 (語詞填空) -->
+    <div id="quiz-modal" class="overlay hidden">
+        <div class="panel flex flex-col items-center p-6">
+            <h2 class="text-2xl font-bold text-blue-400 mb-2">觸發知識節點！</h2>
+            <p class="text-gray-300 mb-6 text-sm">選出正確的語詞填入「」中，答對即可增加一個旋轉武器</p>
+            
+            <!-- 題目句子 -->
+            <div id="question-text" class="text-xl md:text-2xl font-bold text-yellow-300 mb-8 leading-relaxed text-center w-full bg-gray-700 p-4 rounded-lg border-2 border-gray-500">
+                時至今日，地球上仍有許多尚未開發的無人「」。
+            </div>
+
+            <!-- 四選一選項區塊 -->
+            <div id="options-container" class="grid grid-cols-2 gap-4 w-full mb-6">
+                <!-- 選項按鈕會透過 JS 動態生成 -->
+            </div>
+            
+            <button id="skip-btn" class="w-full bg-gray-500 hover:bg-gray-400 text-white font-bold py-3 rounded-lg transition active:scale-95">
+                放棄此題
+            </button>
+            <p id="quiz-feedback" class="mt-4 text-xl font-bold h-6 text-center"></p>
+        </div>
+    </div>
+
+    <!-- 遊戲結束彈窗 -->
+    <div id="game-over-modal" class="overlay hidden">
+        <div class="panel flex flex-col items-center">
+            <h1 class="text-4xl font-bold text-red-500 mb-4">騎士陣亡</h1>
+            <p class="text-xl mb-2">生存時間: <span id="time-survived" class="text-yellow-400">0</span> 秒</p>
+            <p class="text-xl mb-2">抵達關卡: <span id="final-level" class="text-yellow-400">1</span></p>
+            <p class="text-xl mb-6">擊敗敵人: <span id="final-score" class="text-yellow-400">0</span></p>
+            
+            <button id="restart-btn" class="bg-blue-500 hover:bg-blue-400 text-white font-bold py-3 px-8 rounded-lg text-xl transition transform hover:scale-105">
+                重新開始
+            </button>
+        </div>
+    </div>
+
+<script>
+    // --- 語境造句模板 (用於題目用完後自動出題) ---
+    const genericTemplates = [
+        "小明今天在課堂上學到了一個新詞：『「」』。",
+        "老師請大家回家用『「」』練習造句。",
+        "這篇文章中，作者巧妙地使用了『「」』。",
+        "你在字典裡可以查到『「」』的詳細解釋。",
+        "只要多閱讀，就能認識像『「」』這樣的好詞。",
+        "他在作文裡寫下了『「」』，得到了老師的稱讚。",
+        "我非常喜歡『「」』這個語詞的意境。",
+        "請將『「」』填入適當的空格中。",
+        "這個段落的關鍵字是『「」』。",
+        "弟弟不太懂『「」』的意思，跑來問我。",
+        "經過反覆練習，我終於完全掌握『「」』的用法了。",
+        "多數人容易把『「」』這個詞語用錯，我們要特別注意。"
+    ];
+
+    // --- 語詞與句子詞庫 (第一課 ~ 第九課) ---
+    const dictionary = {
+        L1: [
+            { w: "島嶼", s: "時至今日，地球上仍有許多尚未開發的無人「」。" },
+            { w: "獨立", s: "表哥成年後就離家生活，開始學習「」。" },
+            { w: "獨立", s: "前方不遠處有一盞孤燈，「」在街頭。" },
+            { w: "獨立", s: "美國於西元一七七六年宣布脫離英國「」。" },
+            { w: "心馳神往", s: "這部武俠小說的俠義情節，讓他非常「」。" },
+            { w: "輾轉", s: "他因為孩子深夜未歸而「」難眠。" },
+            { w: "櫛比鱗次", s: "大都會裡高樓大廈「」，好像一座水泥叢林。" },
+            { w: "錢幣", s: "在外匯市場上可以自由買賣各國的「」。" },
+            { w: "村莊", s: "這座「」還保有許多舊式建築，十分難得。" },
+            { w: "瀕危", s: "為了保護「」物種，我們需要加強對自然保護區的管理。" },
+            { w: "撒旦", s: "在基督教裡，「」是魔鬼的化身，是黑暗的代表。" },
+            { w: "掠食者", s: "獅子是非洲草原上的凶猛「」。" },
+            { w: "覓食", s: "許多小鳥吱吱喳喳的在公園裡四處「」。" },
+            { w: "紳士", s: "他溫文儒雅的「」風度，受到許多人的尊重。" },
+            { w: "迷濛", s: "大雨滂沱的清晨，窗外一片「」。" },
+            { w: "高亢", s: "他的歌聲激昂「」，讓人聽了情緒也隨之昂揚。" },
+            { w: "凌駕", s: "我國在經濟方面的成就，早已「」世界上先進國家之上。" },
+            { w: "岌岌可危", s: "這棟房子在地震之後出現多處裂縫，隨時都有倒塌的可能，情況「」。" }
+        ],
+        L2: [
+            { w: "遺址", s: "工人們在蓋房子時竟然挖出千年「」，讓大家驚訝不已。" },
+            { w: "屏息", s: "運動場上鴉雀無聲，每個人都「」等待成績公布。" },
+            { w: "秘魯", s: "「」的馬丘比丘已被聯合國教科文組織列為世界遺產。" },
+            { w: "璀璨", s: "台北一○一大樓施放「」的煙火，吸引眾人的目光。" },
+            { w: "愜意", s: "在自行車道騎車兜風，是一種非常「」的休閒活動。" },
+            { w: "振奮", s: "聽到班上獲得音樂比賽冠軍，大家都「」不已。" },
+            { w: "氛圍", s: "這家餐廳經常舉辦親子活動，讓用餐環境洋溢著歡樂喜悅的「」。" },
+            { w: "井然有序", s: "他精明能幹，凡事都能處理得「」。" },
+            { w: "澎湃", s: "颱風來襲，海面上波濤「」，讓人心生敬畏。" },
+            { w: "堆砌", s: "表弟用積木「」一座城堡，贏得大家的讚賞。" },
+            { w: "梯田", s: "從飛機窗口望出去，山谷間的「」構成一幅美麗的幾何圖案。" },
+            { w: "玄妙", s: "自然界中仍有許多「」的事情，是現今科學無法解釋的。" },
+            { w: "拴日石", s: "「」是馬丘比丘著名景點之一。" },
+            { w: "興味盎然", s: "五歲的小弟活潑好動，對新奇的事物都一副「」的樣子。" },
+            { w: "回眸", s: "在夕陽的映照下，他「」看了一眼遠方的山脈，心中充滿了懷念。" }
+        ],
+        L3: [
+            { w: "佛萊堡", s: "「」太陽能發展與技術領先其他地區，是德國太陽能應用最普及的城市。" },
+            { w: "瑞士", s: "「」因為風景優美，吸引許多遊客，觀光事業很發達。" },
+            { w: "名列前茅", s: "這項產品在今年銷售榜上「」，公司決定提高產量，滿足市場需求。" },
+            { w: "唯一", s: "這條小路是通往山頂的「」道路。" },
+            { w: "爆發", s: "火山「」時，噴出的岩漿造成鄰近地區災情慘重。" },
+            { w: "供應", s: "明天的社區活動，主辦單位將免費「」餐點。" },
+            { w: "政府", s: "有廉能的「」，才有公平與安定的社會。" },
+            { w: "收購", s: "財團到處「」土地，準備興建大型溫泉旅館，許多環保人士多方奔走阻攔。" },
+            { w: "騎士", s: "那位自行車「」穿著鮮豔的服裝，穿梭在城市的街道上。" },
+            { w: "駕駛", s: "這位公車「」已有十幾年的經驗，技術相當純熟。" },
+            { w: "冰箱", s: "「」不要貯存過多食物，以免降低冷藏效果。" },
+            { w: "嬉戲", s: "這群小朋友在廣闊的草地上追逐「」，歡笑聲不絕於耳。" },
+            { w: "乒乓球", s: "這次「」比賽，本校除獲得個人組冠軍外，更奪得團體組的金牌。" },
+            { w: "輕鬆自在", s: "問題解決後，他的心情感到無比的「」。" },
+            { w: "護欄", s: "為了避免車輛從懸崖上翻覆，有關單位在此設立「」，以提高行車安全。" }
+        ],
+        L4: [
+            { w: "蕭蕭", s: "現在通訊軟體發達，離別時揮手自茲去，『「」』班馬鳴的傷感已淡了很多。" }, 
+            { w: "清澈", s: "那條溪非常「」，可以看見水中的魚兒游來游去。" },
+            { w: "辭別", s: "他交代完所有的事情後，就向大家「」，出發前往機場了。" },
+            { w: "橫臥", s: "他走進大廳一看，赫然發現一個醉漢「」在地上。" },
+            { w: "行蹤", s: "他自從退休後，「」飄忽不定，恐怕不容易找到他。" },
+            { w: "重逢", s: "想不到在多年之後，居然還能與老朋友「」，令他驚喜萬分。" },
+            { w: "抒發", s: "那名登山客藉著一篇篇的日記，「」自己登山時的心路歷程。" },
+            { w: "漂泊", s: "他因為工作的關係長年「」海外，很少回家。" },
+            { w: "餘暉", s: "落日的「」，把眼前的油桐花染成一片金黃，真的好美！" },
+            { w: "真摯", s: "經過這次事件後，讓我見證「」的友誼是歷久彌堅的。" },
+            { w: "情誼", s: "他們兄弟倆「」深厚，不管什麼事都會第一個想到對方。" }
+        ],
+        L5: [
+            { w: "靠攏", s: "攝影師請全班同學向中間「」，全部的人才能入鏡。" },
+            { w: "笨拙", s: "我的動作「」，連穿針引線都得試好幾次才能完成。" },
+            { w: "疲憊", s: "哥哥每天上完排球隊的訓練課程後，都「」不堪。" },
+            { w: "鈔票", s: "媽媽從皮包裡取出幾張「」來結帳。" },
+            { w: "包裹", s: "姐姐到郵局寄送限時「」給堂妹，祝賀她的十歲生日。" },
+            { w: "巡視", s: "巡守隊每天都會在大街小巷「」，查看是否有可疑人士出沒。" },
+            { w: "甦醒", s: "經過醫護人員緊急搶救，病患終於「」了。" },
+            { w: "豎立", s: "園遊會場地「」了許多旗幟，讓攤位更加醒目。" },
+            { w: "媒體", s: "「」傳播資訊十分快速，人們經常可以接收即時發生的訊息。" },
+            { w: "沸騰", s: "摸彩活動公布第一特獎的得主後，會場氣氛頓時「」到最高點。" },
+            { w: "宛如", s: "陣陣寒風吹在身上，「」針刺刀割。" }
+        ],
+        L6: [
+            { w: "扶疏", s: "奶奶家的院子花木「」，還有休息的搖椅，是家人談心的地方。" },
+            { w: "鳳凰木", s: "每到六月，「」的紅色花朵便會盛開，為畢業季增添美麗的色彩。" },
+            { w: "山巔", s: "清晨太陽露出「」，為大地鋪上一大片金黃色的地毯。" },
+            { w: "戀戀不捨", s: "我們在海灘玩了一整天，直到傍晚，才「」的離開。" },
+            { w: "綠蔭", s: "由於天氣實在太熱了，大家都躲在「」下休息避暑。" },
+            { w: "紡車", s: "「」是中國古代就開始運用的紡織工具。" },
+            { w: "經緯", s: "地球儀上畫出的「」線只是虛擬的線條，讓我們可以判別各地的位置。" },
+            { w: "纖纖", s: "傍晚時，看見家家戶戶「」裊裊的炊煙，總會讓我想起老家村落的模樣。" },
+            { w: "裊裊", s: "古廟的鐘聲在山谷間迴盪，餘音「」。" },
+            { w: "袖珍", s: "這間餐廳的老闆收藏許多「」工藝品，吸引客人的目光。" },
+            { w: "工廠", s: "老師帶我們參觀醬油「」，了解醬油的製作過程。" },
+            { w: "喜孜孜", s: "哥哥「」的跟我們說，他提出的國外大學申請書已經核准了。" },
+            { w: "猶在", s: "他移民國外多年，然而心中的鄉愁「」，時常想念著家鄉的親人。" },
+            { w: "光陰", s: "老師提醒我們要珍惜「」，不要把時間浪費在不重要的事情上。" },
+            { w: "飛逝", s: "時光「」，一轉眼我已經要從國小畢業了。" },
+            { w: "雀斑", s: "夏天要留意皮膚保養，隨時注意防晒，以免形成「」。" }
+        ],
+        L7: [
+            { w: "閣樓", s: "他將「」闢為儲藏室，收放一些不常用的家具。" },
+            { w: "匱乏", s: "我國經濟發達，民生物質不虞「」。" },
+            { w: "舊書攤", s: "他閒來無事時喜歡逛逛「」挖寶貝。" },
+            { w: "冥冥之中", s: "他們兩人之間的緣分「」似乎早已注定。" },
+            { w: "帳篷", s: "「」是游牧民族逐水草而居的必要配備。" },
+            { w: "徒步", s: "表哥每天「」上學，幾年下來已鍛鍊出腳力了。" },
+            { w: "籌備", s: "經過幾年的「」，這家公司終於開張了。" },
+            { w: "埡口", s: "根據山友的經驗，許多高山「」都是容易形成雲海的地方。" },
+            { w: "山脈", s: "他對臺灣各大「」都非常熟悉，如果要登山，可以請教他。" },
+            { w: "紮營", s: "這塊空地背山面水，非常適合「」。" },
+            { w: "窸窸窣窣", s: "風一來，堤岸旁的蘆葦就發出「」的聲音。" },
+            { w: "背誦", s: "老師要同學「」這篇文章。" },
+            { w: "宇宙", s: "「」萬物十分奧妙，值得我們去探索。" },
+            { w: "浩瀚", s: "看到大海的「」，令人更加覺得自己的渺小。" }
+        ],
+        L8: [
+            { w: "瞻前顧後", s: "想把活動辦好，就必須設想周到、「」，這樣在面對突發狀況時才不致無法應付。" },
+            { w: "汲取", s: "爺爺不斷的「」新知，好學不倦的精神不輸給年輕人。" },
+            { w: "富庶", s: "全民同心齊力的奮鬥使國家「」，人民生活水準提高。" },
+            { w: "鍥而不捨", s: "經過警方「」的追查，終於找出了真凶。" },
+            { w: "嶄新", s: "他開了一部「」的轎車，引來許多羨慕的眼光。" },
+            { w: "一輩子", s: "他將「」都奉獻教育，培育了許多傑出的人才。" },
+            { w: "全力以赴", s: "國家籃球代表隊誓言將「」爭取最高榮譽。" },
+            { w: "構築", s: "軍方在邊境「」了許多防禦堡壘，以確保國家的安全。" },
+            { w: "諺語", s: "「」雖是精簡的句子，但卻是古人長遠累積的智慧。" },
+            { w: "羊羹", s: "媽媽準備了親手做的紅豆「」，來款待賓客。" },
+            { w: "公斤", s: "他買了一「」的牛肉，準備燉湯。" },
+            { w: "全神貫注", s: "他「」的聆聽音樂，連門鈴響了也不知道。" },
+            { w: "拓展", s: "閱讀可以「」我們的知識和想像力。" }
+        ],
+        L9: [
+            { w: "恭喜", s: "大家都開心的「」哥哥考上研究所。" },
+            { w: "荊棘", s: "即使人生的旅途布滿了「」，我們也要勇敢的走下去。" },
+            { w: "俗話", s: "「」說：『萬事起頭難。』創業之初，辛苦一點是必然的。" },
+            { w: "窘境", s: "因為父親驟然逝世，使得他們全家的生活頓時陷入了「」。" },
+            { w: "溝通", s: "我們在開會時充分「」意見，達成共識。" },
+            { w: "生涯", s: "他對自己的「」已經做了妥善的規畫，現在正一步步的朝目標與理想邁進。" },
+            { w: "曙光", s: "清晨第一道「」出現前，許多人就已經展開一天的工作了。" }
+        ]
+    };
+
+    // 預先準備好所有的語詞 (全域混淆選項使用)
+    let allWordsGlobal = [];
+    for(let key in dictionary) {
+        dictionary[key].forEach(item => {
+            if(!allWordsGlobal.includes(item.w)) allWordsGlobal.push(item.w);
+        });
+    }
+
+    // --- 遊戲核心變數 ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const uiCanvas = document.getElementById('ui-layer');
+    const uiCtx = uiCanvas.getContext('2d');
+
+    // 無盡模式生成參數
+    const SPAWN_DIST = 1500;
+    const MAX_DIST = 2000;
+
+    // UI 元素
+    const startMenu = document.getElementById('start-menu');
+    const quizModal = document.getElementById('quiz-modal');
+    const gameOverModal = document.getElementById('game-over-modal');
+    const pauseModal = document.getElementById('pause-modal');
+    const hud = document.getElementById('hud');
+    
+    // 遊戲狀態
+    let gameState = 'menu'; // menu, playing, paused, paused_quiz, gameover
+    let lastTime = 0;
+    let gameTimer = 0;
+    let score = 0;
+    let level = 1;
+    let selectedLessons = [];
+    let playerImage = null; // 儲存玩家上傳的圖片
+
+    // 環境物件
+    let rocks = [];
+    let trees = [];
+
+    // 虛擬搖桿狀態
+    const joystick = {
+        active: false, touchId: null,
+        baseX: 120, baseY: 0, 
+        currentX: 120, currentY: 0,
+        dirX: 0, dirY: 0,
+        radius: 60, handleRadius: 30
+    };
+
+    // 視窗大小調整
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        uiCanvas.width = window.innerWidth;
+        uiCanvas.height = window.innerHeight;
+        
+        // 更新搖桿位置 
+        joystick.baseX = window.innerWidth - 80;
+        joystick.baseY = window.innerHeight - 80;
+        joystick.currentX = joystick.baseX;
+        joystick.currentY = joystick.baseY;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // 攝影機
+    const camera = { x: 0, y: 0 };
+
+    // --- 遊戲實體 ---
+    let player = {
+        x: 0, y: 0,
+        radius: 20,
+        speed: 200,
+        hp: 100, maxHp: 100,
+        color: '#3B82F6',
+        weaponCount: 1,
+        weaponRadius: 80,
+        weaponSpeed: 3,
+        weaponAngle: 0
+    };
+
+    let enemies = [];
+    let treasures = [];
+    let damageTexts = [];
+
+    // 輸入控制
+    const keys = { w: false, a: false, s: false, d: false };
+
+    // 國語題目相關變數
+    let activePool = []; // 負責紀錄當前還要詢問的題目清單 (錯題與新題都在這)
+    let currentQuestionData = null; // 當前被問的問題本體
+    let currentQuestion = null; // 包含混淆選項的問題結構
+    let currentTreasureIndex = -1;
+
+    // --- 處理玩家上傳圖片 ---
+    document.getElementById('player-img-upload').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    playerImage = img;
+                    const preview = document.getElementById('player-img-preview');
+                    preview.src = event.target.result;
+                    preview.classList.remove('hidden');
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // --- 產生環境物件 ---
+    function createRock(x, y) {
+        let r = 30 + Math.random() * 40;
+        let numVertices = 6 + Math.floor(Math.random() * 5);
+        let vertices = [];
+        for (let i = 0; i < numVertices; i++) {
+            let angle = (i / numVertices) * Math.PI * 2;
+            let dist = r * (0.7 + Math.random() * 0.6);
+            vertices.push({x: Math.cos(angle)*dist, y: Math.sin(angle)*dist});
+        }
+        return { x, y, radius: r, vertices };
+    }
+
+    function createTree(x, y) {
+        return {
+            x, y,
+            radius: 30 + Math.random() * 30,
+            colorType: Math.random() > 0.5 ? '#166534' : '#14532D'
+        };
+    }
+
+    function generateEnvironment() {
+        rocks = [];
+        trees = [];
+        for (let i = 0; i < 30; i++) {
+            let angle = Math.random() * Math.PI * 2;
+            let dist = Math.random() * SPAWN_DIST;
+            rocks.push(createRock(player.x + Math.cos(angle)*dist, player.y + Math.sin(angle)*dist));
+        }
+        for (let i = 0; i < 60; i++) {
+            let angle = Math.random() * Math.PI * 2;
+            let dist = Math.random() * SPAWN_DIST;
+            trees.push(createTree(player.x + Math.cos(angle)*dist, player.y + Math.sin(angle)*dist));
+        }
+    }
+
+    // --- 初始化與重置 ---
+    function initGame() {
+        player.x = 0;
+        player.y = 0;
+        generateEnvironment();
+        player.hp = player.maxHp;
+        player.weaponCount = 1;
+        player.weaponAngle = 0;
+        enemies = [];
+        treasures = [];
+        damageTexts = [];
+        score = 0;
+        level = 1;
+        gameTimer = 0;
+
+        // 初始化題庫
+        activePool = [];
+        selectedLessons.forEach(lesson => {
+            if (dictionary[lesson]) {
+                activePool = activePool.concat(dictionary[lesson]);
+            }
+        });
+        activePool.sort(() => Math.random() - 0.5); // 隨機打亂
+
+        document.getElementById('level-target').textContent = "/ 30";
+        updateHUD();
+        
+        uiCanvas.style.pointerEvents = 'auto';
+    }
+
+    // --- 輸入監聽 ---
+    window.addEventListener('keydown', e => { 
+        if (e.code === 'KeyW' || e.code === 'ArrowUp') keys.w = true;
+        if (e.code === 'KeyS' || e.code === 'ArrowDown') keys.s = true;
+        if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.a = true;
+        if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = true;
+    });
+    window.addEventListener('keyup', e => { 
+        if (e.code === 'KeyW' || e.code === 'ArrowUp') keys.w = false;
+        if (e.code === 'KeyS' || e.code === 'ArrowDown') keys.s = false;
+        if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.a = false;
+        if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = false;
+    });
+
+    uiCanvas.addEventListener('touchstart', e => {
+        if (gameState !== 'playing') return;
+        Array.from(e.changedTouches).forEach(touch => {
+            if (touch.clientX > window.innerWidth / 2) {
+                joystick.active = true;
+                joystick.touchId = touch.identifier;
+                updateJoystickPos(touch.clientX, touch.clientY);
+            }
+        });
+    }, { passive: false });
+
+    uiCanvas.addEventListener('touchmove', e => {
+        if (!joystick.active) return;
+        e.preventDefault(); 
+        Array.from(e.changedTouches).forEach(touch => {
+            if (touch.identifier === joystick.touchId) {
+                updateJoystickPos(touch.clientX, touch.clientY);
+            }
+        });
+    }, { passive: false });
+
+    const endJoystick = (e) => {
+        Array.from(e.changedTouches).forEach(touch => {
+            if (touch.identifier === joystick.touchId) {
+                joystick.active = false;
+                joystick.dirX = 0;
+                joystick.dirY = 0;
+                joystick.currentX = joystick.baseX;
+                joystick.currentY = joystick.baseY;
+            }
+        });
+    };
+    uiCanvas.addEventListener('touchend', endJoystick);
+    uiCanvas.addEventListener('touchcancel', endJoystick);
+
+    function updateJoystickPos(x, y) {
+        let dx = x - joystick.baseX;
+        let dy = y - joystick.baseY;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        
+        if (dist > joystick.radius) {
+            joystick.currentX = joystick.baseX + (dx / dist) * joystick.radius;
+            joystick.currentY = joystick.baseY + (dy / dist) * joystick.radius;
+        } else {
+            joystick.currentX = x;
+            joystick.currentY = y;
+        }
+
+        if (dist > 10) {
+            joystick.dirX = dx / dist;
+            joystick.dirY = dy / dist;
+        } else {
+            joystick.dirX = 0;
+            joystick.dirY = 0;
+        }
+    }
+
+    // --- 國語題目邏輯 ---
+    function generateQuizQuestion() {
+        // 如果目前題庫已經空了，就利用勾選的課文語詞，自動產生新的造句題目
+        if (activePool.length === 0) {
+            let availableWords = [];
+            selectedLessons.forEach(lesson => {
+                if(dictionary[lesson]) {
+                    dictionary[lesson].forEach(item => {
+                        if(!availableWords.includes(item.w)) availableWords.push(item.w);
+                    });
+                }
+            });
+            
+            // 隨機生成 5 題新題目加入題庫
+            for(let i=0; i<5; i++) {
+                let randomWord = availableWords[Math.floor(Math.random() * availableWords.length)];
+                let randomTemplate = genericTemplates[Math.floor(Math.random() * genericTemplates.length)];
+                activePool.push({
+                    w: randomWord,
+                    s: randomTemplate
+                });
+            }
+        }
+
+        // 從題庫最前方取出一題 (如果有答錯的題目，會被推到最後面，所以不會連續問)
+        currentQuestionData = activePool.shift();
+        let correctAnswer = currentQuestionData.w;
+
+        // 產生4個選項 (包含正確答案與3個不重複的錯誤答案)
+        let options = [correctAnswer];
+        while(options.length < 4) {
+            let randomWord = allWordsGlobal[Math.floor(Math.random() * allWordsGlobal.length)];
+            if(!options.includes(randomWord)) {
+                options.push(randomWord);
+            }
+        }
+
+        // 打亂選項順序
+        options.sort(() => Math.random() - 0.5);
+
+        return {
+            text: currentQuestionData.s,
+            answer: correctAnswer,
+            options: options
+        };
+    }
+
+    function submitQuizAnswer(selectedOpt) {
+        if (selectedOpt === currentQuestion.answer) {
+            closeQuizModal(true);
+        } else {
+            closeQuizModal('wrong');
+        }
+    }
+
+    // --- UI 互動 ---
+    document.getElementById('start-btn').addEventListener('click', () => {
+        const checkboxes = document.querySelectorAll('#start-menu input[type="checkbox"]:checked');
+        selectedLessons = Array.from(checkboxes).map(cb => cb.value);
+        if (selectedLessons.length === 0) {
+            document.getElementById('start-error').classList.remove('hidden');
+            return;
+        }
+        document.getElementById('start-error').classList.add('hidden');
+        startMenu.classList.add('hidden');
+        hud.classList.remove('hidden');
+        
+        initGame();
+        gameState = 'playing';
+        lastTime = performance.now();
+        requestAnimationFrame(gameLoop);
+    });
+
+    document.getElementById('pause-btn').addEventListener('click', () => {
+        if(gameState === 'playing') {
+            gameState = 'paused';
+            pauseModal.classList.remove('hidden');
+            uiCanvas.style.pointerEvents = 'none';
+        }
+    });
+
+    document.getElementById('resume-btn').addEventListener('click', () => {
+        gameState = 'playing';
+        pauseModal.classList.add('hidden');
+        uiCanvas.style.pointerEvents = 'auto';
+        lastTime = performance.now();
+        requestAnimationFrame(gameLoop);
+    });
+
+    document.getElementById('restart-from-pause-btn').addEventListener('click', () => {
+        pauseModal.classList.add('hidden');
+        initGame();
+        gameState = 'playing';
+        lastTime = performance.now();
+        requestAnimationFrame(gameLoop);
+    });
+
+    document.getElementById('reselect-btn').addEventListener('click', () => {
+        gameState = 'menu';
+        hud.classList.add('hidden');
+        startMenu.classList.remove('hidden');
+    });
+
+    document.getElementById('restart-btn').addEventListener('click', () => {
+        gameOverModal.classList.add('hidden');
+        hud.classList.remove('hidden');
+        initGame();
+        gameState = 'playing';
+        lastTime = performance.now();
+        requestAnimationFrame(gameLoop);
+    });
+
+    function closeQuizModal(status) {
+        const fb = document.getElementById('quiz-feedback');
+        
+        const btns = document.querySelectorAll('#options-container button');
+        btns.forEach(b => b.disabled = true);
+
+        if (status === true) {
+            fb.textContent = "正確！獲得新武器！";
+            fb.className = "mt-4 text-xl font-bold text-green-400 h-6";
+            player.weaponCount++;
+            updateHUD();
+        } else if (status === 'wrong') {
+            fb.textContent = "答錯了！尋找下一個知識節點。";
+            fb.className = "mt-4 text-xl font-bold text-red-400 h-6";
+            // 錯題放回題庫尾端，可以重複出題
+            if(currentQuestionData) activePool.push(currentQuestionData);
+        } else {
+            fb.textContent = "放棄。寶物消失。";
+            fb.className = "mt-4 text-xl font-bold text-gray-400 h-6";
+            // 放棄也將題目放回題庫尾端
+            if(currentQuestionData) activePool.push(currentQuestionData);
+        }
+
+        setTimeout(() => {
+            quizModal.classList.add('hidden');
+            fb.textContent = "";
+            if (currentTreasureIndex > -1) treasures.splice(currentTreasureIndex, 1);
+            uiCanvas.style.pointerEvents = 'auto';
+            gameState = 'playing';
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        }, 800);
+    }
+
+    document.getElementById('skip-btn').addEventListener('click', () => closeQuizModal(false));
+
+    function triggerQuiz(treasureIndex) {
+        gameState = 'paused_quiz';
+        currentTreasureIndex = treasureIndex;
+        currentQuestion = generateQuizQuestion();
+        
+        document.getElementById('question-text').textContent = currentQuestion.text;
+        
+        const optionsContainer = document.getElementById('options-container');
+        optionsContainer.innerHTML = ''; 
+        
+        currentQuestion.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-2 rounded-lg text-xl transition active:scale-95 border-2 border-blue-400 shadow-md';
+            btn.textContent = opt;
+            btn.onclick = () => submitQuizAnswer(opt);
+            optionsContainer.appendChild(btn);
+        });
+
+        document.getElementById('quiz-feedback').textContent = "";
+        quizModal.classList.remove('hidden');
+        uiCanvas.style.pointerEvents = 'none';
+        
+        for(let k in keys) keys[k] = false;
+    }
+
+    // --- 敵人與遊戲邏輯 ---
+    function getEnemyColorByHP(hp) {
+        const base = Math.ceil(hp / level);
+        if (base <= 1) return '#FFFFFF'; 
+        if (base === 2) return '#BAE6FD'; 
+        if (base === 3) return '#FDE047'; 
+        if (base === 4) return '#A3E635'; 
+        if (base === 5) return '#FB923C'; 
+        if (base === 6) return '#C084FC'; 
+        if (base === 7) return '#22D3EE'; 
+        if (base === 8) return '#F472B6'; 
+        return '#EF4444'; 
+    }
+
+    function levelUp() {
+        level = 2;
+        addDamageText(player.x, player.y - 50, "進入第二關！難度倍增！", "#EAB308", 3);
+        document.getElementById('level-target').textContent = " (無盡模式)";
+        updateHUD();
+    }
+
+    function update(dt) {
+        let dx = 0, dy = 0;
+        if (keys.w) dy -= 1;
+        if (keys.s) dy += 1;
+        if (keys.a) dx -= 1;
+        if (keys.d) dx += 1;
+
+        if (dx === 0 && dy === 0 && joystick.active) {
+            dx = joystick.dirX;
+            dy = joystick.dirY;
+        }
+
+        if (dx !== 0 || dy !== 0) {
+            const length = Math.sqrt(dx*dx + dy*dy);
+            player.x += (dx / length) * player.speed * dt;
+            player.y += (dy / length) * player.speed * dt;
+        }
+
+        rocks = rocks.filter(r => Math.hypot(r.x - player.x, r.y - player.y) < MAX_DIST);
+        trees = trees.filter(t => Math.hypot(t.x - player.x, t.y - player.y) < MAX_DIST);
+
+        while (rocks.length < 30) {
+            let angle = Math.random() * Math.PI * 2;
+            let dist = SPAWN_DIST + Math.random() * 200;
+            rocks.push(createRock(player.x + Math.cos(angle)*dist, player.y + Math.sin(angle)*dist));
+        }
+        while (trees.length < 60) {
+            let angle = Math.random() * Math.PI * 2;
+            let dist = SPAWN_DIST + Math.random() * 200;
+            trees.push(createTree(player.x + Math.cos(angle)*dist, player.y + Math.sin(angle)*dist));
+        }
+
+        for (let r of rocks) {
+            let rdx = player.x - r.x;
+            let rdy = player.y - r.y;
+            let dist = Math.sqrt(rdx*rdx + rdy*rdy);
+            if (dist < player.radius + r.radius) {
+                let overlap = (player.radius + r.radius) - dist;
+                player.x += (rdx / dist) * overlap;
+                player.y += (rdy / dist) * overlap;
+            }
+        }
+
+        camera.x += (player.x - canvas.width/2 - camera.x) * 0.1;
+        camera.y += (player.y - canvas.height/2 - camera.y) * 0.1;
+
+        player.weaponAngle += player.weaponSpeed * dt;
+
+        gameTimer += dt;
+        const spawnRate = Math.max(0.2, 1.2 - gameTimer * 0.01); 
+        if (enemies.length < 60 && Math.random() < dt / spawnRate) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.max(canvas.width, canvas.height) * 0.7;
+            const ex = player.x + Math.cos(angle) * dist;
+            const ey = player.y + Math.sin(angle) * dist;
+            
+            let baseHp = Math.floor(Math.random() * 9) + 1;
+            let finalHp = level === 2 ? baseHp * 2 : baseHp;
+
+            enemies.push({
+                x: ex, y: ey,
+                radius: 15 + baseHp,
+                speed: 70 + Math.random() * 40,
+                hp: finalHp,
+                hitCooldown: 0 
+            });
+        }
+
+        if (Math.random() < dt / 3) { 
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 100 + Math.random() * 400;
+            const tx = player.x + Math.cos(angle) * dist;
+            const ty = player.y + Math.sin(angle) * dist;
+            treasures.push({ x: tx, y: ty, radius: 15, timeCreated: gameTimer });
+        }
+        treasures = treasures.filter(t => gameTimer - t.timeCreated < 15);
+
+        const currentWeapons = [];
+        for (let i = 0; i < player.weaponCount; i++) {
+            const angle = player.weaponAngle + (Math.PI * 2 / player.weaponCount) * i;
+            currentWeapons.push({
+                x: player.x + Math.cos(angle) * player.weaponRadius,
+                y: player.y + Math.sin(angle) * player.weaponRadius,
+                radius: 12
+            });
+        }
+
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            const e = enemies[i];
+            if(e.hitCooldown > 0) e.hitCooldown -= dt;
+
+            const ex = player.x - e.x;
+            const ey = player.y - e.y;
+            const distToPlayer = Math.sqrt(ex*ex + ey*ey);
+            
+            for(let j=0; j<enemies.length; j++){
+                if(i!==j){
+                    const other = enemies[j];
+                    const oDx = e.x - other.x;
+                    const oDy = e.y - other.y;
+                    const oDist = Math.sqrt(oDx*oDx + oDy*oDy);
+                    if(oDist < e.radius + other.radius) {
+                        e.x += (oDx/oDist) * 1;
+                        e.y += (oDy/oDist) * 1;
+                    }
+                }
+            }
+
+            if (distToPlayer > player.radius + e.radius) {
+                e.x += (ex / distToPlayer) * e.speed * dt;
+                e.y += (ey / distToPlayer) * e.speed * dt;
+            } else {
+                player.hp -= 10;
+                enemies.splice(i, 1);
+                updateHUD();
+                addDamageText(player.x, player.y - 20, "-10", "#EF4444");
+                
+                if (player.hp <= 0) {
+                    gameState = 'gameover';
+                    document.getElementById('time-survived').textContent = Math.floor(gameTimer);
+                    document.getElementById('final-score').textContent = score;
+                    document.getElementById('final-level').textContent = level;
+                    hud.classList.add('hidden');
+                    gameOverModal.classList.remove('hidden');
+                    uiCanvas.style.pointerEvents = 'none';
+                    return;
+                }
+                continue;
+            }
+
+            let hit = false;
+            for (let w of currentWeapons) {
+                const wx = w.x - e.x;
+                const wy = w.y - e.y;
+                if (Math.sqrt(wx*wx + wy*wy) < w.radius + e.radius) {
+                    hit = true; break;
+                }
+            }
+
+            if (hit && e.hitCooldown <= 0) {
+                e.hp -= 1;
+                e.hitCooldown = 0.4; 
+                e.x -= (ex / distToPlayer) * 20;
+                e.y -= (ey / distToPlayer) * 20;
+                
+                addDamageText(e.x, e.y, "-1", "#FFFFFF", 0.5);
+
+                if (e.hp <= 0) {
+                    score++;
+                    updateHUD();
+                    addDamageText(e.x, e.y, "擊破", "#FBBF24");
+                    enemies.splice(i, 1);
+                    
+                    if (level === 1 && score >= 30) {
+                        levelUp();
+                    }
+                }
+            }
+        }
+
+        for (let i = 0; i < treasures.length; i++) {
+            const t = treasures[i];
+            const dx = player.x - t.x;
+            const dy = player.y - t.y;
+            if (Math.sqrt(dx*dx + dy*dy) < player.radius + t.radius) {
+                triggerQuiz(i);
+                break;
+            }
+        }
+
+        for (let i = damageTexts.length - 1; i >= 0; i--) {
+            damageTexts[i].life -= dt;
+            damageTexts[i].y -= 20 * dt; 
+            if (damageTexts[i].life <= 0) damageTexts.splice(i, 1);
+        }
+    }
+
+    function addDamageText(x, y, text, color, life=0.8) {
+        damageTexts.push({ x, y, text, color, life, maxLife: life });
+    }
+
+    function updateHUD() {
+        document.getElementById('hp-display').textContent = Math.max(0, player.hp);
+        document.getElementById('weapon-display').textContent = player.weaponCount;
+        document.getElementById('score-display').textContent = score;
+        document.getElementById('level-display').textContent = level;
+    }
+
+    // --- 繪圖邏輯 ---
+    function draw() {
+        ctx.fillStyle = '#4ade80'; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.save();
+        ctx.translate(-camera.x, -camera.y);
+
+        ctx.strokeStyle = '#22c55e';
+        ctx.lineWidth = 2;
+        const gridSize = 150;
+        const startX = Math.floor(camera.x / gridSize) * gridSize;
+        const startY = Math.floor(camera.y / gridSize) * gridSize;
+        for (let x = startX; x < camera.x + canvas.width; x += gridSize) {
+            ctx.beginPath(); ctx.moveTo(x, camera.y); ctx.lineTo(x, camera.y + canvas.height); ctx.stroke();
+        }
+        for (let y = startY; y < camera.y + canvas.height; y += gridSize) {
+            ctx.beginPath(); ctx.moveTo(camera.x, y); ctx.lineTo(camera.x + canvas.width, y); ctx.stroke();
+        }
+
+        for (let r of rocks) {
+            if(r.x > camera.x - 100 && r.x < camera.x + canvas.width + 100 &&
+               r.y > camera.y - 100 && r.y < camera.y + canvas.height + 100) {
+                ctx.save();
+                ctx.translate(r.x, r.y);
+                
+                ctx.fillStyle = '#6B7280'; 
+                ctx.beginPath();
+                ctx.moveTo(r.vertices[0].x, r.vertices[0].y);
+                for(let i=1; i<r.vertices.length; i++) {
+                    ctx.lineTo(r.vertices[i].x, r.vertices[i].y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.fillStyle = '#9CA3AF';
+                ctx.beginPath();
+                ctx.moveTo(r.vertices[0].x * 0.5 - r.radius * 0.2, r.vertices[0].y * 0.5 - r.radius * 0.2);
+                for(let i=1; i<r.vertices.length; i++) {
+                    ctx.lineTo(r.vertices[i].x * 0.5 - r.radius * 0.2, r.vertices[i].y * 0.5 - r.radius * 0.2);
+                }
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        const pulse = 1 + Math.sin(performance.now() * 0.005) * 0.2;
+        for (let t of treasures) {
+            ctx.save();
+            ctx.translate(t.x, t.y);
+            ctx.scale(pulse, pulse);
+            ctx.shadowColor = '#60A5FA';
+            ctx.shadowBlur = 20;
+            ctx.fillStyle = '#3B82F6';
+            ctx.beginPath(); ctx.moveTo(0, -t.radius); ctx.lineTo(t.radius, 0); ctx.lineTo(0, t.radius); ctx.lineTo(-t.radius, 0); ctx.fill();
+            ctx.fillStyle = 'white';
+            ctx.beginPath(); ctx.moveTo(0, -t.radius/2); ctx.lineTo(t.radius/2, 0); ctx.lineTo(0, t.radius/2); ctx.lineTo(-t.radius/2, 0); ctx.fill();
+            ctx.restore();
+        }
+
+        for (let e of enemies) {
+            ctx.fillStyle = getEnemyColorByHP(e.hp);
+            if(e.hitCooldown > 0.2) ctx.fillStyle = 'white';
+            
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = 'white';
+            ctx.beginPath(); ctx.arc(e.x - e.radius*0.3, e.y - e.radius*0.2, e.radius*0.2, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(e.x + e.radius*0.3, e.y - e.radius*0.2, e.radius*0.2, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'black';
+            ctx.beginPath(); ctx.arc(e.x - e.radius*0.3, e.y - e.radius*0.2, e.radius*0.1, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(e.x + e.radius*0.3, e.y - e.radius*0.2, e.radius*0.1, 0, Math.PI*2); ctx.fill();
+            
+            ctx.fillStyle = 'black';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(e.hp, e.x, e.y + e.radius*0.7);
+        }
+
+        ctx.save();
+        ctx.translate(player.x, player.y);
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath(); ctx.ellipse(0, player.radius, player.radius, player.radius/2, 0, 0, Math.PI*2); ctx.fill();
+        
+        if (playerImage) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip(); 
+            ctx.drawImage(playerImage, -player.radius, -player.radius, player.radius * 2, player.radius * 2);
+            ctx.restore();
+            ctx.strokeStyle = '#EAB308';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
+            ctx.stroke();
+        } else {
+            ctx.fillStyle = '#D1D5DB'; 
+            ctx.fillRect(-15, -15, 30, 30);
+            ctx.fillStyle = '#EAB308'; 
+            ctx.fillRect(-15, -15, 30, 8);
+            ctx.fillStyle = '#1F2937'; 
+            ctx.fillRect(-10, -5, 20, 4);
+        }
+
+        ctx.fillStyle = '#DC2626'; ctx.fillRect(-20, -25, 40, 5);
+        ctx.fillStyle = '#22C55E'; ctx.fillRect(-20, -25, 40 * (Math.max(0, player.hp) / player.maxHp), 5);
+        ctx.restore();
+
+        ctx.fillStyle = '#FBBF24'; 
+        for (let i = 0; i < player.weaponCount; i++) {
+            const angle = player.weaponAngle + (Math.PI * 2 / player.weaponCount) * i;
+            const wx = player.x + Math.cos(angle) * player.weaponRadius;
+            const wy = player.y + Math.sin(angle) * player.weaponRadius;
+            ctx.save();
+            ctx.translate(wx, wy);
+            ctx.rotate(player.weaponAngle * 2);
+            ctx.beginPath();
+            for(let j=0; j<4; j++) { ctx.rotate(Math.PI/2); ctx.lineTo(14, 0); ctx.lineTo(4, 4); }
+            ctx.closePath(); ctx.fill();
+            ctx.fillStyle = 'white';
+            ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#FBBF24';
+            ctx.restore();
+        }
+
+        for (let tr of trees) {
+            if(tr.x > camera.x - 100 && tr.x < camera.x + canvas.width + 100 &&
+               tr.y > camera.y - 100 && tr.y < camera.y + canvas.height + 100) {
+                ctx.fillStyle = '#78350F';
+                ctx.fillRect(tr.x - 8, tr.y - 10, 16, tr.radius * 0.8 + 10);
+                
+                ctx.fillStyle = tr.colorType;
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    let yOffset = tr.y - 10 - i * (tr.radius * 0.35);
+                    let width = tr.radius - i * 8;
+                    ctx.moveTo(tr.x, yOffset - tr.radius); 
+                    ctx.lineTo(tr.x - width, yOffset);     
+                    ctx.lineTo(tr.x + width, yOffset);     
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+                    ctx.beginPath();
+                    ctx.moveTo(tr.x, yOffset - tr.radius);
+                    ctx.lineTo(tr.x - width*0.5, yOffset);
+                    ctx.lineTo(tr.x, yOffset);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.fillStyle = tr.colorType; 
+                }
+            }
+        }
+
+        for (let dt of damageTexts) {
+            ctx.fillStyle = dt.color;
+            ctx.font = 'bold 22px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.globalAlpha = dt.life / dt.maxLife;
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 3;
+            ctx.strokeText(dt.text, dt.x, dt.y);
+            ctx.fillText(dt.text, dt.x, dt.y);
+            ctx.globalAlpha = 1;
+        }
+
+        ctx.restore();
+
+        uiCtx.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
+        
+        if (gameState === 'playing') {
+            uiCtx.fillStyle = 'rgba(100, 116, 139, 0.4)'; 
+            uiCtx.beginPath();
+            uiCtx.arc(joystick.baseX, joystick.baseY, joystick.radius, 0, Math.PI * 2);
+            uiCtx.fill();
+            uiCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            uiCtx.lineWidth = 2;
+            uiCtx.stroke();
+            
+            uiCtx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            uiCtx.beginPath();
+            uiCtx.arc(joystick.currentX, joystick.currentY, joystick.handleRadius, 0, Math.PI * 2);
+            uiCtx.fill();
+        }
+    }
+
+    function gameLoop(timestamp) {
+        if (gameState !== 'playing' && gameState !== 'paused_quiz' && gameState !== 'paused') return;
+
+        if (!lastTime) lastTime = timestamp;
+        let dt = (timestamp - lastTime) / 1000;
+        if (dt > 0.1) dt = 0.1; 
+        lastTime = timestamp;
+
+        if (gameState === 'playing') {
+            update(dt);
+        }
+        
+        draw();
+
+        if (gameState === 'playing' || gameState === 'paused_quiz' || gameState === 'paused') {
+            requestAnimationFrame(gameLoop);
+        }
+    }
+
+</script>
+</body>
+</html>
