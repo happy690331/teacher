@@ -1,0 +1,407 @@
+import React, { useState, useEffect } from 'react';
+import { Play, CheckCircle, XCircle, ArrowRight, Gamepad2, Video, BookOpen, Star, Trophy, RefreshCw, ChevronRight } from 'lucide-react';
+
+// --- 資料庫 ---
+
+const unitsData = {
+  unit1: {
+    title: "單元一：垂直與平行",
+    description: "兩條線相交成「直角」就是「垂直」；像火車鐵軌一樣永遠不會相交的兩條線就是「平行」。",
+    questions: [
+      { q: "兩條直線相交，形成了一個「直角」，我們說這兩條直線互相什麼？", options: ["垂直", "平行", "打結"], ans: 0 },
+      { q: "像火車鐵軌一樣，永遠保持一樣的距離、不會碰在一起的兩條直線，互相什麼？", options: ["垂直", "平行", "交叉"], ans: 1 },
+      { q: "哪一個注音符號裡，有「互相垂直」的線條？", options: ["ㄒ", "ㄟ", "ㄑ"], ans: 0 },
+      { q: "哪一個英文字母裡，有「互相平行」的線條？", options: ["H", "V", "X"], ans: 0 },
+      { q: "我們要檢查兩條線有沒有「垂直」，可以使用什麼文具來幫忙測量？", options: ["三角板的直角", "圓規的針", "普通的橡皮擦"], ans: 0 },
+      { q: "在平平的桌面上，兩條互相平行的直線，它們之間的距離會怎麼樣？", options: ["都一樣寬", "越來越近", "越來越遠"], ans: 0 },
+    ]
+  },
+  unit2: {
+    title: "單元二：認識四邊形",
+    description: "有 4 條邊和 4 個角的圖形叫做「四邊形」。常見的有正方形、長方形、平行四邊形、菱形和梯形喔！",
+    questions: [
+      { q: "有 4 個直角，而且 4 條邊都「一樣長」的圖形叫做什麼？", options: ["正方形", "長方形", "梯形"], ans: 0 },
+      { q: "有 4 個直角，但只有「面對面的邊（對邊）」一樣長的圖形叫做什麼？", options: ["長方形", "菱形", "梯形"], ans: 0 },
+      { q: "只有「一組對邊平行」，形狀像溜滑梯側面的四邊形叫做什麼？", options: ["梯形", "正方形", "菱形"], ans: 0 },
+      { q: "有兩組對邊分別平行，但「沒有直角」的四邊形，通常叫做什麼？", options: ["平行四邊形", "長方形", "梯形"], ans: 0 },
+      { q: "4 條邊都「一樣長」，但「沒有直角」像鑽石一樣的圖形叫做什麼？", options: ["菱形", "長方形", "梯形"], ans: 0 },
+      { q: "下列哪一個圖形「不是」四邊形？", options: ["三角形", "正方形", "梯形"], ans: 0 },
+    ]
+  },
+  unit3: {
+    title: "單元三：四邊形的秘密",
+    description: "不同的四邊形有不同的性質，我們來找找看生活中的四邊形，以及它們共同的秘密！",
+    questions: [
+      { q: "「正方形」和「長方形」，它們都有幾個直角？", options: ["4個直角", "2個直角", "0個直角"], ans: 0 },
+      { q: "「菱形」和「正方形」有一個最大的共同點，請問是什麼？", options: ["4條邊都一樣長", "都有4個直角", "只有一組邊平行"], ans: 0 },
+      { q: "「平行四邊形」有幾組互相平行的對邊？", options: ["2組", "1組", "0組"], ans: 0 },
+      { q: "我們教室裡的「黑板表面」，通常是什麼形狀的？", options: ["長方形", "菱形", "梯形"], ans: 0 },
+      { q: "下列哪一個圖形的四個角，「不一定」是直角？", options: ["菱形", "正方形", "長方形"], ans: 0 },
+      { q: "把一張長方形色紙平平的對折，再打開來，中間的摺線和旁邊的邊會互相什麼？", options: ["平行", "交叉", "打結"], ans: 0 },
+    ]
+  }
+};
+
+const allGameQuestions = [
+    ...unitsData.unit1.questions,
+    ...unitsData.unit2.questions,
+    ...unitsData.unit3.questions
+].sort(() => Math.random() - 0.5); // 隨機打亂
+
+// --- 主元件 ---
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('video');
+  const [globalScore, setGlobalScore] = useState(0);
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'video': return <VideoSection onNext={() => setActiveTab('unit1')} />;
+      case 'unit1': return <UnitSection unitKey="unit1" onNext={() => setActiveTab('unit2')} onScoreUpdate={setGlobalScore} />;
+      case 'unit2': return <UnitSection unitKey="unit2" onNext={() => setActiveTab('unit3')} onScoreUpdate={setGlobalScore} />;
+      case 'unit3': return <UnitSection unitKey="unit3" onNext={() => setActiveTab('game')} onScoreUpdate={setGlobalScore} />;
+      case 'game': return <GameSection />;
+      default: return <VideoSection />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-teal-50 font-sans text-gray-800 flex flex-col items-center">
+      {/* 頂部導航列 */}
+      <header className="w-full bg-white shadow-md p-4 sticky top-0 z-50 border-b-4 border-teal-500">
+        <div className="max-w-4xl mx-auto flex flex-wrap justify-between items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Trophy className="text-orange-500 w-8 h-8" />
+            <h1 className="text-2xl font-bold text-teal-700">幾何探險大挑戰</h1>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <NavButton active={activeTab === 'video'} onClick={() => setActiveTab('video')} icon={<Video />} text="教學影片" />
+            <NavButton active={activeTab === 'unit1'} onClick={() => setActiveTab('unit1')} icon={<BookOpen />} text="單元一" />
+            <NavButton active={activeTab === 'unit2'} onClick={() => setActiveTab('unit2')} icon={<BookOpen />} text="單元二" />
+            <NavButton active={activeTab === 'unit3'} onClick={() => setActiveTab('unit3')} icon={<BookOpen />} text="單元三" />
+            <NavButton active={activeTab === 'game'} onClick={() => setActiveTab('game')} icon={<Gamepad2 />} text="挑戰遊戲" />
+          </div>
+        </div>
+      </header>
+
+      {/* 主要內容區 */}
+      <main className="w-full max-w-4xl p-4 md:p-8 flex-grow">
+        {renderContent()}
+      </main>
+    </div>
+  );
+}
+
+// --- 子元件 ---
+
+function NavButton({ active, onClick, icon, text }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1 px-3 py-2 rounded-full font-bold transition-all ${
+        active 
+          ? 'bg-teal-600 text-white shadow-lg transform scale-105' 
+          : 'bg-gray-100 text-gray-600 hover:bg-teal-100 hover:text-teal-700'
+      }`}
+    >
+      {React.cloneElement(icon, { size: 18 })}
+      <span className="hidden sm:inline">{text}</span>
+    </button>
+  );
+}
+
+// 教學影片區
+function VideoSection({ onNext }) {
+  return (
+    <div className="bg-white rounded-3xl shadow-xl p-6 md:p-10 flex flex-col items-center text-center animate-fade-in border-t-8 border-teal-400">
+      <h2 className="text-3xl font-bold text-teal-700 mb-4">歡迎來到幾何圖形的世界！</h2>
+      <p className="text-xl text-gray-600 mb-8">請先觀看這段影片，我們一起來認識「垂直、平行與四邊形」吧！</p>
+      
+      <div className="w-full max-w-2xl aspect-video bg-gray-200 rounded-2xl overflow-hidden shadow-inner mb-8 border-4 border-teal-200">
+        {/* 使用 YouTube 嵌入 iframe 作為示範影片 (關於四下幾何的教育影片) */}
+        <iframe 
+          className="w-full h-full"
+          src="https://www.youtube.com/embed/2_HjT9N0m2Y?autoplay=0&rel=0" 
+          title="YouTube video player" 
+          frameBorder="0" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowFullScreen>
+        </iframe>
+      </div>
+
+      <button 
+        onClick={onNext}
+        className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-full text-2xl font-bold transition-transform hover:scale-105 shadow-lg"
+      >
+        我看完了，開始練習 <ArrowRight />
+      </button>
+    </div>
+  );
+}
+
+// 單元練習區
+function UnitSection({ unitKey, onNext, onScoreUpdate }) {
+  const data = unitsData[unitKey];
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [isCorrect, setIsCorrect] = useState(null);
+  const [score, setScore] = useState(0);
+  const [showResult, setShowResult] = useState(false);
+
+  const handleAnswer = (index) => {
+    if (selectedAnswer !== null) return; // 已經回答過這題
+    
+    setSelectedAnswer(index);
+    const correct = index === data.questions[currentIndex].ans;
+    setIsCorrect(correct);
+    
+    if (correct) {
+      setScore(s => s + 10);
+      onScoreUpdate(s => s + 10);
+      // 答對自動進入下一題或結算
+      setTimeout(() => {
+        handleNextQuestion();
+      }, 1500);
+    }
+  };
+
+  const handleNextQuestion = () => {
+    if (currentIndex < data.questions.length - 1) {
+      setCurrentIndex(c => c + 1);
+      setSelectedAnswer(null);
+      setIsCorrect(null);
+    } else {
+      setShowResult(true);
+    }
+  };
+
+  const resetUnit = () => {
+    setCurrentIndex(0);
+    setSelectedAnswer(null);
+    setIsCorrect(null);
+    setScore(0);
+    setShowResult(false);
+  };
+
+  if (showResult) {
+    return (
+      <div className="bg-white rounded-3xl shadow-xl p-8 text-center animate-fade-in border-t-8 border-teal-400">
+        <div className="text-6xl mb-4">🎉</div>
+        <h2 className="text-4xl font-bold text-teal-700 mb-6">太棒了！完成{data.title}</h2>
+        <p className="text-2xl mb-8">你在這個單元獲得了 <span className="text-orange-500 font-bold text-4xl">{score}</span> 分！</p>
+        <div className="flex justify-center gap-4 flex-wrap">
+          <button onClick={resetUnit} className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-3 rounded-full text-xl font-bold flex items-center gap-2 transition-transform hover:scale-105">
+            <RefreshCw size={24} /> 再玩一次
+          </button>
+          <button onClick={onNext} className="bg-teal-500 hover:bg-teal-600 text-white px-8 py-3 rounded-full text-xl font-bold flex items-center gap-2 shadow-lg transition-transform hover:scale-105">
+            進入下一關 <ArrowRight size={24} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const currentQ = data.questions[currentIndex];
+
+  return (
+    <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8 animate-fade-in relative overflow-hidden">
+      {/* 標題與進度 */}
+      <div className="bg-teal-100 -mx-6 md:-mx-8 -mt-6 md:-mt-8 p-6 md:p-8 mb-8 border-b-4 border-teal-300">
+        <h2 className="text-3xl font-bold text-teal-800 mb-2">{data.title}</h2>
+        <p className="text-lg text-teal-700 font-medium">{data.description}</p>
+        <div className="mt-4 flex items-center gap-4">
+          <div className="flex-grow bg-white h-4 rounded-full overflow-hidden border-2 border-teal-200">
+            <div 
+              className="bg-orange-400 h-full transition-all duration-500" 
+              style={{ width: `${((currentIndex + 1) / data.questions.length) * 100}%` }}
+            ></div>
+          </div>
+          <span className="font-bold text-teal-800 bg-white px-3 py-1 rounded-full">
+            第 {currentIndex + 1} / {data.questions.length} 題
+          </span>
+        </div>
+      </div>
+
+      {/* 題目區 */}
+      <div className="mb-8 bg-gray-50 p-6 rounded-2xl border-l-8 border-teal-400">
+        <h3 className="text-2xl md:text-3xl font-bold text-gray-800 leading-[1.6]">
+          {currentQ.q}
+        </h3>
+      </div>
+
+      {/* 選項區 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        {currentQ.options.map((opt, idx) => {
+          let btnClass = "bg-white border-4 border-gray-200 hover:border-teal-400 hover:bg-teal-50 text-gray-700";
+          if (selectedAnswer !== null) {
+            if (idx === currentQ.ans) {
+              btnClass = "bg-green-100 border-4 border-green-500 text-green-800 transform scale-105";
+            } else if (idx === selectedAnswer) {
+              btnClass = "bg-red-100 border-4 border-red-500 text-red-800 opacity-50";
+            } else {
+              btnClass = "bg-gray-50 border-4 border-gray-200 opacity-50";
+            }
+          }
+
+          return (
+            <button
+              key={idx}
+              onClick={() => handleAnswer(idx)}
+              disabled={selectedAnswer !== null}
+              className={`p-6 rounded-2xl text-2xl font-bold transition-all duration-300 shadow-sm ${btnClass}`}
+            >
+              {opt}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 回饋區 */}
+      {selectedAnswer !== null && (
+        <div className={`p-4 rounded-2xl flex items-center justify-between animate-bounce-in ${isCorrect ? 'bg-green-100 text-green-800 border-2 border-green-400' : 'bg-red-100 text-red-800 border-2 border-red-400'}`}>
+          <div className="flex items-center gap-3">
+            {isCorrect ? <CheckCircle className="w-10 h-10 text-green-600" /> : <XCircle className="w-10 h-10 text-red-600" />}
+            <span className="text-2xl font-bold">
+              {isCorrect ? "答對了！幾何大師就是你！" : "哎呀，答錯了！想想看圖形的特徵喔！"}
+            </span>
+          </div>
+          {!isCorrect && (
+            <button 
+              onClick={handleNextQuestion}
+              className="bg-red-500 text-white px-6 py-2 rounded-full font-bold text-lg hover:bg-red-600 transition-colors"
+            >
+              跳過看下一題 <ChevronRight className="inline" />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 遊戲區 (打倒怪獸)
+function GameSection() {
+  const [hp, setHp] = useState(100);
+  const [gameState, setGameState] = useState('playing'); // playing, won, lost
+  const [currentQIndex, setCurrentQIndex] = useState(0);
+  const [gameQuestions, setGameQuestions] = useState([]);
+  const [feedback, setFeedback] = useState('');
+
+  // 初始化遊戲題目
+  useEffect(() => {
+    // 從三個單元隨機挑選 10 題作為遊戲題庫
+    const shuffled = [...allGameQuestions].sort(() => 0.5 - Math.random()).slice(0, 10);
+    setGameQuestions(shuffled);
+  }, []);
+
+  const handleAttack = (selectedIndex, correctIndex) => {
+    if (gameState !== 'playing') return;
+
+    if (selectedIndex === correctIndex) {
+      setHp(prev => Math.max(0, prev - 20)); // 答對扣怪獸 20 滴血
+      setFeedback('圖形光束命中！');
+      
+      if (hp - 20 <= 0) {
+        setGameState('won');
+      } else {
+        setTimeout(() => {
+          setFeedback('');
+          setCurrentQIndex(c => c + 1);
+        }, 1000);
+      }
+    } else {
+      setFeedback('哎呀，被閃躲了！');
+      setTimeout(() => {
+        setFeedback('');
+      }, 1000);
+    }
+  };
+
+  const restartGame = () => {
+    setHp(100);
+    setGameState('playing');
+    setCurrentQIndex(0);
+    setFeedback('');
+    const shuffled = [...allGameQuestions].sort(() => 0.5 - Math.random()).slice(0, 10);
+    setGameQuestions(shuffled);
+  };
+
+  if (gameQuestions.length === 0) return <div>準備遊戲中...</div>;
+
+  return (
+    <div className="bg-slate-900 rounded-3xl shadow-2xl p-6 md:p-8 text-white relative overflow-hidden border-8 border-teal-900">
+      
+      {/* 遊戲標題 */}
+      <div className="text-center mb-6">
+        <h2 className="text-4xl font-extrabold text-orange-400 tracking-wider mb-2" style={{ textShadow: '2px 2px 4px #000' }}>打倒變形怪獸</h2>
+        <p className="text-lg text-teal-200">發射正確的圖形魔法，把怪獸的血量扣到 0 吧！</p>
+      </div>
+
+      {/* 遊戲區塊 */}
+      {gameState === 'playing' && (
+        <div className="flex flex-col items-center">
+          
+          {/* 怪獸與血條 */}
+          <div className="w-full max-w-md bg-slate-800 p-6 rounded-2xl border-4 border-slate-700 mb-8 relative flex flex-col items-center">
+            
+            {/* 動態怪獸圖 */}
+            <div className={`text-9xl mb-4 transition-transform ${feedback.includes('命中') ? 'animate-ping text-orange-400' : 'animate-pulse'}`}>
+              👾
+            </div>
+            
+            {/* 血條 */}
+            <div className="w-full bg-gray-900 h-8 rounded-full border-2 border-gray-600 overflow-hidden relative">
+              <div 
+                className="h-full bg-gradient-to-r from-orange-600 to-yellow-400 transition-all duration-300 ease-out"
+                style={{ width: `${hp}%` }}
+              ></div>
+              <div className="absolute inset-0 flex items-center justify-center font-bold text-white text-sm">
+                怪獸血量 : {hp} / 100
+              </div>
+            </div>
+
+            {/* 回饋文字浮動 */}
+            {feedback && (
+              <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-3xl font-black ${feedback.includes('命中') ? 'text-orange-400' : 'text-gray-400'}`} style={{ textShadow: '2px 2px 0px #000' }}>
+                {feedback}
+              </div>
+            )}
+          </div>
+
+          {/* 題目面板 */}
+          <div className="w-full bg-teal-800 p-6 rounded-2xl border-4 border-teal-600 shadow-inner">
+            <h3 className="text-2xl font-bold mb-6 text-center text-white leading-[1.6]">
+              {gameQuestions[currentQIndex].q}
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {gameQuestions[currentQIndex].options.map((opt, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleAttack(idx, gameQuestions[currentQIndex].ans)}
+                  className="bg-teal-600 hover:bg-teal-500 border-b-4 border-teal-900 hover:border-teal-700 text-white font-bold py-4 px-6 rounded-xl text-xl transition-all active:transform active:translate-y-1 active:border-b-0"
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 勝利畫面 */}
+      {gameState === 'won' && (
+        <div className="text-center py-12 animate-fade-in">
+          <div className="text-8xl mb-6">🏆</div>
+          <h2 className="text-5xl font-extrabold text-orange-400 mb-4" style={{ textShadow: '2px 2px 4px #000' }}>挑戰成功！</h2>
+          <p className="text-2xl text-white mb-8">你打敗了變形怪獸，成為幾何大師了！</p>
+          <button 
+            onClick={restartGame}
+            className="bg-gradient-to-r from-orange-400 to-red-500 hover:from-orange-300 hover:to-red-400 text-white font-bold py-4 px-10 rounded-full text-2xl shadow-lg transition-transform hover:scale-110"
+          >
+            再次挑戰
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

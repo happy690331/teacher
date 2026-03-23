@@ -1,0 +1,444 @@
+import React, { useState, useEffect } from 'react';
+import { Play, CheckCircle, XCircle, ArrowRight, Gamepad2, Video, BookOpen, Star, Trophy, RefreshCw, ChevronRight } from 'lucide-react';
+
+// --- 資料庫 ---
+
+const unitsData = {
+  unit1: {
+    title: "單元一：真分數與假分數",
+    description: "分子比分母小的叫「真分數」；分子和分母一樣大，或是分子比分母大的叫「假分數」。",
+    questions: [
+      { q: "分子比分母還要「小」的分數，我們叫它什麼？", options: ["真分數", "假分數", "帶分數"], ans: 0 },
+      { q: "分子和分母「一樣大」，或是分子比分母「大」的分數，叫做什麼？", options: ["真分數", "假分數", "帶分數"], ans: 1 },
+      { q: "分數 3/4 中，分子(3)比分母(4)小，所以它是一個什麼分數？", options: ["真分數", "假分數", "帶分數"], ans: 0 },
+      { q: "分數 5/5 中，分子和分母一樣大，所以它是一個什麼分數？", options: ["真分數", "假分數", "帶分數"], ans: 1 },
+      { q: "分數 7/2 中，分子(7)比分母(2)大，所以它是一個什麼分數？", options: ["真分數", "假分數", "帶分數"], ans: 1 },
+      { q: "請找找看，下面哪一個是「真分數」？", options: ["1/3", "4/4", "5/2"], ans: 0 },
+    ]
+  },
+  unit2: {
+    title: "單元二：認識帶分數",
+    description: "由一個「整數」和一個「真分數」合在一起的分數，就叫做「帶分數」喔！",
+    questions: [
+      { q: "帶有「整數」和「真分數」的分數，叫做什麼名字？", options: ["真分數", "假分數", "帶分數"], ans: 2 },
+      { q: "分數 1又1/2 是一個什麼分數？", options: ["真分數", "假分數", "帶分數"], ans: 2 },
+      { q: "在帶分數「2又3/4」裡面，數字「2」代表什麼？", options: ["整數", "分子", "分母"], ans: 0 },
+      { q: "媽媽買了 3 個完整的披薩，還有半個 (1/2) 披薩，可以記作多少個披薩？", options: ["3又1/2", "3/2", "1又3/2"], ans: 0 },
+      { q: "請找找看，下面哪一個是「帶分數」？", options: ["4/3", "2又1/5", "7/8"], ans: 1 },
+      { q: "讀作「三又四分之二」的分數，寫出來是下面哪一個？", options: ["3/4", "2又3/4", "3又2/4"], ans: 2 },
+    ]
+  },
+  unit3: {
+    title: "單元三：分數的大變身",
+    description: "假分數可以換成帶分數，帶分數也可以換成假分數喔！我們來練習看看！",
+    questions: [
+      { q: "1 個披薩切成 4 等份。4/4 個披薩，也就是幾個完整的披薩？", options: ["1個", "2個", "4個"], ans: 0 },
+      { q: "把假分數 3/2 換成帶分數，會是多少？ (提示：3裡面有1個2，還剩下1)", options: ["1又1/2", "2又1/2", "3又1/2"], ans: 0 },
+      { q: "把帶分數 1又1/4 換成假分數，會是多少？ (提示：1是4/4，再加上1/4)", options: ["5/4", "4/4", "2/4"], ans: 0 },
+      { q: "媽媽有 5/4 塊蛋糕，也就是幾塊蛋糕？", options: ["1又1/4", "1又2/4", "2又1/4"], ans: 0 },
+      { q: "2 個完整的蘋果，如果切成一半 (分母為2)，可以寫成哪一個假分數？", options: ["4/2", "2/2", "3/2"], ans: 0 },
+      { q: "帶分數 2又1/3 換成假分數會是多少？ (提示：2是6/3，再加上1/3)", options: ["7/3", "6/3", "5/3"], ans: 0 },
+    ]
+  }
+};
+
+const allGameQuestions = [
+    ...unitsData.unit1.questions,
+    ...unitsData.unit2.questions,
+    ...unitsData.unit3.questions
+].sort(() => Math.random() - 0.5); // 隨機打亂
+
+// --- 輔助函數：將字串中的 "分子/分母" 或 "整數又分子/分母" 自動轉換為直式分數 ---
+function renderTextWithFractions(text) {
+  if (typeof text !== 'string') return text;
+  
+  // 利用正規表達式找出 "整數又分子/分母" 或 "分子/分母" 的格式
+  const parts = text.split(/(\d+又\d+\/\d+|\d+\/\d+)/g);
+  
+  return parts.map((part, index) => {
+    // 處理帶分數 (例如: 2又1/3)
+    if (part.includes('又') && part.match(/\d+又\d+\/\d+/)) {
+      const [intPart, fracPart] = part.split('又');
+      const [num, den] = fracPart.split('/');
+      return (
+        <span key={index} className="inline-flex items-center mx-1 align-middle">
+          <span className="text-[1.2em] font-bold mr-1">{intPart}</span>
+          <span className="inline-flex flex-col items-center justify-center" style={{ marginTop: '-0.2em' }}>
+            <span className="border-b-[3px] border-current px-1 w-full text-center leading-none pb-[3px]">{num}</span>
+            <span className="px-1 w-full text-center leading-none pt-[3px]">{den}</span>
+          </span>
+        </span>
+      );
+    } 
+    // 處理一般真分數或假分數 (例如: 3/4, 5/2)
+    else if (part.match(/\d+\/\d+/)) {
+      const [num, den] = part.split('/');
+      return (
+        <span key={index} className="inline-flex flex-col items-center justify-center mx-1 align-middle" style={{ marginTop: '-0.2em' }}>
+          <span className="border-b-[3px] border-current px-1 w-full text-center leading-none pb-[3px]">{num}</span>
+          <span className="px-1 w-full text-center leading-none pt-[3px]">{den}</span>
+        </span>
+      );
+    }
+    // 一般文字
+    return <span key={index} className="align-middle">{part}</span>;
+  });
+}
+
+// --- 主元件 ---
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('video');
+  const [globalScore, setGlobalScore] = useState(0);
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'video': return <VideoSection onNext={() => setActiveTab('unit1')} />;
+      case 'unit1': return <UnitSection unitKey="unit1" onNext={() => setActiveTab('unit2')} onScoreUpdate={setGlobalScore} />;
+      case 'unit2': return <UnitSection unitKey="unit2" onNext={() => setActiveTab('unit3')} onScoreUpdate={setGlobalScore} />;
+      case 'unit3': return <UnitSection unitKey="unit3" onNext={() => setActiveTab('game')} onScoreUpdate={setGlobalScore} />;
+      case 'game': return <GameSection />;
+      default: return <VideoSection />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-fuchsia-50 font-sans text-gray-800 flex flex-col items-center">
+      {/* 頂部導航列 */}
+      <header className="w-full bg-white shadow-md p-4 sticky top-0 z-50 border-b-4 border-fuchsia-400">
+        <div className="max-w-4xl mx-auto flex flex-wrap justify-between items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Star className="text-yellow-500 w-8 h-8 fill-current" />
+            <h1 className="text-2xl font-bold text-fuchsia-800">魔法分數大冒險</h1>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <NavButton active={activeTab === 'video'} onClick={() => setActiveTab('video')} icon={<Video />} text="教學影片" />
+            <NavButton active={activeTab === 'unit1'} onClick={() => setActiveTab('unit1')} icon={<BookOpen />} text="單元一" />
+            <NavButton active={activeTab === 'unit2'} onClick={() => setActiveTab('unit2')} icon={<BookOpen />} text="單元二" />
+            <NavButton active={activeTab === 'unit3'} onClick={() => setActiveTab('unit3')} icon={<BookOpen />} text="單元三" />
+            <NavButton active={activeTab === 'game'} onClick={() => setActiveTab('game')} icon={<Gamepad2 />} text="挑戰遊戲" />
+          </div>
+        </div>
+      </header>
+
+      {/* 主要內容區 */}
+      <main className="w-full max-w-4xl p-4 md:p-8 flex-grow">
+        {renderContent()}
+      </main>
+    </div>
+  );
+}
+
+// --- 子元件 ---
+
+function NavButton({ active, onClick, icon, text }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1 px-3 py-2 rounded-full font-bold transition-all ${
+        active 
+          ? 'bg-fuchsia-600 text-white shadow-lg transform scale-105' 
+          : 'bg-gray-100 text-gray-600 hover:bg-fuchsia-100 hover:text-fuchsia-700'
+      }`}
+    >
+      {React.cloneElement(icon, { size: 18 })}
+      <span className="hidden sm:inline">{text}</span>
+    </button>
+  );
+}
+
+// 教學影片區
+function VideoSection({ onNext }) {
+  return (
+    <div className="bg-white rounded-3xl shadow-xl p-6 md:p-10 flex flex-col items-center text-center animate-fade-in border-t-8 border-fuchsia-400">
+      <h2 className="text-3xl font-bold text-fuchsia-800 mb-4">四下數學：分數 (一)</h2>
+      <p className="text-xl text-gray-600 mb-8">跟著李廣祺老師的影片，我們一起來認識「真分數、假分數和帶分數」吧！</p>
+      
+      <div className="w-full max-w-2xl aspect-video bg-gray-200 rounded-2xl overflow-hidden shadow-inner mb-8 border-4 border-fuchsia-200">
+        {/* 使用 YouTube 嵌入 iframe 作為示範影片 */}
+        <iframe 
+          className="w-full h-full"
+          src="https://www.youtube.com/embed/2_HjT9N0m2Y?autoplay=0&rel=0" 
+          title="YouTube video player" 
+          frameBorder="0" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowFullScreen>
+        </iframe>
+      </div>
+
+      <button 
+        onClick={onNext}
+        className="flex items-center gap-2 bg-pink-500 hover:bg-pink-600 text-white px-8 py-4 rounded-full text-2xl font-bold transition-transform hover:scale-105 shadow-lg"
+      >
+        我看完了，開始練習 <ArrowRight />
+      </button>
+    </div>
+  );
+}
+
+// 單元練習區
+function UnitSection({ unitKey, onNext, onScoreUpdate }) {
+  const data = unitsData[unitKey];
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [isCorrect, setIsCorrect] = useState(null);
+  const [score, setScore] = useState(0);
+  const [showResult, setShowResult] = useState(false);
+
+  const handleAnswer = (index) => {
+    if (selectedAnswer !== null) return; // 已經回答過這題
+    
+    setSelectedAnswer(index);
+    const correct = index === data.questions[currentIndex].ans;
+    setIsCorrect(correct);
+    
+    if (correct) {
+      setScore(s => s + 10);
+      onScoreUpdate(s => s + 10);
+      // 答對自動進入下一題或結算
+      setTimeout(() => {
+        handleNextQuestion();
+      }, 1500);
+    }
+  };
+
+  const handleNextQuestion = () => {
+    if (currentIndex < data.questions.length - 1) {
+      setCurrentIndex(c => c + 1);
+      setSelectedAnswer(null);
+      setIsCorrect(null);
+    } else {
+      setShowResult(true);
+    }
+  };
+
+  const resetUnit = () => {
+    setCurrentIndex(0);
+    setSelectedAnswer(null);
+    setIsCorrect(null);
+    setScore(0);
+    setShowResult(false);
+  };
+
+  if (showResult) {
+    return (
+      <div className="bg-white rounded-3xl shadow-xl p-8 text-center animate-fade-in border-t-8 border-fuchsia-400">
+        <div className="text-6xl mb-4">🎉</div>
+        <h2 className="text-4xl font-bold text-fuchsia-700 mb-6">太棒了！完成{data.title}</h2>
+        <p className="text-2xl mb-8">你在這個單元獲得了 <span className="text-pink-500 font-bold text-4xl">{score}</span> 分！</p>
+        <div className="flex justify-center gap-4 flex-wrap">
+          <button onClick={resetUnit} className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-3 rounded-full text-xl font-bold flex items-center gap-2 transition-transform hover:scale-105">
+            <RefreshCw size={24} /> 再玩一次
+          </button>
+          <button onClick={onNext} className="bg-fuchsia-500 hover:bg-fuchsia-600 text-white px-8 py-3 rounded-full text-xl font-bold flex items-center gap-2 shadow-lg transition-transform hover:scale-105">
+            進入下一關 <ArrowRight size={24} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const currentQ = data.questions[currentIndex];
+
+  return (
+    <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8 animate-fade-in relative overflow-hidden">
+      {/* 標題與進度 */}
+      <div className="bg-fuchsia-100 -mx-6 md:-mx-8 -mt-6 md:-mt-8 p-6 md:p-8 mb-8 border-b-4 border-fuchsia-200">
+        <h2 className="text-3xl font-bold text-fuchsia-900 mb-2">{data.title}</h2>
+        <p className="text-lg text-fuchsia-700 font-medium">{data.description}</p>
+        <div className="mt-4 flex items-center gap-4">
+          <div className="flex-grow bg-white h-4 rounded-full overflow-hidden border-2 border-fuchsia-200">
+            <div 
+              className="bg-pink-400 h-full transition-all duration-500" 
+              style={{ width: `${((currentIndex + 1) / data.questions.length) * 100}%` }}
+            ></div>
+          </div>
+          <span className="font-bold text-fuchsia-900 bg-white px-3 py-1 rounded-full">
+            第 {currentIndex + 1} / {data.questions.length} 題
+          </span>
+        </div>
+      </div>
+
+      {/* 題目區 */}
+      <div className="mb-8 bg-gray-50 p-6 rounded-2xl border-l-8 border-fuchsia-400">
+        <h3 className="text-2xl md:text-3xl font-bold text-gray-800 leading-[1.8]">
+          {renderTextWithFractions(currentQ.q)}
+        </h3>
+      </div>
+
+      {/* 選項區 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        {currentQ.options.map((opt, idx) => {
+          let btnClass = "bg-white border-4 border-gray-200 hover:border-fuchsia-400 hover:bg-fuchsia-50 text-gray-700";
+          if (selectedAnswer !== null) {
+            if (idx === currentQ.ans) {
+              btnClass = "bg-green-100 border-4 border-green-500 text-green-800 transform scale-105";
+            } else if (idx === selectedAnswer) {
+              btnClass = "bg-red-100 border-4 border-red-500 text-red-800 opacity-50";
+            } else {
+              btnClass = "bg-gray-50 border-4 border-gray-200 opacity-50";
+            }
+          }
+
+          return (
+            <button
+              key={idx}
+              onClick={() => handleAnswer(idx)}
+              disabled={selectedAnswer !== null}
+              className={`p-6 rounded-2xl text-2xl font-bold transition-all duration-300 shadow-sm leading-[1.6] ${btnClass}`}
+            >
+              {renderTextWithFractions(opt)}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 回饋區 */}
+      {selectedAnswer !== null && (
+        <div className={`p-4 rounded-2xl flex items-center justify-between animate-bounce-in ${isCorrect ? 'bg-green-100 text-green-800 border-2 border-green-400' : 'bg-red-100 text-red-800 border-2 border-red-400'}`}>
+          <div className="flex items-center gap-3">
+            {isCorrect ? <CheckCircle className="w-10 h-10 text-green-600" /> : <XCircle className="w-10 h-10 text-red-600" />}
+            <span className="text-2xl font-bold">
+              {isCorrect ? "答對了！你擁有神奇的分數魔法！" : "哎呀，答錯了！沒關係，我們再仔細看一次題目喔！"}
+            </span>
+          </div>
+          {!isCorrect && (
+            <button 
+              onClick={handleNextQuestion}
+              className="bg-red-500 text-white px-6 py-2 rounded-full font-bold text-lg hover:bg-red-600 transition-colors"
+            >
+              跳過看下一題 <ChevronRight className="inline" />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 遊戲區 (打倒怪獸)
+function GameSection() {
+  const [hp, setHp] = useState(100);
+  const [gameState, setGameState] = useState('playing'); // playing, won, lost
+  const [currentQIndex, setCurrentQIndex] = useState(0);
+  const [gameQuestions, setGameQuestions] = useState([]);
+  const [feedback, setFeedback] = useState('');
+
+  // 初始化遊戲題目
+  useEffect(() => {
+    // 從三個單元隨機挑選 10 題作為遊戲題庫
+    const shuffled = [...allGameQuestions].sort(() => 0.5 - Math.random()).slice(0, 10);
+    setGameQuestions(shuffled);
+  }, []);
+
+  const handleAttack = (selectedIndex, correctIndex) => {
+    if (gameState !== 'playing') return;
+
+    if (selectedIndex === correctIndex) {
+      setHp(prev => Math.max(0, prev - 20)); // 答對扣怪獸 20 滴血
+      setFeedback('魔法命中！怪獸餓肚子了！');
+      
+      if (hp - 20 <= 0) {
+        setGameState('won');
+      } else {
+        setTimeout(() => {
+          setFeedback('');
+          setCurrentQIndex(c => c + 1);
+        }, 1500);
+      }
+    } else {
+      setFeedback('哎呀，被怪獸吃掉分數了！');
+      setTimeout(() => {
+        setFeedback('');
+      }, 1500);
+    }
+  };
+
+  const restartGame = () => {
+    setHp(100);
+    setGameState('playing');
+    setCurrentQIndex(0);
+    setFeedback('');
+    const shuffled = [...allGameQuestions].sort(() => 0.5 - Math.random()).slice(0, 10);
+    setGameQuestions(shuffled);
+  };
+
+  if (gameQuestions.length === 0) return <div>準備遊戲中...</div>;
+
+  return (
+    <div className="bg-purple-900 rounded-3xl shadow-2xl p-6 md:p-8 text-white relative overflow-hidden border-8 border-purple-950">
+      
+      {/* 遊戲標題 */}
+      <div className="text-center mb-6">
+        <h2 className="text-4xl font-extrabold text-pink-400 tracking-wider mb-2" style={{ textShadow: '2px 2px 4px #000' }}>打倒貪吃怪獸</h2>
+        <p className="text-lg text-purple-200">選出正確的分數魔法，把貪吃怪獸趕走吧！</p>
+      </div>
+
+      {/* 遊戲區塊 */}
+      {gameState === 'playing' && (
+        <div className="flex flex-col items-center">
+          
+          {/* 怪獸與血條 */}
+          <div className="w-full max-w-md bg-purple-950 p-6 rounded-2xl border-4 border-purple-800 mb-8 relative flex flex-col items-center shadow-inner">
+            
+            {/* 動態怪獸圖 */}
+            <div className={`text-9xl mb-4 transition-transform ${feedback.includes('命中') ? 'animate-bounce text-pink-400' : 'animate-pulse'}`}>
+              😈
+            </div>
+            
+            {/* 血條 */}
+            <div className="w-full bg-gray-900 h-8 rounded-full border-2 border-gray-600 overflow-hidden relative">
+              <div 
+                className="h-full bg-gradient-to-r from-pink-600 to-purple-400 transition-all duration-300 ease-out"
+                style={{ width: `${hp}%` }}
+              ></div>
+              <div className="absolute inset-0 flex items-center justify-center font-bold text-white text-sm">
+                怪獸體力 : {hp} / 100
+              </div>
+            </div>
+
+            {/* 回饋文字浮動 */}
+            {feedback && (
+              <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl font-black ${feedback.includes('命中') ? 'text-pink-400' : 'text-gray-400'}`} style={{ textShadow: '2px 2px 0px #000', width: '100%', textAlign: 'center' }}>
+                {feedback}
+              </div>
+            )}
+          </div>
+
+          {/* 題目面板 */}
+          <div className="w-full bg-purple-800 p-6 rounded-2xl border-4 border-purple-600 shadow-lg">
+            <h3 className="text-2xl font-bold mb-6 text-center text-white leading-[1.8]">
+              {renderTextWithFractions(gameQuestions[currentQIndex].q)}
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {gameQuestions[currentQIndex].options.map((opt, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleAttack(idx, gameQuestions[currentQIndex].ans)}
+                  className="bg-purple-600 hover:bg-fuchsia-500 border-b-4 border-purple-900 hover:border-fuchsia-700 text-white font-bold py-4 px-6 rounded-xl text-xl transition-all active:transform active:translate-y-1 active:border-b-0 leading-[1.6]"
+                >
+                  {renderTextWithFractions(opt)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 勝利畫面 */}
+      {gameState === 'won' && (
+        <div className="text-center py-12 animate-fade-in">
+          <div className="text-8xl mb-6">✨</div>
+          <h2 className="text-5xl font-extrabold text-pink-400 mb-4" style={{ textShadow: '2px 2px 4px #000' }}>挑戰成功！</h2>
+          <p className="text-2xl text-white mb-8">你打敗了貪吃怪獸，成為魔法分數大師了！</p>
+          <button 
+            onClick={restartGame}
+            className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold py-4 px-10 rounded-full text-2xl shadow-lg transition-transform hover:scale-110"
+          >
+            再次挑戰
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
