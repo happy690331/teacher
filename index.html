@@ -272,10 +272,13 @@
                         .map(item => {
                             let itemUrl = `https://${repoInfo.username}.github.io/${repoInfo.repo}/${item.name}`;
                             let displayName = item.name.replace('.html', '');
+                            // 取得 GitHub 原始檔案的下載連結，並將 .html 替換成 .jpg
+                            let rawImgUrl = item.download_url ? item.download_url.replace('.html', '.jpg') : `https://raw.githubusercontent.com/${repoInfo.username}/${repoInfo.repo}/main/${item.name.replace('.html', '.jpg')}`;
                             
                             return {
                                 name: displayName,
                                 url: itemUrl,
+                                imgUrl: rawImgUrl,
                                 category: getCategoryForName(displayName)
                             };
                         });
@@ -326,8 +329,8 @@
                 // 套用 Minecraft 草地卡片風格
                 a.className = "mc-card flex flex-col items-center justify-start h-auto p-4 group text-center cursor-pointer";
                 
-                // 預設圖片路徑為與網頁同名的 .jpg
-                const imgSrc = item.url.replace('.html', '.jpg');
+                // 圖片路徑自動使用從 GitHub 原始庫抓取的 JPG 連結
+                const imgSrc = item.imgUrl;
                 
                 // 找不到圖片時的預設替代圖案
                 // 將所有單引號改為 URL 編碼的雙引號 %22，避免與 onerror 屬性衝突
