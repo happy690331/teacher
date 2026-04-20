@@ -10,12 +10,8 @@
         /* --- Minecraft 核心風格設定 --- */
         body {
             font-family: '標楷體', 'BiauKai', 'DFKai-SB', serif;
-            /* 藍天綠地背景 (包含像素天空、雲朵與草地) */
-            background-color: #78a7ff;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Cdefs%3E%3Cpattern id='grass' width='64' height='64' patternUnits='userSpaceOnUse'%3E%3Crect width='64' height='64' fill='%235db245'/%3E%3Crect x='0' y='0' width='32' height='32' fill='%2352a03c'/%3E%3Crect x='32' y='32' width='32' height='32' fill='%2352a03c'/%3E%3Crect x='0' y='0' width='64' height='6' fill='%2385db6a'/%3E%3C/pattern%3E%3Cpattern id='clouds' width='256' height='128' patternUnits='userSpaceOnUse'%3E%3Crect x='32' y='32' width='96' height='32' fill='%23ffffff' opacity='0.8'/%3E%3Crect x='64' y='16' width='64' height='64' fill='%23ffffff' opacity='0.8'/%3E%3Crect x='160' y='80' width='64' height='24' fill='%23ffffff' opacity='0.6'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100%25' height='100%25' fill='%2378a7ff'/%3E%3Crect width='100%25' height='100%25' fill='url(%23clouds)'/%3E%3Crect y='40%25' width='100%25' height='60%25' fill='url(%23grass)'/%3E%3C/svg%3E");
-            background-attachment: fixed;
-            background-size: cover;
-            image-rendering: pixelated;
+            /* 避免背景角色或造景造成水平捲動 */
+            overflow-x: hidden;
         }
 
         /* 隱藏捲軸 */
@@ -87,70 +83,172 @@
         }
 
         /* 文字特效 */
-        .mc-title {
-            color: #ffff55; /* MC 經典黃色標題 */
-            text-shadow: 4px 4px 0px #3f3f15;
-            letter-spacing: 2px;
-        }
         .mc-text-shadow {
             text-shadow: 2px 2px 0px rgba(0,0,0,0.8);
         }
         .mc-text-dark-shadow {
             text-shadow: 2px 2px 0px #a0a0a0;
         }
+
+        /* 頭部追蹤過渡效果，讓轉頭更自然 */
+        .head-tracking {
+            transition: transform 0.1s ease-out;
+            /* 將旋轉中心設定在頭部的正中心 (8px, 4px) */
+            transform-origin: 8px 4px;
+        }
+        /* 臉部五官的獨立過渡效果 (用於製造 3D 視差) */
+        .face-tracking {
+            transition: transform 0.1s ease-out;
+        }
     </style>
 </head>
-<body class="min-h-screen pb-12">
+<body class="min-h-screen pb-12 relative">
 
-    <!-- 頂部標題列 -->
-    <header class="pt-8 pb-6">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h1 class="text-4xl md:text-5xl font-bold text-black">AI 教學遊戲天地</h1>
+    <!-- Minecraft 像素風景背景層 (固定在背後不隨捲軸移動) -->
+    <div id="minecraft-bg" class="fixed inset-0 z-[-1] pointer-events-none" style="image-rendering: pixelated;">
+        <!-- 天空 (70%) -->
+        <div class="absolute inset-0 bg-[#78a7ff]"></div>
+        <!-- 像素雲朵圖案 -->
+        <div class="absolute inset-0 opacity-80" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22256%22 height=%22128%22%3E%3Crect x=%2232%22 y=%2232%22 width=%2296%22 height=%2232%22 fill=%22%23ffffff%22/%3E%3Crect x=%2264%22 y=%2216%22 width=%2264%22 height=%2264%22 fill=%22%23ffffff%22/%3E%3Crect x=%22180%22 y=%2270%22 width=%2248%22 height=%2224%22 fill=%22%23ffffff%22 opacity=%220.7%22/%3E%3C/svg%3E'); background-size: 256px 128px;"></div>
+        
+        <!-- 像素樹木 (左側大樹) -->
+        <svg class="absolute bottom-[30%] left-[10%] md:left-[20%] w-24 h-32 md:w-32 md:h-40" viewBox="0 0 16 20" shape-rendering="crispEdges">
+            <!-- 陰影 -->
+            <rect x="3" y="19" width="10" height="1" fill="#448833" opacity="0.6"/>
+            <!-- 樹幹 -->
+            <rect x="6" y="10" width="4" height="10" fill="#5c4033"/>
+            <rect x="6" y="10" width="1" height="10" fill="#3c2a20"/>
+            <!-- 樹葉 -->
+            <rect x="2" y="4" width="12" height="8" fill="#52a03c"/>
+            <rect x="4" y="2" width="8" height="2" fill="#52a03c"/>
+            <rect x="2" y="12" width="12" height="2" fill="#3c7a25"/>
+        </svg>
+
+        <!-- 像素樹木 (右側遠方小樹) -->
+        <svg class="absolute bottom-[30%] right-[15%] md:right-[25%] w-16 h-20 md:w-20 md:h-28" viewBox="0 0 16 20" shape-rendering="crispEdges">
+            <rect x="6" y="10" width="4" height="10" fill="#5c4033"/>
+            <rect x="6" y="10" width="1" height="10" fill="#3c2a20"/>
+            <rect x="2" y="4" width="12" height="8" fill="#52a03c"/>
+            <rect x="4" y="2" width="8" height="2" fill="#52a03c"/>
+            <rect x="2" y="12" width="12" height="2" fill="#3c7a25"/>
+        </svg>
+
+        <!-- 綠地與河流 (底部 30%) -->
+        <div class="absolute bottom-0 w-full h-[30%] bg-[#5db245] border-t-8 border-[#85db6a]" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2264%22 height=%2264%22%3E%3Crect x=%220%22 y=%220%22 width=%2232%22 height=%2232%22 fill=%22%2352a03c%22/%3E%3Crect x=%2232%22 y=%2232%22 width=%2232%22 height=%2232%22 fill=%22%2352a03c%22/%3E%3C/svg%3E'); background-size: 64px 64px;">
+            <!-- 具有透視感的河流 -->
+            <div class="absolute top-0 left-[50%] w-[30%] h-full bg-[#3f76e4]" style="clip-path: polygon(30% 0, 50% 0, 100% 100%, 0% 100%);"></div>
+            <!-- 河水波紋邊緣 -->
+            <div class="absolute top-0 left-[50%] w-[30%] h-full bg-[#2b55b3]" style="clip-path: polygon(30% 0, 35% 0, 15% 100%, 0% 100%);"></div>
+        </div>
+    </div>
+
+    <!-- 頂部標題列 (包含互動角色) -->
+    <header class="relative w-full h-48 md:h-64 flex justify-center items-end pb-4 z-10">
+        
+        <!-- 左側：全身史蒂夫 Steve -->
+        <div class="absolute left-2 md:left-24 bottom-0 z-20">
+            <svg viewBox="0 0 16 32" class="w-16 md:w-20 h-auto drop-shadow-xl" shape-rendering="crispEdges">
+                <!-- 左手 -->
+                <rect x="0" y="8" width="4" height="4" fill="#00a8ff"/>
+                <rect x="0" y="12" width="4" height="8" fill="#c18a66"/>
+                <!-- 右手 -->
+                <rect x="12" y="8" width="4" height="4" fill="#00a8ff"/>
+                <rect x="12" y="12" width="4" height="8" fill="#c18a66"/>
+                <!-- 左腳 -->
+                <rect x="4" y="20" width="4" height="10" fill="#4a366b"/>
+                <rect x="4" y="30" width="4" height="2" fill="#333"/>
+                <!-- 右腳 -->
+                <rect x="8" y="20" width="4" height="10" fill="#4a366b"/>
+                <rect x="8" y="30" width="4" height="2" fill="#333"/>
+                <!-- 身體 -->
+                <rect x="4" y="8" width="8" height="12" fill="#00a8ff"/>
+                <!-- 頸部與頭部 (加入五官獨立群組) -->
+                <g id="steve-head" class="head-tracking">
+                    <rect x="4" y="0" width="8" height="8" fill="#c18a66"/>
+                    <rect x="4" y="0" width="8" height="2" fill="#3d2616"/>
+                    <rect x="4" y="2" width="1" height="1" fill="#3d2616"/>
+                    <rect x="11" y="2" width="1" height="1" fill="#3d2616"/>
+                    <!-- 臉部五官 -->
+                    <g id="steve-face" class="face-tracking">
+                        <rect x="5" y="4" width="1" height="1" fill="white"/>
+                        <rect x="6" y="4" width="1" height="1" fill="#4d49a4"/>
+                        <rect x="9" y="4" width="1" height="1" fill="#4d49a4"/>
+                        <rect x="10" y="4" width="1" height="1" fill="white"/>
+                        <rect x="7" y="5" width="2" height="1" fill="#9d6a46"/>
+                        <rect x="6" y="6" width="4" height="1" fill="#513621"/>
+                    </g>
+                </g>
+            </svg>
+        </div>
+
+        <!-- 中間：文字標題 -->
+        <h1 class="text-4xl md:text-5xl font-bold text-black z-30 drop-shadow-md bg-white/40 px-6 py-2 rounded-xl backdrop-blur-sm">AI 教學遊戲天地</h1>
+
+        <!-- 右側近處：全身苦力怕 Creeper -->
+        <div class="absolute right-20 md:right-48 bottom-0 z-20">
+            <svg viewBox="0 0 16 26" class="w-16 md:w-20 h-auto drop-shadow-xl" shape-rendering="crispEdges">
+                <!-- 後腳 -->
+                <rect x="4" y="20" width="8" height="6" fill="#3b853b"/>
+                <!-- 前左腳 -->
+                <rect x="2" y="20" width="4" height="6" fill="#55cc55"/>
+                <!-- 前右腳 -->
+                <rect x="10" y="20" width="4" height="6" fill="#55cc55"/>
+                <!-- 身體 -->
+                <rect x="4" y="8" width="8" height="12" fill="#55cc55"/>
+                <rect x="4" y="8" width="1" height="12" fill="#6deb6d"/> <!-- 亮部 -->
+                <!-- 頭部 (加入五官獨立群組) -->
+                <g id="creeper-head" class="head-tracking">
+                    <rect x="4" y="0" width="8" height="8" fill="#55cc55"/>
+                    <!-- 臉部五官 -->
+                    <g id="creeper-face" class="face-tracking">
+                        <rect x="5" y="2" width="2" height="2" fill="black"/>
+                        <rect x="9" y="2" width="2" height="2" fill="black"/>
+                        <rect x="7" y="4" width="2" height="3" fill="black"/>
+                        <rect x="6" y="5" width="1" height="3" fill="black"/>
+                        <rect x="9" y="5" width="1" height="3" fill="black"/>
+                    </g>
+                </g>
+            </svg>
+        </div>
+
+        <!-- 右側遠處：高瘦全身終界使者 Enderman -->
+        <div class="absolute right-2 md:right-20 bottom-0 z-10">
+            <svg viewBox="0 0 16 50" class="w-16 md:w-20 h-auto drop-shadow-xl" shape-rendering="crispEdges">
+                <!-- 左手 -->
+                <rect x="2" y="8" width="2" height="30" fill="#161616"/>
+                <!-- 右手 -->
+                <rect x="12" y="8" width="2" height="30" fill="#161616"/>
+                <!-- 左腳 -->
+                <rect x="5" y="20" width="2" height="30" fill="#161616"/>
+                <!-- 右腳 -->
+                <rect x="9" y="20" width="2" height="30" fill="#161616"/>
+                <!-- 身體 -->
+                <rect x="4" y="8" width="8" height="12" fill="#161616"/>
+                <!-- 頭部 (加入五官獨立群組) -->
+                <g id="enderman-head" class="head-tracking">
+                    <rect x="4" y="0" width="8" height="8" fill="#161616"/>
+                    <!-- 臉部五官 -->
+                    <g id="enderman-face" class="face-tracking">
+                        <rect x="4" y="4" width="3" height="1" fill="#e079fa"/>
+                        <rect x="5" y="4" width="1" height="1" fill="#f9c6ff"/>
+                        <rect x="9" y="4" width="3" height="1" fill="#e079fa"/>
+                        <rect x="10" y="4" width="1" height="1" fill="#f9c6ff"/>
+                    </g>
+                </g>
+            </svg>
         </div>
     </header>
 
     <!-- 主要內容區：左欄與右欄 -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row gap-8 mt-4">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row gap-8 mt-4 relative z-20">
         
-        <!-- 左欄：分類選單與腳色裝飾 -->
+        <!-- 左欄：分類選單 -->
         <aside class="w-full md:w-64 flex-shrink-0">
-            <div class="mc-panel p-4 sticky top-6 relative mt-10 md:mt-0">
-                <!-- 常見腳色裝飾 (懸浮於選單邊緣，當作純裝飾) -->
-                <!-- 史蒂夫 Steve (站在選單頂部) -->
-                <svg viewBox="0 0 8 8" class="hidden md:block absolute -top-12 right-4 w-14 h-14 hover:scale-110 transition-transform cursor-pointer drop-shadow-md z-20" shape-rendering="crispEdges" title="史蒂夫">
-                    <rect width="8" height="8" fill="#c18a66"/>
-                    <rect width="8" height="2" fill="#3d2616"/>
-                    <rect x="0" y="2" width="1" height="1" fill="#3d2616"/>
-                    <rect x="7" y="2" width="1" height="1" fill="#3d2616"/>
-                    <rect x="1" y="4" width="1" height="1" fill="white"/>
-                    <rect x="2" y="4" width="1" height="1" fill="#4d49a4"/>
-                    <rect x="5" y="4" width="1" height="1" fill="#4d49a4"/>
-                    <rect x="6" y="4" width="1" height="1" fill="white"/>
-                    <rect x="3" y="5" width="2" height="1" fill="#9d6a46"/>
-                    <rect x="2" y="6" width="4" height="1" fill="#513621"/>
-                </svg>
-                <!-- 苦力怕 Creeper (在左側邊緣探頭) -->
-                <svg viewBox="0 0 8 8" class="hidden md:block absolute -left-8 bottom-8 w-14 h-14 hover:scale-110 transition-transform cursor-pointer drop-shadow-md z-20" shape-rendering="crispEdges" title="苦力怕">
-                    <rect width="8" height="8" fill="#55cc55"/>
-                    <rect x="1" y="2" width="2" height="2" fill="black"/>
-                    <rect x="5" y="2" width="2" height="2" fill="black"/>
-                    <rect x="3" y="4" width="2" height="3" fill="black"/>
-                    <rect x="2" y="5" width="1" height="3" fill="black"/>
-                    <rect x="5" y="5" width="1" height="3" fill="black"/>
-                </svg>
-                <!-- 終界使者 Enderman (在右側邊緣探頭) -->
-                <svg viewBox="0 0 8 8" class="hidden md:block absolute -right-8 top-1/3 w-14 h-14 hover:scale-110 transition-transform cursor-pointer drop-shadow-md z-20" shape-rendering="crispEdges" title="終界使者">
-                    <rect width="8" height="8" fill="#161616"/>
-                    <rect x="0" y="4" width="3" height="1" fill="#e079fa"/>
-                    <rect x="1" y="4" width="1" height="1" fill="#f9c6ff"/>
-                    <rect x="5" y="4" width="3" height="1" fill="#e079fa"/>
-                    <rect x="6" y="4" width="1" height="1" fill="#f9c6ff"/>
-                </svg>
-
-                <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-4 border-gray-400 pb-2 mc-text-dark-shadow relative z-30">
+            <div class="mc-panel p-4 sticky top-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-4 border-gray-400 pb-2 mc-text-dark-shadow">
                     🛠️ 項目分類
                 </h2>
-                <ul id="category-list" class="space-y-3 relative z-30">
+                <ul id="category-list" class="space-y-3">
                     <!-- 分類選項會由 JS 自動產生在這裡 -->
                 </ul>
             </div>
@@ -177,6 +275,55 @@
     </div>
 
     <script>
+        // --- 頭部追蹤滑鼠邏輯 (加入 3D 視差效果) ---
+        document.addEventListener('mousemove', (e) => {
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
+
+            // 包含所有需要追蹤滑鼠的頭部與臉部 ID
+            const characters = [
+                { head: 'steve-head', face: 'steve-face' },
+                { head: 'creeper-head', face: 'creeper-face' },
+                { head: 'enderman-head', face: 'enderman-face' }
+            ];
+            
+            characters.forEach(char => {
+                const head = document.getElementById(char.head);
+                const face = document.getElementById(char.face);
+                if (!head) return;
+
+                // 取得角色頭部在網頁上的實際中心座標
+                const rect = head.getBoundingClientRect();
+                const headCenterX = rect.left + rect.width / 2;
+                const headCenterY = rect.top + rect.height / 2;
+
+                // 計算滑鼠與頭部的距離
+                const dx = mouseX - headCenterX;
+                const dy = mouseY - headCenterY;
+
+                // 限制最大轉動角度與位移 (-1 到 1 之間)
+                const normX = Math.max(-1, Math.min(1, dx / (window.innerWidth / 2)));
+                const normY = Math.max(-1, Math.min(1, dy / (window.innerHeight / 2)));
+
+                // 整個頭部的轉動與微幅平移
+                const headRot = normX * 25; // 左右看時的傾斜角度
+                const headTx = normX * 1;   // 頭部輕微位移
+                const headTy = normY * 1;   
+
+                // 五官的進階平移 (位移幅度大於頭部，製造出 3D 轉頭的視差感)
+                const faceTx = normX * 2;
+                const faceTy = normY * 1.5;
+
+                // 使用 CSS transform 套用效果 (效能比 setAttribute 更好)
+                head.style.transform = `translate(${headTx}px, ${headTy}px) rotate(${headRot}deg)`;
+                
+                // 套用五官視差
+                if (face) {
+                    face.style.transform = `translate(${faceTx}px, ${faceTy}px)`;
+                }
+            });
+        });
+
         // --- 核心設定 ---
         const repoInfo = { username: 'happy690331', repo: 'teacher', path: '' };
         const itemsPerPage = 16; // 維持剛好 4x4 排列
