@@ -10,15 +10,11 @@
         /* --- Minecraft 核心風格設定 --- */
         body {
             font-family: '標楷體', 'BiauKai', 'DFKai-SB', serif;
-            /* 泥土方塊背景紋理 */
-            background-color: #7a5c43;
-            background-image:
-                linear-gradient(45deg, #70533c 25%, transparent 25%),
-                linear-gradient(-45deg, #70533c 25%, transparent 25%),
-                linear-gradient(45deg, transparent 75%, #70533c 75%),
-                linear-gradient(-45deg, transparent 75%, #70533c 75%);
-            background-size: 32px 32px;
-            background-position: 0 0, 0 16px, 16px -16px, -16px 0px;
+            /* 藍天綠地背景 (包含像素天空、雲朵與草地) */
+            background-color: #78a7ff;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Cdefs%3E%3Cpattern id='grass' width='64' height='64' patternUnits='userSpaceOnUse'%3E%3Crect width='64' height='64' fill='%235db245'/%3E%3Crect x='0' y='0' width='32' height='32' fill='%2352a03c'/%3E%3Crect x='32' y='32' width='32' height='32' fill='%2352a03c'/%3E%3Crect x='0' y='0' width='64' height='6' fill='%2385db6a'/%3E%3C/pattern%3E%3Cpattern id='clouds' width='256' height='128' patternUnits='userSpaceOnUse'%3E%3Crect x='32' y='32' width='96' height='32' fill='%23ffffff' opacity='0.8'/%3E%3Crect x='64' y='16' width='64' height='64' fill='%23ffffff' opacity='0.8'/%3E%3Crect x='160' y='80' width='64' height='24' fill='%23ffffff' opacity='0.6'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100%25' height='100%25' fill='%2378a7ff'/%3E%3Crect width='100%25' height='100%25' fill='url(%23clouds)'/%3E%3Crect y='40%25' width='100%25' height='60%25' fill='url(%23grass)'/%3E%3C/svg%3E");
+            background-attachment: fixed;
+            background-size: cover;
             image-rendering: pixelated;
         }
 
@@ -109,7 +105,7 @@
     <!-- 頂部標題列 -->
     <header class="pt-8 pb-6">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h1 class="text-4xl md:text-5xl font-bold mc-title">AI 教學遊戲天地</h1>
+            <h1 class="text-4xl md:text-5xl font-bold text-black">AI 教學遊戲天地</h1>
         </div>
     </header>
 
@@ -194,7 +190,7 @@
         const categoryConfig = {
             '全部': [],
             '國語': ['國語', '語文', '注音', '拼音', '字', '詞', '句', '閱讀', '寫作', '國文'],
-            '數學': ['數學', '算數', '加', '減', '乘', '除', '幾何', '分數', '數字', '九九', '時鐘'],
+            '數學': ['數學', '算數', '加', '減', '乘', '除', '幾何', '分數', '數字', '九九', '時鐘', '翰林'],
             '學習策略': ['策略', '學習', '記憶', '筆記', '專注', '心智圖', '複習'],
             '考試報讀': ['報讀', '考試', '測驗', '語音', '聽讀', '朗讀', '發聲'],
             '學生輔導': ['輔導', '情緒', '特教', '心理', '人際', '資源', '班級經營', '社交'],
