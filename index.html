@@ -145,8 +145,31 @@
     <!-- 頂部標題列 (包含互動角色) -->
     <header class="relative w-full h-48 md:h-64 flex justify-center items-end pb-4 z-10">
         
-        <!-- 左側：全身史蒂夫 Steve -->
-        <div class="absolute left-2 md:left-24 bottom-0 z-20">
+        <!-- 左側遠處：經典殭屍 Zombie (新加入) -->
+        <div class="absolute left-2 md:left-6 bottom-0 z-10 hidden sm:block">
+            <svg viewBox="0 0 16 32" class="w-16 md:w-20 h-auto drop-shadow-xl" shape-rendering="crispEdges">
+                <!-- 手部 -->
+                <rect x="0" y="8" width="4" height="12" fill="#3c8527"/>
+                <rect x="12" y="8" width="4" height="12" fill="#3c8527"/>
+                <!-- 腳 -->
+                <rect x="4" y="20" width="4" height="12" fill="#4a366b"/>
+                <rect x="8" y="20" width="4" height="12" fill="#4a366b"/>
+                <!-- 身體 -->
+                <rect x="4" y="8" width="8" height="12" fill="#00aabf"/>
+                <!-- 頭部 (包含獨立五官群組) -->
+                <g id="zombie-head" class="head-tracking">
+                    <rect x="4" y="0" width="8" height="8" fill="#3c8527"/>
+                    <g id="zombie-face" class="face-tracking">
+                        <rect x="5" y="3" width="2" height="2" fill="#222"/>
+                        <rect x="9" y="3" width="2" height="2" fill="#222"/>
+                        <rect x="6" y="5" width="4" height="2" fill="#1b2a10"/>
+                    </g>
+                </g>
+            </svg>
+        </div>
+
+        <!-- 左側近處：全身史蒂夫 Steve -->
+        <div class="absolute left-16 md:left-28 bottom-0 z-20">
             <svg viewBox="0 0 16 32" class="w-16 md:w-20 h-auto drop-shadow-xl" shape-rendering="crispEdges">
                 <!-- 左手 -->
                 <rect x="0" y="8" width="4" height="4" fill="#00a8ff"/>
@@ -176,6 +199,32 @@
                         <rect x="10" y="4" width="1" height="1" fill="white"/>
                         <rect x="7" y="5" width="2" height="1" fill="#9d6a46"/>
                         <rect x="6" y="6" width="4" height="1" fill="#513621"/>
+                    </g>
+                </g>
+            </svg>
+        </div>
+
+        <!-- 中間偏左：粉紅小豬 Pig (新加入) -->
+        <div class="absolute left-1/2 -ml-36 md:-ml-48 bottom-0 z-20 hidden lg:block">
+            <svg viewBox="0 0 16 20" class="w-16 md:w-20 h-auto drop-shadow-xl" shape-rendering="crispEdges">
+                <!-- 腳 -->
+                <rect x="4" y="14" width="2" height="6" fill="#f3b2b2"/>
+                <rect x="10" y="14" width="2" height="6" fill="#f3b2b2"/>
+                <!-- 身體 -->
+                <rect x="3" y="8" width="10" height="8" fill="#f3b2b2"/>
+                <!-- 頭部 (包含獨立五官群組) -->
+                <g id="pig-head" class="head-tracking">
+                    <rect x="4" y="2" width="8" height="8" fill="#f3b2b2"/>
+                    <g id="pig-face" class="face-tracking">
+                        <!-- 眼睛 -->
+                        <rect x="4" y="5" width="1" height="2" fill="#fff"/>
+                        <rect x="5" y="5" width="1" height="2" fill="#000"/>
+                        <rect x="11" y="5" width="1" height="2" fill="#fff"/>
+                        <rect x="10" y="5" width="1" height="2" fill="#000"/>
+                        <!-- 鼻子 -->
+                        <rect x="6" y="6" width="4" height="3" fill="#d88f8f"/>
+                        <rect x="6" y="7" width="1" height="1" fill="#a45858"/>
+                        <rect x="9" y="7" width="1" height="1" fill="#a45858"/>
                     </g>
                 </g>
             </svg>
@@ -284,7 +333,9 @@
             const characters = [
                 { head: 'steve-head', face: 'steve-face' },
                 { head: 'creeper-head', face: 'creeper-face' },
-                { head: 'enderman-head', face: 'enderman-face' }
+                { head: 'enderman-head', face: 'enderman-face' },
+                { head: 'zombie-head', face: 'zombie-face' },
+                { head: 'pig-head', face: 'pig-face' }
             ];
             
             characters.forEach(char => {
@@ -340,7 +391,8 @@
             '數學': ['數學', '算數', '加', '減', '乘', '除', '幾何', '分數', '數字', '九九', '時鐘', '翰林'],
             '學習策略': ['策略', '學習', '記憶', '筆記', '專注', '心智圖', '複習'],
             '考試報讀': ['報讀', '考試', '測驗', '語音', '聽讀', '朗讀', '發聲'],
-            '學生輔導': ['輔導', '情緒', '特教', '心理', '人際', '資源', '班級經營', '社交'],
+            '學生輔導': ['輔導', '情緒', '特教', '心理', '人際', '資源', '班級經營', '社交', '紀錄程式'],
+            '程式': ['程式', '編程', '代碼', 'coding', 'scratch', 'python', '迴圈'],
             '其他': []
         };
         const categoryList = Object.keys(categoryConfig);
