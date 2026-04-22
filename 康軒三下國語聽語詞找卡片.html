@@ -76,9 +76,16 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      aspect-ratio: 4/3;
-      min-height: 90px;
-      min-width: 120px;
+      aspect-ratio: 3/4;
+      min-height: 120px;
+      min-width: 90px;
+      container-type: size;
+    }
+
+    .dynamic-word-text {
+      font-size: clamp(2.5rem, 40cqmin, 7rem);
+      letter-spacing: 0.1em;
+      white-space: nowrap;
     }
     
     .word-card:hover:not(.correct):not(.wrong) {
@@ -217,7 +224,7 @@
       <div class="h-2 bg-orange-100 rounded-full overflow-hidden w-20 flex-shrink-0">
        <div id="progress-bar" class="h-full progress-bar rounded-full transition-all duration-500" style="width: 0%"></div>
       </div><button id="play-sound-btn" class="play-btn w-14 h-14 bg-gradient-to-br from-orange-400 to-amber-500 hover:from-orange-500 hover:to-amber-600 rounded-full shadow-lg flex items-center justify-center transform hover:scale-105 active:scale-95 transition-all duration-300 flex-shrink-0"> <span class="text-xl">🔊</span> </button>
-      <div class="flex items-center gap-1 flex-shrink-0"><label class="text-orange-700 font-medium text-xs">語速</label> <input type="range" id="speed-slider" min="0.1" max="1.6" step="0.1" value="0.4" class="h-2 bg-orange-200 rounded-lg appearance-none cursor-pointer w-14" style="accent-color: #fb923c;"> <span id="speed-display" class="text-orange-700 font-bold text-sm w-7 text-center">0.4x</span>
+      <div class="flex items-center gap-1 flex-shrink-0"><label class="text-orange-700 font-medium text-xs">語速</label> <input type="range" id="speed-slider" min="0.1" max="1.6" step="0.1" value="0.7" class="h-2 bg-orange-200 rounded-lg appearance-none cursor-pointer w-14" style="accent-color: #fb923c;"> <span id="speed-display" class="text-orange-700 font-bold text-sm w-7 text-center">0.7x</span>
       </div>
       <div class="text-center flex-shrink-0">
        <div id="elapsed-time" class="text-orange-700 font-bold text-sm">
@@ -314,7 +321,7 @@
     const availableCount = document.getElementById('available-count');
     const mainTitle = document.getElementById('main-title');
     
-    let currentSpeed = 0.4;
+    let currentSpeed = 0.7;
     let successAudioContext = null;
     let gameStartTime = null;
     let gameTimer = null;
@@ -543,7 +550,7 @@
       cardsToShow.forEach((word, index) => {
         const card = document.createElement('div');
         card.className = `word-card p-4 rounded-2xl shadow-lg border-2 slide-in bg-gradient-to-br from-white to-orange-50 border-orange-200 hover:border-orange-400`;
-        card.innerHTML = `<span class="text-lg font-bold text-orange-800">${word}</span>`;
+        card.innerHTML = `<span class="dynamic-word-text font-bold text-orange-800">${word}</span>`;
         card.dataset.word = word;
         card.style.animationDelay = `${index * 0.05}s`;
         
