@@ -10,328 +10,280 @@
   html, body { width: 100%; height: 100%; overflow: hidden; background: #050818; font-family: 'Noto Sans TC', sans-serif; user-select: none; -webkit-user-select: none; }
   canvas { display: block; cursor: crosshair; touch-action: none; -webkit-tap-highlight-color: transparent; }
 
-  /* ---------- 開始畫面 ---------- */
+  /* ========== 開始畫面 ========== */
   #menu {
     position: fixed; inset: 0; z-index: 10;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background:
-      radial-gradient(ellipse at 30% 20%, rgba(255, 60, 180, 0.18), transparent 50%),
-      radial-gradient(ellipse at 70% 80%, rgba(60, 200, 255, 0.18), transparent 50%),
-      linear-gradient(180deg, #050818 0%, #0a0a2a 100%);
-    overflow-y: auto;
-    padding: 20px 0;
+    background: radial-gradient(ellipse at 30% 20%, rgba(255,60,180,0.18), transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(60,200,255,0.18), transparent 50%),
+                linear-gradient(180deg, #050818 0%, #0a0a2a 100%);
+    overflow-y: auto; padding: 20px 0;
   }
   #menu::before {
     content: ''; position: fixed; inset: 0; pointer-events: none;
-    background-image:
-      linear-gradient(rgba(80, 150, 255, 0.06) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(80, 150, 255, 0.06) 1px, transparent 1px);
+    background-image: linear-gradient(rgba(80,150,255,0.06) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(80,150,255,0.06) 1px, transparent 1px);
     background-size: 40px 40px;
     mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
   }
   .menu-card {
     position: relative; z-index: 2;
-    background: rgba(10, 10, 30, 0.6);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(120, 200, 255, 0.3);
-    border-radius: 24px;
+    background: rgba(10,10,30,0.6); backdrop-filter: blur(12px);
+    border: 1px solid rgba(120,200,255,0.3); border-radius: 24px;
     padding: 40px 50px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 60px rgba(80, 200, 255, 0.15);
-    text-align: center;
-    max-width: 600px;
-    width: calc(100% - 40px);
-    margin: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 60px rgba(80,200,255,0.15);
+    text-align: center; max-width: 600px; width: calc(100% - 40px); margin: auto;
   }
   h1 {
-    font-family: 'Orbitron', sans-serif;
-    font-weight: 900;
-    font-size: clamp(28px, 5vw, 46px);
+    font-family: 'Orbitron', sans-serif; font-weight: 900;
+    font-size: clamp(28px,5vw,46px);
     background: linear-gradient(135deg, #4cf 0%, #fc4 50%, #f4c 100%);
-    -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: 4px;
-    margin-bottom: 6px;
-    filter: drop-shadow(0 0 20px rgba(100, 200, 255, 0.5));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: 4px; margin-bottom: 6px;
+    filter: drop-shadow(0 0 20px rgba(100,200,255,0.5));
   }
-  .subtitle {
-    font-family: 'Orbitron', sans-serif;
-    color: #88aacc; letter-spacing: 4px; font-size: 12px; margin-bottom: 28px;
-  }
+  .subtitle { font-family: 'Orbitron', sans-serif; color: #88aacc; letter-spacing: 4px; font-size: 12px; margin-bottom: 28px; }
   #nameInput {
-    width: 100%;
-    font-size: 17px; font-family: 'Noto Sans TC', sans-serif;
+    width: 100%; font-size: 17px; font-family: 'Noto Sans TC', sans-serif;
     padding: 12px 20px; margin-bottom: 20px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(120, 200, 255, 0.4);
-    border-radius: 999px;
-    color: #fff; outline: none; text-align: center;
-    transition: all 0.2s;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(120,200,255,0.4);
+    border-radius: 999px; color: #fff; outline: none; text-align: center; transition: all 0.2s;
   }
-  #nameInput:focus { border-color: #4cf; box-shadow: 0 0 20px rgba(80, 200, 255, 0.4); background: rgba(255, 255, 255, 0.08); }
+  #nameInput:focus { border-color: #4cf; box-shadow: 0 0 20px rgba(80,200,255,0.4); background: rgba(255,255,255,0.08); }
   .start-btn {
     display: inline-block; cursor: pointer;
     font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: 3px;
-    padding: 14px 52px;
-    color: #050818;
+    padding: 14px 52px; color: #050818;
     background: linear-gradient(135deg, #4cf 0%, #f4c 100%);
     border: none; border-radius: 999px;
-    box-shadow: 0 10px 30px rgba(80, 200, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    box-shadow: 0 10px 30px rgba(80,200,255,0.4), inset 0 1px 0 rgba(255,255,255,0.4);
     transition: all 0.2s;
   }
-  .start-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 40px rgba(244, 80, 200, 0.5); }
+  .start-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 40px rgba(244,80,200,0.5); }
   .start-btn:active { transform: translateY(0); }
-  .controls {
-    margin-top: 28px; padding-top: 20px;
-    border-top: 1px solid rgba(120, 200, 255, 0.15);
-    color: #aac; font-size: 13px; line-height: 1.9;
-  }
-  .controls .key {
-    display: inline-block; padding: 2px 10px; margin: 0 3px;
-    background: rgba(120, 200, 255, 0.12); border: 1px solid rgba(120, 200, 255, 0.3);
-    border-radius: 6px; font-family: 'Orbitron', sans-serif; font-size: 11px; color: #cef;
-  }
+  .controls { margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(120,200,255,0.15); color: #aac; font-size: 13px; line-height: 1.9; }
+  .controls .key { display: inline-block; padding: 2px 10px; margin: 0 3px; background: rgba(120,200,255,0.12); border: 1px solid rgba(120,200,255,0.3); border-radius: 6px; font-family: 'Orbitron', sans-serif; font-size: 11px; color: #cef; }
 
-  /* ---------- 死亡畫面 ---------- */
-  #gameover {
-    display: none;
-    position: fixed; inset: 0; z-index: 20;
-    align-items: center; justify-content: center;
-    background: radial-gradient(ellipse at center, rgba(180, 30, 60, 0.4), rgba(5, 5, 20, 0.95));
-    backdrop-filter: blur(8px);
-    animation: fadeIn 0.4s ease-out;
+  /* ========== 頂部 HUD 列 ========== */
+  #topBar {
+    display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 15;
+    height: 54px; background: rgba(5,8,24,0.82); backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(120,200,255,0.15);
+    align-items: center; justify-content: space-between; padding: 0 16px;
   }
-  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-  .gameover-card {
-    background: rgba(15, 10, 30, 0.85);
-    border: 1px solid rgba(255, 100, 150, 0.4);
-    border-radius: 24px;
-    padding: 50px 70px;
-    text-align: center;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 60px rgba(255, 80, 130, 0.25);
+  .top-btn {
+    display: flex; align-items: center; gap: 6px;
+    font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 2px; color: #cef;
+    background: rgba(120,200,255,0.1); border: 1px solid rgba(120,200,255,0.3);
+    border-radius: 999px; padding: 7px 18px; cursor: pointer; transition: all 0.18s;
   }
-  .gameover-card h2 {
+  .top-btn:hover { background: rgba(120,200,255,0.22); border-color: #4cf; color: #fff; }
+  .top-btn.danger { color: #ffaacc; border-color: rgba(255,100,150,0.35); background: rgba(255,80,130,0.1); }
+  .top-btn.danger:hover { background: rgba(255,80,130,0.22); border-color: #f4c; color: #fff; }
+  #timerDisplay {
     font-family: 'Orbitron', sans-serif; font-weight: 900;
-    font-size: 48px; letter-spacing: 6px;
-    background: linear-gradient(135deg, #f4c, #fc4);
-    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-    margin-bottom: 8px;
+    font-size: clamp(20px,3vw,28px); letter-spacing: 4px; color: #fff;
+    text-shadow: 0 0 20px rgba(80,200,255,0.6); text-align: center; min-width: 100px;
   }
-  .gameover-card .label { color: #aac; letter-spacing: 4px; font-size: 13px; margin-bottom: 30px; font-family: 'Orbitron', sans-serif; }
-  .stats { display: flex; gap: 30px; justify-content: center; margin: 20px 0 30px; }
-  .stat {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 14px; padding: 16px 28px; min-width: 110px;
-  }
-  .stat .num { font-family: 'Orbitron', sans-serif; font-size: 32px; font-weight: 900; color: #4cf; }
-  .stat .lbl { font-size: 12px; color: #88a; letter-spacing: 2px; margin-top: 4px; }
+  #timerDisplay.warning { color: #ffd84a; text-shadow: 0 0 20px rgba(255,216,74,0.7); animation: pulse 0.9s ease-in-out infinite; }
+  #timerDisplay.critical { color: #ff6688; text-shadow: 0 0 22px rgba(255,80,130,0.9); animation: pulse 0.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.55} }
+  #scoreDisplay { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 14px; color: #6f9; letter-spacing: 2px; white-space: nowrap; }
 
-  /* ---------- 遊戲中 HUD ---------- */
-  #hud { display: none; }
   .hint-bar {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-    background: rgba(10, 10, 30, 0.5); backdrop-filter: blur(8px);
-    border: 1px solid rgba(120, 200, 255, 0.2);
-    border-radius: 999px;
-    padding: 10px 24px;
-    color: #aac; font-size: 13px;
-    z-index: 5; pointer-events: none;
+    background: rgba(10,10,30,0.5); backdrop-filter: blur(8px);
+    border: 1px solid rgba(120,200,255,0.2); border-radius: 999px;
+    padding: 10px 24px; color: #aac; font-size: 13px; z-index: 5; pointer-events: none;
   }
-  .hint-bar .key { display: inline-block; padding: 1px 8px; margin: 0 2px; background: rgba(120, 200, 255, 0.15); border-radius: 4px; font-family: 'Orbitron', sans-serif; color: #cef; }
+  .hint-bar .key { display: inline-block; padding: 1px 8px; margin: 0 2px; background: rgba(120,200,255,0.15); border-radius: 4px; font-family: 'Orbitron', sans-serif; color: #cef; }
   .hint-bar.touch-mode { display: none; }
 
-  /* ---------- 課次選擇 ---------- */
-  .qtype-label {
-    color: #88aacc; letter-spacing: 3px; font-size: 12px; font-family: 'Orbitron', sans-serif;
-    margin: 16px 0 10px; text-align: left;
+  /* ========== 暫停畫面 ========== */
+  #pauseScreen {
+    display: none; position: fixed; inset: 0; z-index: 25;
+    align-items: center; justify-content: center;
+    background: rgba(5,8,24,0.85); backdrop-filter: blur(12px);
+    animation: fadeIn 0.2s ease-out;
   }
-  .lesson-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
-    margin-bottom: 22px;
+  .pause-card { background: rgba(12,14,34,0.92); border: 1px solid rgba(120,200,255,0.4); border-radius: 28px; padding: 52px 76px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 60px rgba(80,200,255,0.2); }
+  .pause-card h2 { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 46px; letter-spacing: 8px; color: #4cf; margin-bottom: 10px; text-shadow: 0 0 30px rgba(80,200,255,0.5); }
+  .pause-card p { color: #88aacc; font-size: 13px; letter-spacing: 4px; margin-bottom: 36px; font-family: 'Orbitron', sans-serif; }
+  .pause-btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .pause-resume { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 18px; letter-spacing: 3px; padding: 14px 44px; color: #050818; background: linear-gradient(135deg, #4cf 0%, #f4c 100%); border: none; border-radius: 999px; cursor: pointer; box-shadow: 0 10px 28px rgba(80,200,255,0.4); transition: all 0.2s; }
+  .pause-resume:hover { transform: translateY(-2px); }
+  .pause-menu-btn { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 2px; padding: 14px 36px; color: #ffaacc; background: rgba(255,80,130,0.1); border: 1px solid rgba(255,100,150,0.4); border-radius: 999px; cursor: pointer; transition: all 0.2s; }
+  .pause-menu-btn:hover { background: rgba(255,80,130,0.22); transform: translateY(-2px); }
+
+  /* ========== 確認結束彈窗 ========== */
+  #confirmModal {
+    display: none; position: fixed; inset: 0; z-index: 40;
+    align-items: center; justify-content: center;
+    background: rgba(5,8,24,0.88); backdrop-filter: blur(10px);
+    animation: fadeIn 0.18s ease-out;
   }
-  .lesson-card {
-    position: relative;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1.5px solid rgba(120, 200, 255, 0.18);
-    border-radius: 12px; padding: 12px 8px 10px;
-    cursor: pointer; text-align: center;
-    transition: all 0.18s; user-select: none;
+  .confirm-card { background: rgba(15,14,36,0.95); border: 1.5px solid rgba(255,100,150,0.45); border-radius: 22px; padding: 40px 52px; text-align: center; box-shadow: 0 16px 56px rgba(0,0,0,0.6), 0 0 50px rgba(255,80,130,0.2); }
+  .confirm-card h3 { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 22px; color: #ffaacc; letter-spacing: 4px; margin-bottom: 10px; }
+  .confirm-card p  { color: #aac; font-size: 14px; margin-bottom: 28px; }
+  .confirm-btns { display: flex; gap: 14px; justify-content: center; }
+  .confirm-yes { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 2px; padding: 12px 36px; color: #050818; background: linear-gradient(135deg, #f4c 0%, #fc4 100%); border: none; border-radius: 999px; cursor: pointer; transition: all 0.18s; }
+  .confirm-yes:hover { transform: translateY(-2px); }
+  .confirm-no  { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 2px; padding: 12px 36px; color: #cef; background: rgba(120,200,255,0.1); border: 1px solid rgba(120,200,255,0.35); border-radius: 999px; cursor: pointer; transition: all 0.18s; }
+  .confirm-no:hover { background: rgba(120,200,255,0.22); transform: translateY(-2px); }
+
+  /* ========== 遊戲結束（死亡） ========== */
+  #gameover {
+    display: none; position: fixed; inset: 0; z-index: 20;
+    align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at center, rgba(180,30,60,0.4), rgba(5,5,20,0.95));
+    backdrop-filter: blur(8px); animation: fadeIn 0.4s ease-out;
   }
-  .lesson-card::after {
-    content: ''; position: absolute;
-    top: 6px; right: 6px;
-    width: 15px; height: 15px;
-    border-radius: 50%;
-    border: 1.5px solid rgba(120, 200, 255, 0.4);
-    background: rgba(0, 0, 0, 0.2);
-    transition: all 0.18s;
-    line-height: 12px; font-size: 10px; font-weight: 900;
-    color: transparent; text-align: center;
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  .gameover-card { background: rgba(15,10,30,0.88); border: 1px solid rgba(255,100,150,0.4); border-radius: 24px; padding: 50px 60px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 60px rgba(255,80,130,0.25); }
+  .gameover-card h2 { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 48px; letter-spacing: 6px; background: linear-gradient(135deg, #f4c, #fc4); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px; }
+  .result-label { color: #aac; letter-spacing: 4px; font-size: 13px; margin-bottom: 28px; font-family: 'Orbitron', sans-serif; }
+  .stats { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin: 20px 0 30px; }
+  .stat { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px 22px; min-width: 96px; }
+  .stat .num { font-family: 'Orbitron', sans-serif; font-size: 30px; font-weight: 900; color: #4cf; }
+  .stat .num.green { color: #6f9; }
+  .stat .lbl { font-size: 11px; color: #88a; letter-spacing: 2px; margin-top: 4px; }
+
+  /* ========== 時間到畫面 ========== */
+  #timeup {
+    display: none; position: fixed; inset: 0; z-index: 20;
+    align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at center, rgba(20,55,120,0.5), rgba(5,5,20,0.96));
+    backdrop-filter: blur(8px); animation: fadeIn 0.4s ease-out;
   }
-  .lesson-card.selected::after {
-    content: '✓';
-    background: #4cf; border-color: #4cf;
-    color: #050818;
-    box-shadow: 0 0 8px rgba(80, 200, 255, 0.6);
-  }
-  .lesson-card:hover { background: rgba(120, 200, 255, 0.10); border-color: rgba(120, 200, 255, 0.45); transform: translateY(-2px); }
-  .lesson-card.selected {
-    background: linear-gradient(180deg, rgba(80, 200, 255, 0.22), rgba(80, 200, 255, 0.10));
-    border-color: #4cf;
-    box-shadow: 0 0 16px rgba(80, 200, 255, 0.3), inset 0 0 10px rgba(80, 200, 255, 0.12);
-  }
-  .lesson-card .num {
-    font-family: 'Orbitron', sans-serif; font-weight: 900;
-    font-size: 20px; color: #4cf; line-height: 1;
-  }
+  .timeup-card { background: rgba(10,12,32,0.92); border: 2px solid rgba(80,200,255,0.55); border-radius: 28px; padding: 46px 60px; text-align: center; box-shadow: 0 20px 70px rgba(0,0,0,0.65), 0 0 80px rgba(80,200,255,0.28); max-width: 480px; width: calc(100% - 40px); }
+  .timeup-card .trophy { font-size: 52px; margin-bottom: 10px; }
+  .timeup-card h2 { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 36px; letter-spacing: 4px; background: linear-gradient(135deg, #4cf, #fc4); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px; }
+  .timeup-card .result-label { color: #88aacc; letter-spacing: 4px; font-size: 12px; margin-bottom: 20px; font-family: 'Orbitron', sans-serif; }
+  .timeup-name { color: #ffea66; font-size: 22px; font-weight: 700; margin-bottom: 18px; }
+
+  /* ========== 課次選擇 ========== */
+  .qtype-label { color: #88aacc; letter-spacing: 3px; font-size: 12px; font-family: 'Orbitron', sans-serif; margin: 16px 0 10px; text-align: left; }
+  .lesson-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 22px; }
+  .lesson-card { position: relative; background: rgba(255,255,255,0.03); border: 1.5px solid rgba(120,200,255,0.18); border-radius: 12px; padding: 12px 8px 10px; cursor: pointer; text-align: center; transition: all 0.18s; user-select: none; }
+  .lesson-card::after { content: ''; position: absolute; top: 6px; right: 6px; width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid rgba(120,200,255,0.4); background: rgba(0,0,0,0.2); transition: all 0.18s; line-height: 12px; font-size: 10px; font-weight: 900; color: transparent; text-align: center; }
+  .lesson-card.selected::after { content: '✓'; background: #4cf; border-color: #4cf; color: #050818; box-shadow: 0 0 8px rgba(80,200,255,0.6); }
+  .lesson-card:hover { background: rgba(120,200,255,0.10); border-color: rgba(120,200,255,0.45); transform: translateY(-2px); }
+  .lesson-card.selected { background: linear-gradient(180deg, rgba(80,200,255,0.22), rgba(80,200,255,0.10)); border-color: #4cf; box-shadow: 0 0 16px rgba(80,200,255,0.3); }
+  .lesson-card .num { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 20px; color: #4cf; line-height: 1; }
   .lesson-card.selected .num { color: #fff; text-shadow: 0 0 10px #4cf; }
   .lesson-card .name { font-size: 11px; color: #cef; margin-top: 5px; font-weight: 700; line-height: 1.3; }
   .lesson-card .count { font-size: 10px; color: #66a; margin-top: 3px; font-family: 'Orbitron', sans-serif; letter-spacing: 1px; }
 
-  /* ---------- 語詞題彈窗 ---------- */
-  #quizModal {
-    display: none;
-    position: fixed; inset: 0; z-index: 30;
-    align-items: center; justify-content: center;
-    background: radial-gradient(ellipse at center, rgba(20, 30, 80, 0.55), rgba(5, 8, 24, 0.88));
-    backdrop-filter: blur(8px);
-    animation: fadeIn 0.25s ease-out;
-  }
-  .quiz-card {
-    background: linear-gradient(180deg, #15183a 0%, #0a0d24 100%);
-    border: 2px solid #4cf;
-    border-radius: 28px;
-    padding: 32px 40px 28px;
-    text-align: center;
-    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.65), 0 0 80px rgba(80, 200, 255, 0.35);
-    max-width: 540px;
-    width: calc(100% - 32px);
-  }
-  .quiz-title {
-    font-family: 'Orbitron', sans-serif;
-    color: #ffd84a; letter-spacing: 4px; font-size: 13px; font-weight: 700;
-    margin-bottom: 6px;
-  }
-  .quiz-lesson-tag {
-    display: inline-block;
-    background: rgba(80, 200, 255, 0.15);
-    border: 1px solid rgba(80, 200, 255, 0.35);
-    border-radius: 999px;
-    padding: 3px 14px;
-    color: #7de; font-size: 12px; font-family: 'Noto Sans TC', sans-serif;
-    margin-bottom: 18px;
-  }
-  .quiz-def {
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: clamp(16px, 2.5vw, 21px); font-weight: 700;
-    color: #fff; line-height: 1.65;
-    margin-bottom: 26px;
-    min-height: 60px;
-    text-shadow: 0 0 20px rgba(80, 200, 255, 0.3);
-  }
-  .quiz-def .def-label {
-    display: block;
-    font-size: 12px; color: #88aacc; letter-spacing: 3px;
-    font-weight: 400; margin-bottom: 8px;
-    font-family: 'Orbitron', sans-serif;
-  }
-  .quiz-options {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 12px; margin-bottom: 10px;
-  }
-  .opt-btn {
-    padding: 13px 10px;
-    font-family: 'Noto Sans TC', sans-serif; font-size: 18px; font-weight: 700;
-    color: #def;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1.5px solid rgba(120, 200, 255, 0.3);
-    border-radius: 14px; cursor: pointer;
-    transition: all 0.15s;
-    letter-spacing: 2px;
-  }
-  .opt-btn:hover:not(:disabled) {
-    background: rgba(80, 200, 255, 0.18);
-    border-color: #4cf;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(80, 200, 255, 0.3);
-  }
+  /* ========== 語詞題彈窗 ========== */
+  #quizModal { display: none; position: fixed; inset: 0; z-index: 30; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, rgba(20,30,80,0.55), rgba(5,8,24,0.88)); backdrop-filter: blur(8px); animation: fadeIn 0.25s ease-out; }
+  .quiz-card { background: linear-gradient(180deg, #15183a 0%, #0a0d24 100%); border: 2px solid #4cf; border-radius: 28px; padding: 30px 38px 26px; text-align: center; box-shadow: 0 25px 70px rgba(0,0,0,0.65), 0 0 80px rgba(80,200,255,0.35); max-width: 540px; width: calc(100% - 32px); }
+  .quiz-title { font-family: 'Orbitron', sans-serif; color: #ffd84a; letter-spacing: 4px; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .quiz-lesson-tag { display: inline-block; background: rgba(80,200,255,0.15); border: 1px solid rgba(80,200,255,0.35); border-radius: 999px; padding: 3px 14px; color: #7de; font-size: 12px; font-family: 'Noto Sans TC', sans-serif; margin-bottom: 16px; }
+  .quiz-def { font-family: 'Noto Sans TC', sans-serif; font-size: clamp(16px,2.5vw,20px); font-weight: 700; color: #fff; line-height: 1.65; margin-bottom: 22px; min-height: 56px; text-shadow: 0 0 20px rgba(80,200,255,0.3); }
+  .quiz-def .def-label { display: block; font-size: 12px; color: #88aacc; letter-spacing: 3px; font-weight: 400; margin-bottom: 8px; font-family: 'Orbitron', sans-serif; }
+  .quiz-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+  .opt-btn { padding: 13px 8px; font-family: 'Noto Sans TC', sans-serif; font-size: 17px; font-weight: 700; color: #def; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(120,200,255,0.3); border-radius: 14px; cursor: pointer; transition: all 0.15s; letter-spacing: 2px; }
+  .opt-btn:hover:not(:disabled) { background: rgba(80,200,255,0.18); border-color: #4cf; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(80,200,255,0.3); }
   .opt-btn:active:not(:disabled) { transform: translateY(0); }
-  .opt-btn.correct {
-    background: rgba(80, 255, 140, 0.2) !important;
-    border-color: #6f9 !important;
-    color: #6f9 !important;
-    box-shadow: 0 0 20px rgba(80, 255, 140, 0.4) !important;
-  }
-  .opt-btn.wrong {
-    background: rgba(255, 80, 100, 0.18) !important;
-    border-color: #f88 !important;
-    color: #f88 !important;
-  }
-  .opt-btn.reveal {
-    background: rgba(80, 255, 140, 0.12) !important;
-    border-color: rgba(80, 255, 140, 0.5) !important;
-    color: rgba(80, 255, 140, 0.7) !important;
-  }
-  .quiz-feedback {
-    min-height: 28px;
-    font-weight: 700; font-size: 17px; letter-spacing: 2px;
-    font-family: 'Noto Sans TC', sans-serif;
-    margin-top: 6px;
-  }
-  .quiz-feedback.correct { color: #6f9; text-shadow: 0 0 15px rgba(80, 255, 140, 0.5); }
-  .quiz-feedback.wrong   { color: #f88; text-shadow: 0 0 12px rgba(255, 120, 120, 0.5); }
-
-  @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    20%, 60%  { transform: translateX(-12px); }
-    40%, 80%  { transform: translateX(12px); }
-  }
+  .opt-btn.correct { background: rgba(80,255,140,0.2) !important; border-color: #6f9 !important; color: #6f9 !important; box-shadow: 0 0 20px rgba(80,255,140,0.4) !important; }
+  .opt-btn.wrong { background: rgba(255,80,100,0.2) !important; border-color: #f88 !important; color: #f88 !important; }
+  .quiz-feedback { min-height: 26px; font-weight: 700; font-size: 16px; letter-spacing: 2px; font-family: 'Noto Sans TC', sans-serif; margin-top: 4px; }
+  .quiz-feedback.correct { color: #6f9; text-shadow: 0 0 15px rgba(80,255,140,0.5); }
+  .quiz-feedback.wrong   { color: #f88; text-shadow: 0 0 12px rgba(255,120,120,0.5); }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-12px)} 40%,80%{transform:translateX(12px)} }
   .quiz-card.shake { animation: shake 0.4s ease; }
 </style>
 </head>
 <body>
-
 <canvas id="game"></canvas>
 
-<!-- 開始選單 -->
+<!-- ========== 開始選單 ========== -->
 <div id="menu">
   <div class="menu-card">
     <h1>貪食蛇語詞</h1>
     <div class="subtitle">V O C A B · S N A K E · G A M E</div>
     <input id="nameInput" placeholder="輸入你的名字" maxlength="12" value="">
-
-    <div class="qtype-label">📚 選擇課次 <span style="color:#cef; letter-spacing:0; font-family:'Noto Sans TC',sans-serif; font-weight:700;">（可複選）</span></div>
+    <div class="qtype-label">📚 選擇課次 <span style="color:#cef;letter-spacing:0;font-family:'Noto Sans TC',sans-serif;font-weight:700;">（可複選）</span></div>
     <div class="lesson-grid" id="lessonGrid"></div>
-
     <button class="start-btn" onclick="startGame()">開 始 遊 戲</button>
     <div class="controls">
       🖱️ <strong style="color:#cef">電腦：</strong>移動<span class="key">滑鼠</span>控制方向，按住<span class="key">左鍵</span>或<span class="key">空白</span>衝刺<br>
-      📱 <strong style="color:#cef">平板：</strong>左下角<span class="key">搖桿</span>控制方向，右下角<span class="key">⚡按鈕</span>衝刺<br>
-      📖 <strong style="color:#ffd84a">每吃 8 個食物出語詞題目</strong>，答對 +25 長度 +4 秒護盾
+      📱 <strong style="color:#cef">平板：</strong>左下角<span class="key">搖桿</span>控制，右下角<span class="key">⚡</span>衝刺<br>
+      ⏱️ <strong style="color:#ffd84a">遊戲時間 5 分鐘</strong>，每吃 8 個食物出語詞題，答對 +25 長度 + 護盾
     </div>
   </div>
 </div>
 
-<!-- HUD -->
-<div id="hud">
+<!-- ========== 頂部 HUD 列 ========== -->
+<div id="topBar">
+  <button class="top-btn" id="pauseBtn" onclick="togglePause()">⏸ 暫停</button>
+  <div id="timerDisplay">05:00</div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div id="scoreDisplay">✓ 0</div>
+    <button class="top-btn danger" onclick="confirmMenu()">✕ 結束</button>
+  </div>
+</div>
+
+<!-- 底部提示 -->
+<div id="hud" style="display:none;">
   <div class="hint-bar">⚡ 按住 <span class="key">左鍵</span> / <span class="key">空白</span> 衝刺</div>
 </div>
 
-<!-- 死亡畫面 -->
-<div id="gameover">
-  <div class="gameover-card">
-    <h2>YOU DIED</h2>
-    <div class="label">G A M E   O V E R</div>
-    <div class="stats">
-      <div class="stat"><div class="num" id="finalLength">0</div><div class="lbl">長度</div></div>
-      <div class="stat"><div class="num" id="finalRank">-</div><div class="lbl">名次</div></div>
-      <div class="stat"><div class="num" id="finalKills">0</div><div class="lbl">擊殺</div></div>
+<!-- ========== 暫停畫面 ========== -->
+<div id="pauseScreen">
+  <div class="pause-card">
+    <h2>PAUSE</h2>
+    <p>G A M E &nbsp; P A U S E D</p>
+    <div class="pause-btns">
+      <button class="pause-resume" onclick="togglePause()">繼 續 遊 戲</button>
+      <button class="pause-menu-btn" onclick="goToMenu()">回 主 選 單</button>
     </div>
-    <button class="start-btn" onclick="restart()">再 玩 一 次</button>
   </div>
 </div>
 
-<!-- 語詞題彈窗 -->
+<!-- ========== 死亡畫面 ========== -->
+<div id="gameover">
+  <div class="gameover-card">
+    <h2>YOU DIED</h2>
+    <div class="result-label">G A M E &nbsp; O V E R</div>
+    <div class="stats">
+      <div class="stat"><div class="num green" id="finalCorrect">0</div><div class="lbl">答對</div></div>
+      <div class="stat"><div class="num" id="finalLength">0</div><div class="lbl">長度</div></div>
+      <div class="stat"><div class="num" id="finalKills">0</div><div class="lbl">擊殺</div></div>
+    </div>
+    <button class="start-btn" onclick="goToMenu()">再 玩 一 次</button>
+  </div>
+</div>
+
+<!-- ========== 時間到畫面 ========== -->
+<div id="timeup">
+  <div class="timeup-card">
+    <div class="trophy">🏆</div>
+    <h2>TIME UP！</h2>
+    <div class="result-label">遊 戲 結 束</div>
+    <div class="timeup-name" id="timeupName">玩家</div>
+    <div class="stats">
+      <div class="stat"><div class="num green" id="tuCorrect">0</div><div class="lbl">答對題數</div></div>
+      <div class="stat"><div class="num" id="tuLength">0</div><div class="lbl">最終長度</div></div>
+      <div class="stat"><div class="num" id="tuKills">0</div><div class="lbl">擊殺</div></div>
+    </div>
+    <button class="start-btn" onclick="goToMenu()">再 玩 一 次</button>
+  </div>
+</div>
+
+<!-- ========== 確認結束彈窗 ========== -->
+<div id="confirmModal">
+  <div class="confirm-card">
+    <h3>確認結束？</h3>
+    <p>目前遊戲進度將不會儲存</p>
+    <div class="confirm-btns">
+      <button class="confirm-yes" onclick="doGoToMenu()">確認結束</button>
+      <button class="confirm-no"  onclick="closeConfirm()">繼續遊戲</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 語詞題彈窗 ========== -->
 <div id="quizModal">
   <div class="quiz-card" id="quizCard">
     <div class="quiz-title">📖 語 詞 時 間</div>
@@ -348,849 +300,513 @@
 <script>
 'use strict';
 
-// ============== 語詞資料 ==============
+// ============ 語詞資料 ============
 const LESSONS_DATA = [
-  {
-    id: 1, title: '馬達加斯加，出發！',
-    vocab: [
-      { word: '島嶼', def: '四周被水圍繞的小面積陸地' },
-      { word: '獨立', def: '不倚靠他人而能自立' },
-      { word: '心馳神往', def: '心神專注、嚮往於事物上' },
-      { word: '輾轉', def: '間接的' },
-      { word: '櫛比鱗次', def: '比喻緊密的連接排列' },
-      { word: '錢幣', def: '錢，多指金屬貨幣' },
-      { word: '村莊', def: '鄉民聚集居住的地方' },
-      { word: '瀕危', def: '接近危險的境地，多指物種即將滅絕' },
-      { word: '掠食者', def: '捕食他種生物而藉以生存的動物' },
-      { word: '覓食', def: '尋找食物' },
-      { word: '紳士', def: '舉止斯文有禮的人' },
-      { word: '迷濛', def: '形容景物朦朧不清' },
-      { word: '高亢', def: '聲調、情緒高昂激動' },
-      { word: '凌駕', def: '超越、勝過' },
-      { word: '岌岌可危', def: '形容非常危險' },
-    ]
-  },
-  {
-    id: 2, title: '沉睡的天空之城',
-    vocab: [
-      { word: '遺址', def: '古代人類活動的地方，可供考古學家研究' },
-      { word: '屏息', def: '抑止呼吸，止住聲息' },
-      { word: '璀璨', def: '光采鮮明的樣子' },
-      { word: '愜意', def: '滿意、舒適' },
-      { word: '振奮', def: '振作奮發' },
-      { word: '氛圍', def: '周圍的氣氛和情調' },
-      { word: '井然有序', def: '條理分明而有秩序' },
-      { word: '澎湃', def: '有聲勢浩大、氣勢壯闊之意' },
-      { word: '堆砌', def: '將物體層疊累積' },
-      { word: '梯田', def: '山坡上呈階梯狀的田地' },
-      { word: '玄妙', def: '深奧微妙' },
-      { word: '興味盎然', def: '興趣很高昂的樣子' },
-      { word: '回眸', def: '回過頭看' },
-    ]
-  },
-  {
-    id: 3, title: '走進太陽之城',
-    vocab: [
-      { word: '名列前茅', def: '比喻名次排在前面' },
-      { word: '唯一', def: '獨一無二' },
-      { word: '爆發', def: '事情突然發生或被揭露' },
-      { word: '供應', def: '供給需要的錢財或物品' },
-      { word: '政府', def: '國家統治機關的總稱' },
-      { word: '收購', def: '收買購置' },
-      { word: '駕駛', def: '操控車船、飛機等交通工具' },
-      { word: '冰箱', def: '一種以降低溫度來保存食品的電器用品' },
-      { word: '嬉戲', def: '遊戲玩耍' },
-      { word: '乒乓球', def: '桌球的別名，一種球類運動' },
-      { word: '輕鬆自在', def: '愉快適意' },
-      { word: '護欄', def: '設置於路邊、河岸等地防止危險的設施' },
-    ]
-  },
-  {
-    id: 4, title: '送友人',
-    vocab: [
-      { word: '蕭蕭', def: '摹聲詞，形容馬鳴聲、風聲或落葉聲' },
-      { word: '清澈', def: '澄淨透明' },
-      { word: '辭別', def: '辭行、告別' },
-      { word: '橫臥', def: '平躺' },
-      { word: '行蹤', def: '出現或來去的蹤跡' },
-      { word: '重逢', def: '再度相逢' },
-      { word: '抒發', def: '表達、發洩' },
-      { word: '漂泊', def: '比喻生活不固定，居無定所' },
-      { word: '餘暉', def: '夕照' },
-      { word: '真摯', def: '真實誠懇' },
-      { word: '情誼', def: '人與人之間彼此關愛的情感' },
-    ]
-  },
-  {
-    id: 5, title: '蚵鄉風情',
-    vocab: [
-      { word: '靠攏', def: '靠近、聚攏' },
-      { word: '笨拙', def: '反應遲鈍、不靈巧' },
-      { word: '疲憊', def: '極為疲勞困倦' },
-      { word: '鈔票', def: '紙幣' },
-      { word: '包裹', def: '包紮成件的東西' },
-      { word: '巡視', def: '巡行視察' },
-      { word: '甦醒', def: '從昏迷中醒過來' },
-      { word: '豎立', def: '物體垂直地面立起來' },
-      { word: '媒體', def: '傳播資料訊息的工具' },
-      { word: '沸騰', def: '液體加熱至一定溫度，發生上湧汽化的現象' },
-      { word: '宛如', def: '彷彿' },
-    ]
-  },
-  {
-    id: 6, title: '童年・夏日・棉花糖',
-    vocab: [
-      { word: '扶疏', def: '枝葉繁茂，四處伸展的樣子' },
-      { word: '山巔', def: '山的頂端' },
-      { word: '戀戀不捨', def: '十分留戀，捨不得離開' },
-      { word: '綠蔭', def: '樹蔭' },
-      { word: '纖纖', def: '微細' },
-      { word: '裊裊', def: '縈迴繚繞、搖曳不定的樣子' },
-      { word: '袖珍', def: '形容小型的或小巧的' },
-      { word: '工廠', def: '將原料或半成品製成成品的地方' },
-      { word: '喜孜孜', def: '歡喜的樣子' },
-      { word: '猶在', def: '還存在' },
-      { word: '光陰', def: '時間' },
-      { word: '飛逝', def: '快速消逝' },
-    ]
-  },
-  {
-    id: 7, title: '我的少年夢',
-    vocab: [
-      { word: '閣樓', def: '建築於屋內的夾層矮樓' },
-      { word: '匱乏', def: '貧乏' },
-      { word: '冥冥之中', def: '人無法預測、理解、控制的狀況' },
-      { word: '帳篷', def: '可拆卸自由搬運的組合式住宅' },
-      { word: '徒步', def: '步行' },
-      { word: '籌備', def: '事先預備計畫' },
-      { word: '埡口', def: '狹窄的山口' },
-      { word: '山脈', def: '山巒相連並依一定方向延伸的山群' },
-      { word: '紮營', def: '屯駐營寨' },
-      { word: '窸窸窣窣', def: '摹聲詞，摹擬斷續的細碎聲音' },
-      { word: '背誦', def: '熟記文句後能不看原文就能誦讀' },
-      { word: '宇宙', def: '時間與空間的總稱，即天地' },
-      { word: '浩瀚', def: '廣大繁多的樣子' },
-    ]
-  },
-  {
-    id: 8, title: '如何張開追夢的翅膀',
-    vocab: [
-      { word: '瞻前顧後', def: '形容做事顧慮太多，猶豫不決' },
-      { word: '汲取', def: '吸取、吸收' },
-      { word: '富庶', def: '物資豐富，人口眾多' },
-      { word: '鍥而不捨', def: '比喻有恆心、毅力，堅持到底' },
-      { word: '嶄新', def: '全新、極新' },
-      { word: '一輩子', def: '一生、一世' },
-      { word: '全力以赴', def: '投入全部的心力以達成目的' },
-      { word: '構築', def: '建造修築' },
-      { word: '諺語', def: '民間流傳的俗語' },
-      { word: '全神貫注', def: '將心思和精神完全集中在某事物上' },
-      { word: '拓展', def: '開拓發展' },
-    ]
-  },
-  {
-    id: 9, title: '成為人生的開拓者',
-    vocab: [
-      { word: '恭喜', def: '向人表示慶賀之敬詞' },
-      { word: '荊棘', def: '比喻困難、險境' },
-      { word: '俗話', def: '流行通俗的語句' },
-      { word: '窘境', def: '艱難貧困的處境' },
-      { word: '溝通', def: '彼此間意見的交流或疏通' },
-      { word: '生涯', def: '所過的生活或經歷的人生' },
-      { word: '曙光', def: '比喻轉機的希望' },
-    ]
-  },
+  { id:1, title:'馬達加斯加，出發！', vocab:[
+    {word:'島嶼',def:'四周被水圍繞的小面積陸地'},
+    {word:'獨立',def:'不倚靠他人而能自立'},
+    {word:'心馳神往',def:'心神專注、嚮往於事物上'},
+    {word:'輾轉',def:'間接的'},
+    {word:'櫛比鱗次',def:'比喻緊密的連接排列'},
+    {word:'錢幣',def:'錢，多指金屬貨幣'},
+    {word:'村莊',def:'鄉民聚集居住的地方'},
+    {word:'瀕危',def:'接近危險的境地，多指物種即將滅絕'},
+    {word:'掠食者',def:'捕食他種生物而藉以生存的動物'},
+    {word:'覓食',def:'尋找食物'},
+    {word:'紳士',def:'舉止斯文有禮的人'},
+    {word:'迷濛',def:'形容景物朦朧不清'},
+    {word:'高亢',def:'聲調、情緒高昂激動'},
+    {word:'凌駕',def:'超越、勝過'},
+    {word:'岌岌可危',def:'形容非常危險'},
+  ]},
+  { id:2, title:'沉睡的天空之城', vocab:[
+    {word:'遺址',def:'古代人類活動的地方，可供考古學家研究'},
+    {word:'屏息',def:'抑止呼吸，止住聲息'},
+    {word:'璀璨',def:'光采鮮明的樣子'},
+    {word:'愜意',def:'滿意、舒適'},
+    {word:'振奮',def:'振作奮發'},
+    {word:'氛圍',def:'周圍的氣氛和情調'},
+    {word:'井然有序',def:'條理分明而有秩序'},
+    {word:'澎湃',def:'有聲勢浩大、氣勢壯闊之意'},
+    {word:'堆砌',def:'將物體層疊累積'},
+    {word:'梯田',def:'山坡上呈階梯狀的田地'},
+    {word:'玄妙',def:'深奧微妙'},
+    {word:'興味盎然',def:'興趣很高昂的樣子'},
+    {word:'回眸',def:'回過頭看'},
+  ]},
+  { id:3, title:'走進太陽之城', vocab:[
+    {word:'名列前茅',def:'比喻名次排在前面'},
+    {word:'唯一',def:'獨一無二'},
+    {word:'爆發',def:'事情突然發生或被揭露'},
+    {word:'供應',def:'供給需要的錢財或物品'},
+    {word:'政府',def:'國家統治機關的總稱'},
+    {word:'收購',def:'收買購置'},
+    {word:'駕駛',def:'操控車船、飛機等交通工具'},
+    {word:'冰箱',def:'一種以降低溫度來保存食品的電器用品'},
+    {word:'嬉戲',def:'遊戲玩耍'},
+    {word:'乒乓球',def:'桌球的別名，一種球類運動'},
+    {word:'輕鬆自在',def:'愉快適意'},
+    {word:'護欄',def:'設置於路邊、河岸等地防止危險的設施'},
+  ]},
+  { id:4, title:'送友人', vocab:[
+    {word:'蕭蕭',def:'摹聲詞，形容馬鳴聲、風聲或落葉聲'},
+    {word:'清澈',def:'澄淨透明'},
+    {word:'辭別',def:'辭行、告別'},
+    {word:'橫臥',def:'平躺'},
+    {word:'行蹤',def:'出現或來去的蹤跡'},
+    {word:'重逢',def:'再度相逢'},
+    {word:'抒發',def:'表達、發洩'},
+    {word:'漂泊',def:'比喻生活不固定，居無定所'},
+    {word:'餘暉',def:'夕照'},
+    {word:'真摯',def:'真實誠懇'},
+    {word:'情誼',def:'人與人之間彼此關愛的情感'},
+  ]},
+  { id:5, title:'蚵鄉風情', vocab:[
+    {word:'靠攏',def:'靠近、聚攏'},
+    {word:'笨拙',def:'反應遲鈍、不靈巧'},
+    {word:'疲憊',def:'極為疲勞困倦'},
+    {word:'鈔票',def:'紙幣'},
+    {word:'包裹',def:'包紮成件的東西'},
+    {word:'巡視',def:'巡行視察'},
+    {word:'甦醒',def:'從昏迷中醒過來'},
+    {word:'豎立',def:'物體垂直地面立起來'},
+    {word:'媒體',def:'傳播資料訊息的工具'},
+    {word:'沸騰',def:'液體加熱至一定溫度，發生上湧汽化的現象'},
+    {word:'宛如',def:'彷彿'},
+  ]},
+  { id:6, title:'童年・夏日・棉花糖', vocab:[
+    {word:'扶疏',def:'枝葉繁茂，四處伸展的樣子'},
+    {word:'山巔',def:'山的頂端'},
+    {word:'戀戀不捨',def:'十分留戀，捨不得離開'},
+    {word:'綠蔭',def:'樹蔭'},
+    {word:'纖纖',def:'微細'},
+    {word:'裊裊',def:'縈迴繚繞、搖曳不定的樣子'},
+    {word:'袖珍',def:'形容小型的或小巧的'},
+    {word:'工廠',def:'將原料或半成品製成成品的地方'},
+    {word:'喜孜孜',def:'歡喜的樣子'},
+    {word:'猶在',def:'還存在'},
+    {word:'光陰',def:'時間'},
+    {word:'飛逝',def:'快速消逝'},
+  ]},
+  { id:7, title:'我的少年夢', vocab:[
+    {word:'閣樓',def:'建築於屋內的夾層矮樓'},
+    {word:'匱乏',def:'貧乏'},
+    {word:'冥冥之中',def:'人無法預測、理解、控制的狀況'},
+    {word:'帳篷',def:'可拆卸自由搬運的組合式住宅'},
+    {word:'徒步',def:'步行'},
+    {word:'籌備',def:'事先預備計畫'},
+    {word:'埡口',def:'狹窄的山口'},
+    {word:'山脈',def:'山巒相連並依一定方向延伸的山群'},
+    {word:'紮營',def:'屯駐營寨'},
+    {word:'窸窸窣窣',def:'摹聲詞，摹擬斷續的細碎聲音'},
+    {word:'背誦',def:'熟記文句後能不看原文就能誦讀'},
+    {word:'宇宙',def:'時間與空間的總稱，即天地'},
+    {word:'浩瀚',def:'廣大繁多的樣子'},
+  ]},
+  { id:8, title:'如何張開追夢的翅膀', vocab:[
+    {word:'瞻前顧後',def:'形容做事顧慮太多，猶豫不決'},
+    {word:'汲取',def:'吸取、吸收'},
+    {word:'富庶',def:'物資豐富，人口眾多'},
+    {word:'鍥而不捨',def:'比喻有恆心、毅力，堅持到底'},
+    {word:'嶄新',def:'全新、極新'},
+    {word:'一輩子',def:'一生、一世'},
+    {word:'全力以赴',def:'投入全部的心力以達成目的'},
+    {word:'構築',def:'建造修築'},
+    {word:'諺語',def:'民間流傳的俗語'},
+    {word:'全神貫注',def:'將心思和精神完全集中在某事物上'},
+    {word:'拓展',def:'開拓發展'},
+  ]},
+  { id:9, title:'成為人生的開拓者', vocab:[
+    {word:'恭喜',def:'向人表示慶賀之敬詞'},
+    {word:'荊棘',def:'比喻困難、險境'},
+    {word:'俗話',def:'流行通俗的語句'},
+    {word:'窘境',def:'艱難貧困的處境'},
+    {word:'溝通',def:'彼此間意見的交流或疏通'},
+    {word:'生涯',def:'所過的生活或經歷的人生'},
+    {word:'曙光',def:'比喻轉機的希望'},
+  ]},
 ];
 
-// ============== 建立課次選單 ==============
+// ============ 課次選單 ============
 const selectedLessons = new Set([1]);
-
 function buildLessonGrid() {
   const grid = document.getElementById('lessonGrid');
   grid.innerHTML = '';
   LESSONS_DATA.forEach(lesson => {
     const card = document.createElement('div');
     card.className = 'lesson-card' + (selectedLessons.has(lesson.id) ? ' selected' : '');
-    card.dataset.id = lesson.id;
-    card.innerHTML = `
-      <div class="num">第${lesson.id}課</div>
-      <div class="name">${lesson.title}</div>
-      <div class="count">${lesson.vocab.length} 詞</div>
-    `;
+    card.innerHTML = `<div class="num">第${lesson.id}課</div><div class="name">${lesson.title}</div><div class="count">${lesson.vocab.length} 詞</div>`;
     card.addEventListener('click', () => {
       if (selectedLessons.has(lesson.id)) {
-        if (selectedLessons.size > 1) {
-          selectedLessons.delete(lesson.id);
-          card.classList.remove('selected');
-        } else {
-          card.animate(
-            [{ transform: 'scale(1)' }, { transform: 'scale(0.95)' }, { transform: 'scale(1)' }],
-            { duration: 220 }
-          );
-        }
-      } else {
-        selectedLessons.add(lesson.id);
-        card.classList.add('selected');
-      }
+        if (selectedLessons.size > 1) { selectedLessons.delete(lesson.id); card.classList.remove('selected'); }
+        else card.animate([{transform:'scale(1)'},{transform:'scale(0.95)'},{transform:'scale(1)'}],{duration:220});
+      } else { selectedLessons.add(lesson.id); card.classList.add('selected'); }
     });
     grid.appendChild(card);
   });
 }
 buildLessonGrid();
 
-// ============== 取得題目詞彙池 ==============
 function getVocabPool() {
   const pool = [];
-  LESSONS_DATA.forEach(lesson => {
-    if (selectedLessons.has(lesson.id)) {
-      lesson.vocab.forEach(v => pool.push({ ...v, lessonId: lesson.id, lessonTitle: lesson.title }));
-    }
-  });
+  LESSONS_DATA.forEach(l => { if (selectedLessons.has(l.id)) l.vocab.forEach(v => pool.push({...v, lessonId:l.id, lessonTitle:l.title})); });
   return pool;
 }
 
-// ============== 語詞題系統 ==============
-let foodsEatenSinceQuiz = 0;
-let paused = false;
-let currentQuestion = null;
-const QUIZ_EVERY = 8;
+// ============ 計時器 ============
+const GAME_DURATION = 300;
+let timeLeft = GAME_DURATION;
+let timerInterval = null;
 
-function genVocabQuestion() {
-  const pool = getVocabPool();
-  if (pool.length < 4) return null;
-  // 選正確答案
-  const correctIdx = Math.floor(Math.random() * pool.length);
-  const correct = pool[correctIdx];
-  // 選三個錯誤選項（不重複）
-  const wrongPool = pool.filter((_, i) => i !== correctIdx);
-  const shuffled = wrongPool.sort(() => Math.random() - 0.5);
-  const wrongs = shuffled.slice(0, 3);
-  // 四個選項打亂
-  const options = [correct, ...wrongs].sort(() => Math.random() - 0.5);
-  return { correct, options };
+function startTimer() {
+  timeLeft = GAME_DURATION;
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    if (quizPaused || pausedByBtn) return;
+    timeLeft = Math.max(0, timeLeft - 1);
+    updateTimerDisplay();
+    if (timeLeft === 0) { clearInterval(timerInterval); timerInterval = null; endByTime(); }
+  }, 1000);
 }
 
-function showQuestion() {
-  const q = genVocabQuestion();
-  if (!q) return;
-  paused = true;
-  currentQuestion = q;
+function updateTimerDisplay() {
+  const el = document.getElementById('timerDisplay');
+  const m = String(Math.floor(timeLeft / 60)).padStart(2,'0');
+  const s = String(timeLeft % 60).padStart(2,'0');
+  el.textContent = `${m}:${s}`;
+  el.className = timeLeft <= 30 ? 'critical' : timeLeft <= 60 ? 'warning' : '';
+}
 
+function endByTime() {
+  running = false;
+  document.getElementById('quizModal').style.display = 'none';
+  document.getElementById('pauseScreen').style.display = 'none';
+  document.getElementById('topBar').style.display = 'none';
+  document.getElementById('hud').style.display = 'none';
+  document.getElementById('timeupName').textContent = player ? player.name : '玩家';
+  document.getElementById('tuCorrect').textContent = correctAnswers;
+  document.getElementById('tuLength').textContent  = player ? Math.floor(player.length) : 0;
+  document.getElementById('tuKills').textContent   = player ? player.kills : 0;
+  document.getElementById('timeup').style.display  = 'flex';
+}
+
+// ============ 暫停控制 ============
+let quizPaused = false;   // 題目暫停
+let pausedByBtn = false;  // 按鈕暫停
+
+function togglePause() {
+  if (!running) return;
+  pausedByBtn = !pausedByBtn;
+  const btn = document.getElementById('pauseBtn');
+  const ps  = document.getElementById('pauseScreen');
+  if (pausedByBtn) {
+    ps.style.display = 'flex';
+    btn.textContent = '▶ 繼續';
+    requestAnimationFrame(renderOnly);
+  } else {
+    ps.style.display = 'none';
+    btn.textContent = '⏸ 暫停';
+    if (!quizPaused) requestAnimationFrame(loop);
+  }
+}
+
+function renderOnly() {
+  if (!pausedByBtn) return;
+  const t = performance.now();
+  renderBackground(t); renderBorder();
+  for (const f of foods) f.render(t);
+  [...snakes].filter(s=>s.alive).sort((a,b)=>a.length-b.length).forEach(s=>s.render(t));
+  for (const p of particles) p.render();
+  renderHUD(); renderTouchControls();
+  requestAnimationFrame(renderOnly);
+}
+
+function confirmMenu() {
+  // 暫停計時器與遊戲邏輯，顯示自製確認彈窗
+  pausedByBtn = true;
+  document.getElementById('confirmModal').style.display = 'flex';
+}
+function closeConfirm() {
+  document.getElementById('confirmModal').style.display = 'none';
+  pausedByBtn = false;
+  if (!quizPaused && running) requestAnimationFrame(loop);
+}
+function doGoToMenu() {
+  document.getElementById('confirmModal').style.display = 'none';
+  goToMenu();
+}
+function goToMenu() {
+  running = false;
+  pausedByBtn = false;
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  ['gameover','timeup','quizModal','pauseScreen','confirmModal','topBar','hud'].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('menu').style.display = 'flex';
+}
+
+// ============ 語詞題系統 ============
+let foodsEatenSinceQuiz = 0;
+let currentQ = null;
+let correctAnswers = 0;
+const QUIZ_EVERY = 8;
+
+function genQ() {
+  const pool = getVocabPool();
+  if (pool.length < 4) return null;
+  const ci = Math.floor(Math.random() * pool.length);
+  const correct = pool[ci];
+  const wrongs  = pool.filter((_,i)=>i!==ci).sort(()=>Math.random()-0.5).slice(0,3);
+  return { correct, options: [correct,...wrongs].sort(()=>Math.random()-0.5) };
+}
+
+function renderQuizModal(q) {
   document.getElementById('quizLessonTag').textContent = `第${q.correct.lessonId}課　${q.correct.lessonTitle}`;
   document.getElementById('quizDef').textContent = q.correct.def;
-
-  const optContainer = document.getElementById('quizOptions');
-  optContainer.innerHTML = '';
+  const fb = document.getElementById('quizFeedback');
+  fb.textContent = ''; fb.className = 'quiz-feedback';
+  const oc = document.getElementById('quizOptions');
+  oc.innerHTML = '';
   q.options.forEach(opt => {
     const btn = document.createElement('button');
     btn.className = 'opt-btn';
     btn.textContent = opt.word;
     btn.addEventListener('click', () => handleAnswer(btn, opt.word === q.correct.word));
-    optContainer.appendChild(btn);
+    oc.appendChild(btn);
   });
+}
 
-  const fb = document.getElementById('quizFeedback');
-  fb.textContent = '';
-  fb.className = 'quiz-feedback';
+function showQuestion() {
+  const q = genQ();
+  if (!q) return;
+  quizPaused = true;
+  currentQ = q;
+  renderQuizModal(q);
   document.getElementById('quizModal').style.display = 'flex';
 }
 
 function handleAnswer(btn, isCorrect) {
-  if (!currentQuestion) return;
-  const allBtns = document.querySelectorAll('.opt-btn');
-  allBtns.forEach(b => b.disabled = true);
-
-  const fb = document.getElementById('quizFeedback');
+  if (!currentQ) return;
+  document.querySelectorAll('.opt-btn').forEach(b => b.disabled = true);
+  const fb   = document.getElementById('quizFeedback');
   const card = document.getElementById('quizCard');
 
   if (isCorrect) {
+    // 答對
     btn.classList.add('correct');
     fb.textContent = '✓ 答對了！ +25 長度 + 護盾';
-    fb.className = 'quiz-feedback correct';
-    if (player && player.alive) {
-      player.length += 25;
-      player.shieldUntil = performance.now() + 4000;
-    }
-    currentQuestion = null;
+    fb.className   = 'quiz-feedback correct';
+    correctAnswers++;
+    document.getElementById('scoreDisplay').textContent = `✓ ${correctAnswers}`;
+    if (player && player.alive) { player.length += 25; player.shieldUntil = performance.now() + 4000; }
+    currentQ = null;
     setTimeout(() => {
       document.getElementById('quizModal').style.display = 'none';
-      paused = false;
-    }, 1200);
+      quizPaused = false;
+    }, 1100);
   } else {
+    // 答錯：抖動 → 換新題，不揭示正確答案
     btn.classList.add('wrong');
-    // 顯示正確答案
-    allBtns.forEach(b => {
-      if (b.textContent === currentQuestion.correct.word) b.classList.add('reveal');
-    });
-    fb.textContent = '✗ 答錯了，正確答案已標示';
-    fb.className = 'quiz-feedback wrong';
-    card.classList.remove('shake');
-    void card.offsetWidth;
-    card.classList.add('shake');
-    // 答錯可再等一下後繼續
+    fb.textContent = '✗ 答錯了，換下一題！';
+    fb.className   = 'quiz-feedback wrong';
+    card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
     setTimeout(() => {
-      allBtns.forEach(b => { b.disabled = false; b.classList.remove('wrong', 'reveal', 'correct'); });
-      fb.textContent = '';
-      fb.className = 'quiz-feedback';
-    }, 1800);
+      currentQ = null;
+      const nq = genQ();
+      if (!nq) { document.getElementById('quizModal').style.display='none'; quizPaused=false; return; }
+      currentQ = nq;
+      renderQuizModal(nq);
+    }, 900);
   }
 }
 
-// ============== 畫布設定 ==============
+// ============ 畫布 ============
 const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
+const ctx    = canvas.getContext('2d');
 let W, H;
 function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
-resize();
-window.addEventListener('resize', resize);
+resize(); window.addEventListener('resize', resize);
 
-// ============== 世界常數 ==============
-const WORLD_SIZE = 4500;
-const FOOD_COUNT  = 500;
-const BOT_COUNT   = 5;
-const MIN_LENGTH  = 60;
-const BASE_SPEED  = 2.6;
-const BOOST_SPEED = 5.0;
+const WORLD_SIZE=4500, FOOD_COUNT=500, BOT_COUNT=5, MIN_LENGTH=60, BASE_SPEED=2.6, BOOST_SPEED=5.0;
 
-// ============== 輸入 ==============
-const mouse = { x: 0, y: 0, down: false };
-canvas.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
-canvas.addEventListener('mousedown', e => { if (e.button === 0) mouse.down = true; });
-canvas.addEventListener('mouseup',   e => { if (e.button === 0) mouse.down = false; });
-canvas.addEventListener('contextmenu', e => e.preventDefault());
+const mouse = {x:0,y:0,down:false};
+canvas.addEventListener('mousemove', e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
+canvas.addEventListener('mousedown', e=>{if(e.button===0)mouse.down=true;});
+canvas.addEventListener('mouseup',   e=>{if(e.button===0)mouse.down=false;});
+canvas.addEventListener('contextmenu', e=>e.preventDefault());
+let spaceDown=false;
+window.addEventListener('keydown', e=>{ if(e.code==='Space'){spaceDown=true;e.preventDefault();} });
+window.addEventListener('keyup',   e=>{ if(e.code==='Space') spaceDown=false; });
 
-let spaceDown = false;
-window.addEventListener('keydown', e => { if (e.code === 'Space') { spaceDown = true; e.preventDefault(); } });
-window.addEventListener('keyup',   e => { if (e.code === 'Space') spaceDown = false; });
+let touchMode=false;
+const JOY_BASE_R=75, JOY_STICK_R=38, BOOST_BTN_R=60, TOUCH_PAD=32;
+const ts={joyId:null,joyDX:0,joyDY:0,boostId:null};
+function joyC()   { return {cx:TOUCH_PAD+JOY_BASE_R,   cy:H-TOUCH_PAD-JOY_BASE_R}; }
+function boostC() { return {cx:W-TOUCH_PAD-BOOST_BTN_R, cy:H-TOUCH_PAD-BOOST_BTN_R}; }
+function inJ(x,y) { const c=joyC();   return dist2(x,y,c.cx,c.cy)<(JOY_BASE_R*1.6)**2; }
+function inB(x,y) { const c=boostC(); return dist2(x,y,c.cx,c.cy)<(BOOST_BTN_R*1.4)**2; }
+function setJoy(x,y) { const c=joyC(); let dx=x-c.cx,dy=y-c.cy; const d=Math.hypot(dx,dy); if(d>JOY_BASE_R){dx=dx/d*JOY_BASE_R;dy=dy/d*JOY_BASE_R;} ts.joyDX=dx/JOY_BASE_R; ts.joyDY=dy/JOY_BASE_R; }
+canvas.addEventListener('touchstart', e=>{ e.preventDefault(); touchMode=true; document.querySelector('.hint-bar')?.classList.add('touch-mode'); for(const t of e.changedTouches){ const x=t.clientX,y=t.clientY; if(ts.joyId===null&&inJ(x,y)){ts.joyId=t.identifier;setJoy(x,y);} else if(ts.boostId===null&&inB(x,y)) ts.boostId=t.identifier; } },{passive:false});
+canvas.addEventListener('touchmove', e=>{ e.preventDefault(); for(const t of e.changedTouches) if(t.identifier===ts.joyId) setJoy(t.clientX,t.clientY); },{passive:false});
+function endT(e){ e.preventDefault(); for(const t of e.changedTouches){ if(t.identifier===ts.joyId){ts.joyId=null;ts.joyDX=0;ts.joyDY=0;} else if(t.identifier===ts.boostId) ts.boostId=null; } }
+canvas.addEventListener('touchend',   endT,{passive:false});
+canvas.addEventListener('touchcancel',endT,{passive:false});
 
-// ============== 觸控（平板） ==============
-let touchMode = false;
-const JOY_BASE_R  = 75;
-const JOY_STICK_R = 38;
-const BOOST_BTN_R = 60;
-const TOUCH_PAD   = 32;
-const touchState  = { joyId: null, joyDX: 0, joyDY: 0, boostId: null };
+const BOT_NAMES=['小白','大蟒','閃電','幻影','綠龍','黑貓','獵人','風暴','刺客','王者','傳說','武士','忍者','流浪客','彩虹','Cobra','Viper','Shadow','Blaze','Frost'];
+const rand = (a,b) => a+Math.random()*(b-a);
+const dist2 = (ax,ay,bx,by) => { const dx=ax-bx,dy=ay-by; return dx*dx+dy*dy; };
 
-function joyCenter()   { return { cx: TOUCH_PAD + JOY_BASE_R, cy: H - TOUCH_PAD - JOY_BASE_R }; }
-function boostCenter() { return { cx: W - TOUCH_PAD - BOOST_BTN_R, cy: H - TOUCH_PAD - BOOST_BTN_R }; }
-
-function inJoyZone(x, y)   { const c = joyCenter(); return dist2(x, y, c.cx, c.cy) < (JOY_BASE_R * 1.6) ** 2; }
-function inBoostZone(x, y) { const c = boostCenter(); return dist2(x, y, c.cx, c.cy) < (BOOST_BTN_R * 1.4) ** 2; }
-
-function setJoyFromPoint(x, y) {
-  const c = joyCenter();
-  let dx = x - c.cx, dy = y - c.cy;
-  const d = Math.hypot(dx, dy);
-  if (d > JOY_BASE_R) { dx = dx / d * JOY_BASE_R; dy = dy / d * JOY_BASE_R; }
-  touchState.joyDX = dx / JOY_BASE_R;
-  touchState.joyDY = dy / JOY_BASE_R;
-}
-
-canvas.addEventListener('touchstart', e => {
-  e.preventDefault(); touchMode = true;
-  document.querySelector('.hint-bar')?.classList.add('touch-mode');
-  for (const t of e.changedTouches) {
-    const x = t.clientX, y = t.clientY;
-    if (touchState.joyId === null && inJoyZone(x, y)) { touchState.joyId = t.identifier; setJoyFromPoint(x, y); }
-    else if (touchState.boostId === null && inBoostZone(x, y)) { touchState.boostId = t.identifier; }
-  }
-}, { passive: false });
-
-canvas.addEventListener('touchmove', e => {
-  e.preventDefault();
-  for (const t of e.changedTouches) { if (t.identifier === touchState.joyId) setJoyFromPoint(t.clientX, t.clientY); }
-}, { passive: false });
-
-function endTouch(e) {
-  e.preventDefault();
-  for (const t of e.changedTouches) {
-    if (t.identifier === touchState.joyId) { touchState.joyId = null; touchState.joyDX = 0; touchState.joyDY = 0; }
-    else if (t.identifier === touchState.boostId) { touchState.boostId = null; }
-  }
-}
-canvas.addEventListener('touchend',   endTouch, { passive: false });
-canvas.addEventListener('touchcancel', endTouch, { passive: false });
-
-// ============== AI 機器人名字池 ==============
-const BOT_NAMES = [
-  '小白','大蟒','閃電','幻影','綠龍','黑貓','獵人','風暴','刺客',
-  '王者','傳說','武士','忍者','流浪客','獨角獸','彩虹','黃金','藍寶石',
-  'Cobra','Viper','Shadow','Blaze','Frost','Phantom','Neo','Zero','Ace'
-];
-
-// ============== 工具 ==============
-function rand(min, max) { return min + Math.random() * (max - min); }
-function dist2(ax, ay, bx, by) { const dx = ax - bx, dy = ay - by; return dx*dx + dy*dy; }
-
-// ============== 食物類別 ==============
+// ============ Food ============
 class Food {
-  constructor(x, y, size, hue, value) {
-    this.x = x; this.y = y;
-    this.size  = size  !== undefined ? size  : rand(3.5, 5.5);
-    this.hue   = hue   !== undefined ? hue   : Math.random() * 360;
-    this.value = value || 1;
-    this.pulse = Math.random() * Math.PI * 2;
-  }
-  render(time) {
-    const sx = this.x - cam.x + W/2, sy = this.y - cam.y + H/2;
-    if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) return;
-    const ps = this.size + Math.sin(time * 0.005 + this.pulse) * 0.6;
-    const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, ps * 4);
-    grad.addColorStop(0,   `hsla(${this.hue}, 100%, 65%, 0.85)`);
-    grad.addColorStop(0.4, `hsla(${this.hue}, 100%, 60%, 0.25)`);
-    grad.addColorStop(1,   `hsla(${this.hue}, 100%, 60%, 0)`);
-    ctx.fillStyle = grad;
-    ctx.beginPath(); ctx.arc(sx, sy, ps * 4, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = `hsl(${this.hue}, 100%, 75%)`;
-    ctx.beginPath(); ctx.arc(sx, sy, ps, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.beginPath(); ctx.arc(sx - ps*0.3, sy - ps*0.3, ps*0.35, 0, Math.PI*2); ctx.fill();
-  }
+  constructor(x,y,sz,hue,val){ this.x=x;this.y=y;this.size=sz!==undefined?sz:rand(3.5,5.5);this.hue=hue!==undefined?hue:Math.random()*360;this.value=val||1;this.pulse=Math.random()*Math.PI*2; }
+  render(t){ const sx=this.x-cam.x+W/2,sy=this.y-cam.y+H/2; if(sx<-20||sx>W+20||sy<-20||sy>H+20)return; const ps=this.size+Math.sin(t*0.005+this.pulse)*0.6; const g=ctx.createRadialGradient(sx,sy,0,sx,sy,ps*4); g.addColorStop(0,`hsla(${this.hue},100%,65%,0.85)`);g.addColorStop(0.4,`hsla(${this.hue},100%,60%,0.25)`);g.addColorStop(1,`hsla(${this.hue},100%,60%,0)`); ctx.fillStyle=g;ctx.beginPath();ctx.arc(sx,sy,ps*4,0,Math.PI*2);ctx.fill(); ctx.fillStyle=`hsl(${this.hue},100%,75%)`;ctx.beginPath();ctx.arc(sx,sy,ps,0,Math.PI*2);ctx.fill(); ctx.fillStyle='rgba(255,255,255,0.6)';ctx.beginPath();ctx.arc(sx-ps*0.3,sy-ps*0.3,ps*0.35,0,Math.PI*2);ctx.fill(); }
 }
 
-// ============== 蛇類別 ==============
+// ============ Snake ============
 class Snake {
-  constructor(opts) {
-    this.x = opts.x; this.y = opts.y;
-    this.angle = opts.angle !== undefined ? opts.angle : Math.random() * Math.PI * 2;
-    this.targetAngle = this.angle;
-    this.isPlayer = !!opts.isPlayer;
-    this.name = opts.name || 'Bot';
-    this.hue  = opts.hue !== undefined ? opts.hue : Math.random() * 360;
-    this.alive = true;
-    this.length = opts.length || MIN_LENGTH;
-    this.boosting = false; this.boostCounter = 0; this.kills = 0;
-    this.segments = [];
-    for (let i = 0; i < this.length; i++) {
-      this.segments.push({
-        x: this.x - Math.cos(this.angle) * i * 4,
-        y: this.y - Math.sin(this.angle) * i * 4
-      });
-    }
-    this.aiTurn = 0; this.aiBoostUntil = 0;
+  constructor(o){ this.x=o.x;this.y=o.y;this.angle=o.angle!==undefined?o.angle:Math.random()*Math.PI*2;this.targetAngle=this.angle;this.isPlayer=!!o.isPlayer;this.name=o.name||'Bot';this.hue=o.hue!==undefined?o.hue:Math.random()*360;this.alive=true;this.length=o.length||MIN_LENGTH;this.boosting=false;this.boostCounter=0;this.kills=0;this.segments=[];for(let i=0;i<this.length;i++) this.segments.push({x:this.x-Math.cos(this.angle)*i*4,y:this.y-Math.sin(this.angle)*i*4});this.aiTurn=0;this.aiBoostUntil=0; }
+  get radius(){ return 6+Math.min(16,this.length/60); }
+  update(){
+    if(!this.alive)return;
+    if(this.isPlayer){
+      if(touchMode){ const dx=ts.joyDX,dy=ts.joyDY; if(dx*dx+dy*dy>0.04)this.targetAngle=Math.atan2(dy,dx); this.boosting=(ts.boostId!==null)&&this.length>MIN_LENGTH; }
+      else { this.targetAngle=Math.atan2(mouse.y-H/2,mouse.x-W/2); this.boosting=(mouse.down||spaceDown)&&this.length>MIN_LENGTH; }
+    } else this.aiUpdate();
+    let diff=this.targetAngle-this.angle; while(diff>Math.PI)diff-=Math.PI*2; while(diff<-Math.PI)diff+=Math.PI*2;
+    this.angle+=Math.max(-0.085,Math.min(0.085,diff));
+    const useBoost=this.boosting&&this.length>MIN_LENGTH, speed=useBoost?BOOST_SPEED:BASE_SPEED;
+    if(useBoost){ this.boostCounter++; if(this.boostCounter>=7){ this.boostCounter=0;this.length=Math.max(MIN_LENGTH,this.length-1);const t=this.segments[this.segments.length-1];if(t)foods.push(new Food(t.x+rand(-8,8),t.y+rand(-8,8),rand(4,5.5),this.hue,1)); } }
+    const head=this.segments[0],nx=head.x+Math.cos(this.angle)*speed,ny=head.y+Math.sin(this.angle)*speed;
+    if(nx<0||nx>WORLD_SIZE||ny<0||ny>WORLD_SIZE){this.die(null);return;}
+    this.segments.unshift({x:nx,y:ny}); while(this.segments.length>Math.floor(this.length))this.segments.pop();
+    const r=this.radius; for(let i=foods.length-1;i>=0;i--){ const f=foods[i]; if(dist2(nx,ny,f.x,f.y)<(r+f.size+4)**2){ this.length+=f.value;foods.splice(i,1); if(this.isPlayer){foodsEatenSinceQuiz++;if(foodsEatenSinceQuiz>=QUIZ_EVERY){foodsEatenSinceQuiz=0;showQuestion();}} } }
   }
-
-  get radius() { return 6 + Math.min(16, this.length / 60); }
-  get segSpacing() { return 3.2; }
-
-  update() {
-    if (!this.alive) return;
-    if (this.isPlayer) {
-      if (touchMode) {
-        const dx = touchState.joyDX, dy = touchState.joyDY;
-        if (dx*dx + dy*dy > 0.04) this.targetAngle = Math.atan2(dy, dx);
-        this.boosting = (touchState.boostId !== null) && this.length > MIN_LENGTH;
-      } else {
-        this.targetAngle = Math.atan2(mouse.y - H/2, mouse.x - W/2);
-        this.boosting = (mouse.down || spaceDown) && this.length > MIN_LENGTH;
-      }
-    } else { this.aiUpdate(); }
-
-    let diff = this.targetAngle - this.angle;
-    while (diff >  Math.PI) diff -= Math.PI * 2;
-    while (diff < -Math.PI) diff += Math.PI * 2;
-    this.angle += Math.max(-0.085, Math.min(0.085, diff));
-
-    const useBoost = this.boosting && this.length > MIN_LENGTH;
-    const speed = useBoost ? BOOST_SPEED : BASE_SPEED;
-    if (useBoost) {
-      this.boostCounter++;
-      if (this.boostCounter >= 7) {
-        this.boostCounter = 0;
-        this.length = Math.max(MIN_LENGTH, this.length - 1);
-        const tail = this.segments[this.segments.length - 1];
-        if (tail) foods.push(new Food(tail.x + rand(-8,8), tail.y + rand(-8,8), rand(4,5.5), this.hue, 1));
-      }
-    }
-
-    const head = this.segments[0];
-    const nx = head.x + Math.cos(this.angle) * speed;
-    const ny = head.y + Math.sin(this.angle) * speed;
-
-    if (nx < 0 || nx > WORLD_SIZE || ny < 0 || ny > WORLD_SIZE) { this.die(null); return; }
-
-    this.segments.unshift({ x: nx, y: ny });
-    while (this.segments.length > Math.floor(this.length)) this.segments.pop();
-
-    const r = this.radius;
-    for (let i = foods.length - 1; i >= 0; i--) {
-      const f = foods[i];
-      if (dist2(nx, ny, f.x, f.y) < (r + f.size + 4) ** 2) {
-        this.length += f.value;
-        foods.splice(i, 1);
-        if (this.isPlayer) {
-          foodsEatenSinceQuiz++;
-          if (foodsEatenSinceQuiz >= QUIZ_EVERY) { foodsEatenSinceQuiz = 0; showQuestion(); }
-        }
-      }
-    }
+  aiUpdate(){
+    const head=this.segments[0],margin=250;
+    if(head.x<margin||head.x>WORLD_SIZE-margin||head.y<margin||head.y>WORLD_SIZE-margin){this.targetAngle=Math.atan2(WORLD_SIZE/2-head.y,WORLD_SIZE/2-head.x);this.boosting=false;return;}
+    const la=90+this.radius*2,fx=head.x+Math.cos(this.angle)*la,fy=head.y+Math.sin(this.angle)*la;
+    let danger=null,dD2=la**2;
+    for(const o of snakes){if(o===this||!o.alive)continue;for(let i=0;i<o.segments.length;i+=4){const s=o.segments[i];const d2=dist2(fx,fy,s.x,s.y);if(d2<dD2){dD2=d2;danger=s;}}}
+    if(danger){this.targetAngle=Math.atan2(head.y-danger.y,head.x-danger.x)+(Math.random()-0.5)*0.5;this.boosting=false;return;}
+    let bf=null,bd2=350*350; for(const f of foods){const d2=dist2(head.x,head.y,f.x,f.y);if(d2<bd2){bd2=d2;bf=f;}}
+    this.aiTurn--; if(bf)this.targetAngle=Math.atan2(bf.y-head.y,bf.x-head.x); else if(this.aiTurn<=0){this.targetAngle=Math.random()*Math.PI*2;this.aiTurn=80+Math.random()*160;}
+    if(this.length>70&&Math.random()<0.003)this.aiBoostUntil=performance.now()+500+Math.random()*1500;
+    this.boosting=performance.now()<this.aiBoostUntil&&this.length>MIN_LENGTH;
   }
-
-  aiUpdate() {
-    const head = this.segments[0];
-    const margin = 250;
-    if (head.x < margin || head.x > WORLD_SIZE - margin || head.y < margin || head.y > WORLD_SIZE - margin) {
-      this.targetAngle = Math.atan2(WORLD_SIZE/2 - head.y, WORLD_SIZE/2 - head.x);
-      this.boosting = false; return;
-    }
-    const lookAhead = 90 + this.radius * 2;
-    const fx = head.x + Math.cos(this.angle) * lookAhead;
-    const fy = head.y + Math.sin(this.angle) * lookAhead;
-    let danger = null, dangerD2 = lookAhead ** 2;
-    for (const other of snakes) {
-      if (other === this || !other.alive) continue;
-      for (let i = 0; i < other.segments.length; i += 4) {
-        const seg = other.segments[i];
-        const d2 = dist2(fx, fy, seg.x, seg.y);
-        if (d2 < dangerD2) { dangerD2 = d2; danger = seg; }
-      }
-    }
-    if (danger) {
-      this.targetAngle = Math.atan2(head.y - danger.y, head.x - danger.x) + (Math.random() - 0.5) * 0.5;
-      this.boosting = false; return;
-    }
-    let bestFood = null, bestD2 = 350 * 350;
-    for (const f of foods) {
-      const d2 = dist2(head.x, head.y, f.x, f.y);
-      if (d2 < bestD2) { bestD2 = d2; bestFood = f; }
-    }
-    this.aiTurn--;
-    if (bestFood) { this.targetAngle = Math.atan2(bestFood.y - head.y, bestFood.x - head.x); }
-    else if (this.aiTurn <= 0) { this.targetAngle = Math.random() * Math.PI * 2; this.aiTurn = 80 + Math.random() * 160; }
-    if (this.length > 70 && Math.random() < 0.003) this.aiBoostUntil = performance.now() + 500 + Math.random() * 1500;
-    this.boosting = performance.now() < this.aiBoostUntil && this.length > MIN_LENGTH;
+  checkHeadCollision(){
+    if(!this.alive)return; if(this.shieldUntil&&performance.now()<this.shieldUntil)return;
+    const head=this.segments[0],r=this.radius;
+    for(const o of snakes){if(o===this||!o.alive)continue;const sr2=(r*0.7+o.radius)**2;for(let i=1;i<o.segments.length;i++){if(dist2(head.x,head.y,o.segments[i].x,o.segments[i].y)<sr2){this.die(o);return;}}}
   }
-
-  checkHeadCollision() {
-    if (!this.alive) return;
-    if (this.shieldUntil && performance.now() < this.shieldUntil) return;
-    const head = this.segments[0];
-    const r = this.radius;
-    for (const other of snakes) {
-      if (other === this || !other.alive) continue;
-      const sumR2 = (r * 0.7 + other.radius) ** 2;
-      for (let i = 1; i < other.segments.length; i++) {
-        const seg = other.segments[i];
-        if (dist2(head.x, head.y, seg.x, seg.y) < sumR2) { this.die(other); return; }
-      }
-    }
-  }
-
-  die(killer) {
-    if (!this.alive) return;
-    this.alive = false;
-    if (killer) killer.kills++;
-    const totalFood = Math.min(80, Math.floor(this.length * 0.6));
-    for (let i = 0; i < totalFood; i++) {
-      const idx = Math.floor((i / totalFood) * this.segments.length);
-      const seg = this.segments[idx];
-      foods.push(new Food(seg.x + rand(-18,18), seg.y + rand(-18,18), rand(5,7.5), this.hue, Math.random() < 0.15 ? 3 : 2));
-    }
-    for (let i = 0; i < 40; i++) {
-      particles.push(new Particle(this.segments[0].x, this.segments[0].y, rand(-4,4), rand(-4,4), this.hue, rand(40,70)));
-    }
-  }
-
-  render(time) {
-    if (!this.alive) return;
-    const r = this.radius;
-    const isShielded = this.shieldUntil && time < this.shieldUntil;
-    if (isShielded) {
-      const remain = (this.shieldUntil - time) / 4000;
-      const pulse = 0.7 + Math.sin(time * 0.012) * 0.3;
-      for (let i = 0; i < this.segments.length; i += 4) {
-        const seg = this.segments[i];
-        const sx = seg.x - cam.x + W/2, sy = seg.y - cam.y + H/2;
-        if (sx < -40 || sx > W+40 || sy < -40 || sy > H+40) continue;
-        const sg = ctx.createRadialGradient(sx, sy, r, sx, sy, r*2.5);
-        sg.addColorStop(0, `rgba(255,220,80,${0.55*pulse*remain})`);
-        sg.addColorStop(1, 'rgba(255,220,80,0)');
-        ctx.fillStyle = sg;
-        ctx.beginPath(); ctx.arc(sx, sy, r*2.5, 0, Math.PI*2); ctx.fill();
-      }
-    }
-    for (let i = this.segments.length - 1; i >= 0; i--) {
-      const seg = this.segments[i];
-      const sx = seg.x - cam.x + W/2, sy = seg.y - cam.y + H/2;
-      if (sx < -r*2 || sx > W+r*2 || sy < -r*2 || sy > H+r*2) continue;
-      const stripe = Math.floor(i/5) % 2;
-      const lightness = stripe ? 58 : 42;
-      const sat = this.boosting ? 100 : 85;
-      if (this.boosting && i % 3 === 0) {
-        const glowGrad = ctx.createRadialGradient(sx, sy, r, sx, sy, r*2.5);
-        glowGrad.addColorStop(0, `hsla(${this.hue},100%,70%,0.4)`);
-        glowGrad.addColorStop(1, `hsla(${this.hue},100%,70%,0)`);
-        ctx.fillStyle = glowGrad;
-        ctx.beginPath(); ctx.arc(sx, sy, r*2.5, 0, Math.PI*2); ctx.fill();
-      }
-      ctx.fillStyle = `hsl(${this.hue},${sat}%,${lightness}%)`;
-      ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = `hsla(${this.hue},100%,80%,0.35)`;
-      ctx.beginPath(); ctx.arc(sx - r*0.3, sy - r*0.3, r*0.45, 0, Math.PI*2); ctx.fill();
-    }
-    const head = this.segments[0];
-    const hx = head.x - cam.x + W/2, hy = head.y - cam.y + H/2;
-    const eyeOff = r*0.55, eyeR = r*0.42;
-    const e1x = hx + Math.cos(this.angle - 0.65)*eyeOff, e1y = hy + Math.sin(this.angle - 0.65)*eyeOff;
-    const e2x = hx + Math.cos(this.angle + 0.65)*eyeOff, e2y = hy + Math.sin(this.angle + 0.65)*eyeOff;
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(e1x, e1y, eyeR, 0, Math.PI*2); ctx.arc(e2x, e2y, eyeR, 0, Math.PI*2); ctx.fill();
-    const pOffX = Math.cos(this.targetAngle)*eyeR*0.5, pOffY = Math.sin(this.targetAngle)*eyeR*0.5;
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.arc(e1x+pOffX, e1y+pOffY, eyeR*0.55, 0, Math.PI*2);
-    ctx.arc(e2x+pOffX, e2y+pOffY, eyeR*0.55, 0, Math.PI*2);
-    ctx.fill();
-    ctx.font = `700 ${Math.max(13, r*0.95)}px 'Noto Sans TC', sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillText(this.name, hx+1, hy - r - 9);
-    ctx.fillStyle = this.isPlayer ? '#ffea66' : '#fff';
-    ctx.fillText(this.name, hx, hy - r - 10);
+  die(killer){ if(!this.alive)return;this.alive=false;if(killer)killer.kills++; const tot=Math.min(80,Math.floor(this.length*0.6)); for(let i=0;i<tot;i++){const idx=Math.floor((i/tot)*this.segments.length);const s=this.segments[idx];foods.push(new Food(s.x+rand(-18,18),s.y+rand(-18,18),rand(5,7.5),this.hue,Math.random()<0.15?3:2));} for(let i=0;i<40;i++)particles.push(new Particle(this.segments[0].x,this.segments[0].y,rand(-4,4),rand(-4,4),this.hue,rand(40,70))); }
+  render(t){
+    if(!this.alive)return; const r=this.radius,isS=this.shieldUntil&&t<this.shieldUntil;
+    if(isS){const rem=(this.shieldUntil-t)/4000,pulse=0.7+Math.sin(t*0.012)*0.3;for(let i=0;i<this.segments.length;i+=4){const s=this.segments[i];const sx=s.x-cam.x+W/2,sy=s.y-cam.y+H/2;if(sx<-40||sx>W+40||sy<-40||sy>H+40)continue;const sg=ctx.createRadialGradient(sx,sy,r,sx,sy,r*2.5);sg.addColorStop(0,`rgba(255,220,80,${0.55*pulse*rem})`);sg.addColorStop(1,'rgba(255,220,80,0)');ctx.fillStyle=sg;ctx.beginPath();ctx.arc(sx,sy,r*2.5,0,Math.PI*2);ctx.fill();}}
+    for(let i=this.segments.length-1;i>=0;i--){const s=this.segments[i];const sx=s.x-cam.x+W/2,sy=s.y-cam.y+H/2;if(sx<-r*2||sx>W+r*2||sy<-r*2||sy>H+r*2)continue;const st=Math.floor(i/5)%2,lt=st?58:42,sat=this.boosting?100:85;if(this.boosting&&i%3===0){const gg=ctx.createRadialGradient(sx,sy,r,sx,sy,r*2.5);gg.addColorStop(0,`hsla(${this.hue},100%,70%,0.4)`);gg.addColorStop(1,`hsla(${this.hue},100%,70%,0)`);ctx.fillStyle=gg;ctx.beginPath();ctx.arc(sx,sy,r*2.5,0,Math.PI*2);ctx.fill();}ctx.fillStyle=`hsl(${this.hue},${sat}%,${lt}%)`;ctx.beginPath();ctx.arc(sx,sy,r,0,Math.PI*2);ctx.fill();ctx.fillStyle=`hsla(${this.hue},100%,80%,0.35)`;ctx.beginPath();ctx.arc(sx-r*0.3,sy-r*0.3,r*0.45,0,Math.PI*2);ctx.fill();}
+    const head=this.segments[0],hx=head.x-cam.x+W/2,hy=head.y-cam.y+H/2,er=r*0.42,eo=r*0.55;
+    const e1x=hx+Math.cos(this.angle-0.65)*eo,e1y=hy+Math.sin(this.angle-0.65)*eo,e2x=hx+Math.cos(this.angle+0.65)*eo,e2y=hy+Math.sin(this.angle+0.65)*eo;
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(e1x,e1y,er,0,Math.PI*2);ctx.arc(e2x,e2y,er,0,Math.PI*2);ctx.fill();
+    const px=Math.cos(this.targetAngle)*er*0.5,py=Math.sin(this.targetAngle)*er*0.5;
+    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(e1x+px,e1y+py,er*0.55,0,Math.PI*2);ctx.arc(e2x+px,e2y+py,er*0.55,0,Math.PI*2);ctx.fill();
+    ctx.font=`700 ${Math.max(13,r*0.95)}px 'Noto Sans TC',sans-serif`;ctx.textAlign='center';
+    ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillText(this.name,hx+1,hy-r-9);
+    ctx.fillStyle=this.isPlayer?'#ffea66':'#fff';ctx.fillText(this.name,hx,hy-r-10);
   }
 }
 
-// ============== 粒子 ==============
 class Particle {
-  constructor(x, y, vx, vy, hue, life) {
-    this.x=x; this.y=y; this.vx=vx; this.vy=vy;
-    this.hue=hue; this.life=life; this.maxLife=life;
-    this.size = rand(2,5);
+  constructor(x,y,vx,vy,hue,life){this.x=x;this.y=y;this.vx=vx;this.vy=vy;this.hue=hue;this.life=life;this.maxLife=life;this.size=rand(2,5);}
+  update(){this.x+=this.vx;this.y+=this.vy;this.vx*=0.94;this.vy*=0.94;this.life--;}
+  render(){const sx=this.x-cam.x+W/2,sy=this.y-cam.y+H/2;const a=this.life/this.maxLife;ctx.fillStyle=`hsla(${this.hue},100%,70%,${a})`;ctx.beginPath();ctx.arc(sx,sy,this.size*a,0,Math.PI*2);ctx.fill();}
+}
+
+let snakes=[],foods=[],particles=[],cam={x:WORLD_SIZE/2,y:WORLD_SIZE/2},player=null,running=false;
+
+function spawnFoods(){ while(foods.length<FOOD_COUNT) foods.push(new Food(rand(20,WORLD_SIZE-20),rand(20,WORLD_SIZE-20))); }
+function spawnBots(){ const alive=snakes.filter(s=>!s.isPlayer&&s.alive).length; for(let i=alive;i<BOT_COUNT;i++){let x,y;if(player&&player.alive){const ang=Math.random()*Math.PI*2,d=rand(900,1700);x=Math.max(150,Math.min(WORLD_SIZE-150,player.segments[0].x+Math.cos(ang)*d));y=Math.max(150,Math.min(WORLD_SIZE-150,player.segments[0].y+Math.sin(ang)*d));}else{x=rand(200,WORLD_SIZE-200);y=rand(200,WORLD_SIZE-200);}snakes.push(new Snake({x,y,name:BOT_NAMES[Math.floor(Math.random()*BOT_NAMES.length)],hue:Math.random()*360,length:Math.floor(rand(60,180))}));}}
+
+function renderBackground(t){ ctx.fillStyle='#050818';ctx.fillRect(0,0,W,H);const g=80,sx0=Math.floor((cam.x-W/2)/g)*g,sy0=Math.floor((cam.y-H/2)/g)*g;ctx.strokeStyle='rgba(80,130,220,0.08)';ctx.lineWidth=1;ctx.beginPath();for(let x=sx0;x<cam.x+W/2+g;x+=g){const sx=x-cam.x+W/2;ctx.moveTo(sx,0);ctx.lineTo(sx,H);}for(let y=sy0;y<cam.y+H/2+g;y+=g){const sy=y-cam.y+H/2;ctx.moveTo(0,sy);ctx.lineTo(W,sy);}ctx.stroke(); }
+function renderBorder(){ ctx.save();ctx.shadowColor='#ff3b88';ctx.shadowBlur=25;ctx.strokeStyle='#ff3b88';ctx.lineWidth=3;ctx.strokeRect(-cam.x+W/2,-cam.y+H/2,WORLD_SIZE,WORLD_SIZE);ctx.restore(); }
+function rr(x,y,w,h,r,fill,stroke){ ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();if(fill)ctx.fill();if(stroke)ctx.stroke(); }
+
+function renderHUD(){
+  const TOP=62;
+  if(player&&player.alive){
+    ctx.font='900 13px Orbitron,sans-serif';ctx.textAlign='left';ctx.fillStyle='#88aacc';ctx.fillText('LENGTH',24,TOP+20);
+    ctx.font='900 34px Orbitron,sans-serif';ctx.fillStyle='#fff';ctx.fillText(Math.floor(player.length),24,TOP+54);
+    ctx.font='900 13px Orbitron,sans-serif';ctx.fillStyle='#88aacc';ctx.fillText('KILLS',24,TOP+84);
+    ctx.font='900 26px Orbitron,sans-serif';ctx.fillStyle='#ff7caa';ctx.fillText(player.kills,24,TOP+112);
+    const px=24,py=TOP+126,pw=140,ph=7;
+    ctx.fillStyle='rgba(255,255,255,0.08)';rr(px,py,pw,ph,3,true,false);
+    if(foodsEatenSinceQuiz>0){const gr=ctx.createLinearGradient(px,0,px+pw,0);gr.addColorStop(0,'#4cf');gr.addColorStop(1,'#f4c');ctx.fillStyle=gr;rr(px,py,pw*(foodsEatenSinceQuiz/QUIZ_EVERY),ph,3,true,false);}
+    ctx.font='700 10px Orbitron,sans-serif';ctx.fillStyle='#88aacc';ctx.fillText(`QUIZ ${foodsEatenSinceQuiz}/${QUIZ_EVERY}`,px,py+18);
   }
-  update() { this.x+=this.vx; this.y+=this.vy; this.vx*=0.94; this.vy*=0.94; this.life--; }
-  render() {
-    const sx = this.x - cam.x + W/2, sy = this.y - cam.y + H/2;
-    const a = this.life / this.maxLife;
-    ctx.fillStyle = `hsla(${this.hue},100%,70%,${a})`;
-    ctx.beginPath(); ctx.arc(sx, sy, this.size*a, 0, Math.PI*2); ctx.fill();
+  const top=[...snakes].filter(s=>s.alive).sort((a,b)=>b.length-a.length).slice(0,10);
+  const bx=W-240,by=TOP,bw=220,bh=40+top.length*24;
+  ctx.fillStyle='rgba(8,10,28,0.65)';ctx.strokeStyle='rgba(120,200,255,0.25)';ctx.lineWidth=1;rr(bx,by,bw,bh,12,true,true);
+  ctx.fillStyle='#4cf';ctx.font='900 13px Orbitron,sans-serif';ctx.textAlign='left';ctx.fillText('🏆 LEADERBOARD',bx+16,by+24);
+  for(let i=0;i<top.length;i++){const s=top[i],ip=s===player,yy=by+48+i*24;ctx.fillStyle=i===0?'#ffd84a':i===1?'#cce0ff':i===2?'#ffa570':'#88a';ctx.font='900 12px Orbitron,sans-serif';ctx.fillText((i+1).toString().padStart(2,'0'),bx+16,yy);ctx.fillStyle=ip?'#ffea66':'#dfe7f3';ctx.font=`${ip?700:500} 13px "Noto Sans TC",sans-serif`;ctx.fillText(s.name.length>10?s.name.slice(0,10)+'…':s.name,bx+44,yy);ctx.fillStyle=ip?'#ffea66':`hsl(${s.hue},70%,70%)`;ctx.font='900 13px Orbitron,sans-serif';ctx.textAlign='right';ctx.fillText(Math.floor(s.length),bx+bw-16,yy);ctx.textAlign='left';}
+  const ms=130,mx=24,my=TOP+150;
+  ctx.fillStyle='rgba(8,10,28,0.7)';ctx.strokeStyle='rgba(120,200,255,0.3)';ctx.lineWidth=1;rr(mx,my,ms,ms,10,true,true);
+  ctx.strokeStyle='rgba(255,80,130,0.4)';ctx.strokeRect(mx+2,my+2,ms-4,ms-4);
+  for(const s of snakes){if(!s.alive)continue;const h=s.segments[0];const px2=mx+(h.x/WORLD_SIZE)*ms,py2=my+(h.y/WORLD_SIZE)*ms;if(s===player){ctx.fillStyle='#ffea66';ctx.beginPath();ctx.arc(px2,py2,4,0,Math.PI*2);ctx.fill();const vw=W/WORLD_SIZE*ms,vh=H/WORLD_SIZE*ms;ctx.strokeStyle='rgba(255,234,102,0.4)';ctx.lineWidth=1;ctx.strokeRect(px2-vw/2,py2-vh/2,vw,vh);}else{ctx.fillStyle=`hsl(${s.hue},70%,60%)`;ctx.beginPath();ctx.arc(px2,py2,2.2,0,Math.PI*2);ctx.fill();}}
+  ctx.fillStyle='#88aacc';ctx.font='900 10px Orbitron,sans-serif';ctx.fillText('MAP',mx+8,my+14);
+}
+
+function renderTouchControls(){
+  if(!touchMode)return;
+  const j=joyC();const gO=ctx.createRadialGradient(j.cx,j.cy,JOY_BASE_R*0.6,j.cx,j.cy,JOY_BASE_R*1.4);gO.addColorStop(0,'rgba(80,180,255,0.18)');gO.addColorStop(1,'rgba(80,180,255,0)');ctx.fillStyle=gO;ctx.beginPath();ctx.arc(j.cx,j.cy,JOY_BASE_R*1.4,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(8,14,32,0.55)';ctx.strokeStyle='rgba(120,200,255,0.5)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(j.cx,j.cy,JOY_BASE_R,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.strokeStyle='rgba(120,200,255,0.18)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(j.cx,j.cy,JOY_BASE_R*0.55,0,Math.PI*2);ctx.stroke();
+  const sx2=j.cx+ts.joyDX*(JOY_BASE_R-JOY_STICK_R),sy2=j.cy+ts.joyDY*(JOY_BASE_R-JOY_STICK_R);const sg=ctx.createRadialGradient(sx2-JOY_STICK_R*0.3,sy2-JOY_STICK_R*0.3,JOY_STICK_R*0.1,sx2,sy2,JOY_STICK_R);sg.addColorStop(0,'rgba(180,240,255,0.95)');sg.addColorStop(0.6,'rgba(80,180,240,0.95)');sg.addColorStop(1,'rgba(40,100,180,0.95)');ctx.fillStyle=sg;ctx.beginPath();ctx.arc(sx2,sy2,JOY_STICK_R,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=1.5;ctx.stroke();
+  const b=boostC(),pr=ts.boostId!==null;const bgO=ctx.createRadialGradient(b.cx,b.cy,BOOST_BTN_R*0.6,b.cx,b.cy,BOOST_BTN_R*1.4);bgO.addColorStop(0,pr?'rgba(255,200,80,0.4)':'rgba(255,80,130,0.22)');bgO.addColorStop(1,'rgba(255,80,130,0)');ctx.fillStyle=bgO;ctx.beginPath();ctx.arc(b.cx,b.cy,BOOST_BTN_R*1.4,0,Math.PI*2);ctx.fill();const bg2=ctx.createRadialGradient(b.cx-BOOST_BTN_R*0.3,b.cy-BOOST_BTN_R*0.3,4,b.cx,b.cy,BOOST_BTN_R);if(pr){bg2.addColorStop(0,'rgba(255,245,150,0.95)');bg2.addColorStop(0.6,'rgba(255,180,60,0.95)');bg2.addColorStop(1,'rgba(220,60,100,0.95)');}else{bg2.addColorStop(0,'rgba(255,140,180,0.85)');bg2.addColorStop(0.7,'rgba(220,60,110,0.85)');bg2.addColorStop(1,'rgba(140,30,70,0.85)');}ctx.fillStyle=bg2;ctx.beginPath();ctx.arc(b.cx,b.cy,BOOST_BTN_R,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.55)';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#fff';ctx.font=`900 ${pr?44:40}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('⚡',b.cx,b.cy+2);ctx.textBaseline='alphabetic';
+}
+
+function loop(){
+  if(!running)return;
+  const t=performance.now();
+  if(!quizPaused&&!pausedByBtn){
+    for(const s of snakes)s.update();
+    for(const s of snakes)s.checkHeadCollision();
+    snakes=snakes.filter(s=>s.alive||s.isPlayer);
+    spawnFoods();spawnBots();
+    for(const p of particles)p.update();
+    particles=particles.filter(p=>p.life>0);
+    if(player){const h=player.segments[0];cam.x+=(h.x-cam.x)*0.12;cam.y+=(h.y-cam.y)*0.12;}
   }
-}
-
-// ============== 全域狀態 ==============
-let snakes = [], foods = [], particles = [];
-let cam = { x: WORLD_SIZE/2, y: WORLD_SIZE/2 };
-let player = null, running = false, timeStarted = 0;
-
-// ============== 生成 ==============
-function spawnFoods() {
-  while (foods.length < FOOD_COUNT)
-    foods.push(new Food(rand(20, WORLD_SIZE-20), rand(20, WORLD_SIZE-20)));
-}
-
-function spawnBots() {
-  const aliveBots = snakes.filter(s => !s.isPlayer && s.alive).length;
-  for (let i = aliveBots; i < BOT_COUNT; i++) {
-    let x, y;
-    if (player && player.alive) {
-      const ang = Math.random() * Math.PI * 2;
-      const d = rand(900, 1700);
-      x = Math.max(150, Math.min(WORLD_SIZE-150, player.segments[0].x + Math.cos(ang)*d));
-      y = Math.max(150, Math.min(WORLD_SIZE-150, player.segments[0].y + Math.sin(ang)*d));
-    } else {
-      x = rand(200, WORLD_SIZE-200); y = rand(200, WORLD_SIZE-200);
-    }
-    snakes.push(new Snake({ x, y, name: BOT_NAMES[Math.floor(Math.random()*BOT_NAMES.length)], hue: Math.random()*360, length: Math.floor(rand(60,180)) }));
-  }
-}
-
-// ============== 渲染 ==============
-function renderBackground(time) {
-  ctx.fillStyle = '#050818'; ctx.fillRect(0, 0, W, H);
-  const grid = 80;
-  const startX = Math.floor((cam.x - W/2) / grid) * grid;
-  const startY = Math.floor((cam.y - H/2) / grid) * grid;
-  ctx.strokeStyle = 'rgba(80,130,220,0.08)'; ctx.lineWidth = 1;
-  ctx.beginPath();
-  for (let x = startX; x < cam.x + W/2 + grid; x += grid) { const sx = x - cam.x + W/2; ctx.moveTo(sx,0); ctx.lineTo(sx,H); }
-  for (let y = startY; y < cam.y + H/2 + grid; y += grid) { const sy = y - cam.y + H/2; ctx.moveTo(0,sy); ctx.lineTo(W,sy); }
-  ctx.stroke();
-}
-
-function renderBorder() {
-  ctx.save();
-  ctx.shadowColor = '#ff3b88'; ctx.shadowBlur = 25;
-  ctx.strokeStyle = '#ff3b88'; ctx.lineWidth = 3;
-  ctx.strokeRect(-cam.x + W/2, -cam.y + H/2, WORLD_SIZE, WORLD_SIZE);
-  ctx.restore();
-}
-
-function roundRect(x, y, w, h, r, fill, stroke) {
-  ctx.beginPath();
-  ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
-  ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
-  ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
-  ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y); ctx.closePath();
-  if (fill) ctx.fill(); if (stroke) ctx.stroke();
-}
-
-function renderHUD() {
-  if (player && player.alive) {
-    ctx.font = '900 14px Orbitron, sans-serif'; ctx.textAlign = 'left';
-    ctx.fillStyle = '#88aacc'; ctx.fillText('LENGTH', 24, 38);
-    ctx.font = '900 38px Orbitron, sans-serif'; ctx.fillStyle = '#fff';
-    ctx.fillText(Math.floor(player.length), 24, 76);
-    ctx.font = '900 14px Orbitron, sans-serif'; ctx.fillStyle = '#88aacc';
-    ctx.fillText('KILLS', 24, 108);
-    ctx.font = '900 28px Orbitron, sans-serif'; ctx.fillStyle = '#ff7caa';
-    ctx.fillText(player.kills, 24, 140);
-
-    // 題目進度條
-    const progressX = 24, progressY = 155, progressW = 140, progressH = 8;
-    ctx.fillStyle = 'rgba(255,255,255,0.08)';
-    roundRect(progressX, progressY, progressW, progressH, 4, true, false);
-    const pct = foodsEatenSinceQuiz / QUIZ_EVERY;
-    if (pct > 0) {
-      const grad = ctx.createLinearGradient(progressX, 0, progressX + progressW, 0);
-      grad.addColorStop(0, '#4cf'); grad.addColorStop(1, '#f4c');
-      ctx.fillStyle = grad;
-      roundRect(progressX, progressY, progressW * pct, progressH, 4, true, false);
-    }
-    ctx.font = '700 10px Orbitron, sans-serif'; ctx.fillStyle = '#88aacc';
-    ctx.fillText(`QUIZ ${foodsEatenSinceQuiz}/${QUIZ_EVERY}`, progressX, progressY + 20);
-  }
-
-  // 排行榜
-  const top = [...snakes].filter(s => s.alive).sort((a,b) => b.length - a.length).slice(0, 10);
-  const bx = W-240, by = 24, bw = 220, bh = 40 + top.length * 24;
-  ctx.fillStyle = 'rgba(8,10,28,0.65)'; ctx.strokeStyle = 'rgba(120,200,255,0.25)'; ctx.lineWidth = 1;
-  roundRect(bx, by, bw, bh, 12, true, true);
-  ctx.fillStyle = '#4cf'; ctx.font = '900 13px Orbitron, sans-serif'; ctx.textAlign = 'left';
-  ctx.fillText('🏆 LEADERBOARD', bx+16, by+24);
-  ctx.font = '600 14px "Noto Sans TC", sans-serif';
-  for (let i = 0; i < top.length; i++) {
-    const s = top[i]; const isPlayerRow = s === player;
-    const yy = by + 48 + i*24;
-    ctx.fillStyle = i===0 ? '#ffd84a' : (i===1 ? '#cce0ff' : (i===2 ? '#ffa570' : '#88a'));
-    ctx.font = '900 12px Orbitron, sans-serif';
-    ctx.fillText((i+1).toString().padStart(2,'0'), bx+16, yy);
-    ctx.fillStyle = isPlayerRow ? '#ffea66' : '#dfe7f3';
-    ctx.font = `${isPlayerRow?'700':'500'} 13px "Noto Sans TC", sans-serif`;
-    ctx.fillText(s.name.length > 10 ? s.name.slice(0,10)+'…' : s.name, bx+44, yy);
-    ctx.fillStyle = isPlayerRow ? '#ffea66' : `hsl(${s.hue},70%,70%)`;
-    ctx.font = '900 13px Orbitron, sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText(Math.floor(s.length), bx+bw-16, yy);
-    ctx.textAlign = 'left';
-  }
-
-  // 小地圖
-  const mapSize = 140, mx = 24, my = 183;
-  ctx.fillStyle = 'rgba(8,10,28,0.7)'; ctx.strokeStyle = 'rgba(120,200,255,0.3)'; ctx.lineWidth = 1;
-  roundRect(mx, my, mapSize, mapSize, 10, true, true);
-  ctx.strokeStyle = 'rgba(255,80,130,0.4)';
-  ctx.strokeRect(mx+2, my+2, mapSize-4, mapSize-4);
-  for (const s of snakes) {
-    if (!s.alive) continue;
-    const head = s.segments[0];
-    const px = mx + (head.x / WORLD_SIZE) * mapSize;
-    const py = my + (head.y / WORLD_SIZE) * mapSize;
-    if (s === player) {
-      ctx.fillStyle = '#ffea66';
-      ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI*2); ctx.fill();
-      const vw = (W/1) / WORLD_SIZE * mapSize, vh = (H/1) / WORLD_SIZE * mapSize;
-      ctx.strokeStyle = 'rgba(255,234,102,0.4)'; ctx.lineWidth = 1;
-      ctx.strokeRect(px - vw/2, py - vh/2, vw, vh);
-    } else {
-      ctx.fillStyle = `hsl(${s.hue},70%,60%)`;
-      ctx.beginPath(); ctx.arc(px, py, 2.2, 0, Math.PI*2); ctx.fill();
-    }
-  }
-  ctx.fillStyle = '#88aacc'; ctx.font = '900 10px Orbitron, sans-serif';
-  ctx.fillText('MAP', mx+8, my+14);
-}
-
-function renderTouchControls() {
-  if (!touchMode) return;
-  const j = joyCenter();
-  const gOuter = ctx.createRadialGradient(j.cx, j.cy, JOY_BASE_R*0.6, j.cx, j.cy, JOY_BASE_R*1.4);
-  gOuter.addColorStop(0, 'rgba(80,180,255,0.18)'); gOuter.addColorStop(1, 'rgba(80,180,255,0)');
-  ctx.fillStyle = gOuter;
-  ctx.beginPath(); ctx.arc(j.cx, j.cy, JOY_BASE_R*1.4, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = 'rgba(8,14,32,0.55)'; ctx.strokeStyle = 'rgba(120,200,255,0.5)'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(j.cx, j.cy, JOY_BASE_R, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-  ctx.strokeStyle = 'rgba(120,200,255,0.18)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.arc(j.cx, j.cy, JOY_BASE_R*0.55, 0, Math.PI*2); ctx.stroke();
-  const sx = j.cx + touchState.joyDX*(JOY_BASE_R - JOY_STICK_R);
-  const sy = j.cy + touchState.joyDY*(JOY_BASE_R - JOY_STICK_R);
-  const sg = ctx.createRadialGradient(sx - JOY_STICK_R*0.3, sy - JOY_STICK_R*0.3, JOY_STICK_R*0.1, sx, sy, JOY_STICK_R);
-  sg.addColorStop(0, 'rgba(180,240,255,0.95)'); sg.addColorStop(0.6, 'rgba(80,180,240,0.95)'); sg.addColorStop(1, 'rgba(40,100,180,0.95)');
-  ctx.fillStyle = sg;
-  ctx.beginPath(); ctx.arc(sx, sy, JOY_STICK_R, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1.5; ctx.stroke();
-  const b = boostCenter();
-  const pressed = touchState.boostId !== null;
-  const bgOuter = ctx.createRadialGradient(b.cx, b.cy, BOOST_BTN_R*0.6, b.cx, b.cy, BOOST_BTN_R*1.4);
-  bgOuter.addColorStop(0, pressed ? 'rgba(255,200,80,0.4)' : 'rgba(255,80,130,0.22)');
-  bgOuter.addColorStop(1, 'rgba(255,80,130,0)');
-  ctx.fillStyle = bgOuter;
-  ctx.beginPath(); ctx.arc(b.cx, b.cy, BOOST_BTN_R*1.4, 0, Math.PI*2); ctx.fill();
-  const bg = ctx.createRadialGradient(b.cx - BOOST_BTN_R*0.3, b.cy - BOOST_BTN_R*0.3, 4, b.cx, b.cy, BOOST_BTN_R);
-  if (pressed) { bg.addColorStop(0,'rgba(255,245,150,0.95)'); bg.addColorStop(0.6,'rgba(255,180,60,0.95)'); bg.addColorStop(1,'rgba(220,60,100,0.95)'); }
-  else { bg.addColorStop(0,'rgba(255,140,180,0.85)'); bg.addColorStop(0.7,'rgba(220,60,110,0.85)'); bg.addColorStop(1,'rgba(140,30,70,0.85)'); }
-  ctx.fillStyle = bg;
-  ctx.beginPath(); ctx.arc(b.cx, b.cy, BOOST_BTN_R, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = '#fff'; ctx.font = `900 ${pressed?44:40}px sans-serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('⚡', b.cx, b.cy+2); ctx.textBaseline = 'alphabetic';
-}
-
-// ============== 主迴圈 ==============
-function loop() {
-  if (!running) return;
-  const time = performance.now();
-  if (!paused) {
-    for (const s of snakes) s.update();
-    for (const s of snakes) s.checkHeadCollision();
-    snakes = snakes.filter(s => s.alive || s.isPlayer);
-    spawnFoods(); spawnBots();
-    for (const p of particles) p.update();
-    particles = particles.filter(p => p.life > 0);
-    if (player) { const head = player.segments[0]; cam.x += (head.x - cam.x) * 0.12; cam.y += (head.y - cam.y) * 0.12; }
-  }
-  renderBackground(time); renderBorder();
-  for (const f of foods) f.render(time);
-  const sortedSnakes = [...snakes].filter(s => s.alive).sort((a,b) => a.length - b.length);
-  for (const s of sortedSnakes) s.render(time);
-  for (const p of particles) p.render();
-  renderHUD(); renderTouchControls();
-  if (player && !player.alive) { running = false; showGameOver(); return; }
+  renderBackground(t);renderBorder();
+  for(const f of foods)f.render(t);
+  [...snakes].filter(s=>s.alive).sort((a,b)=>a.length-b.length).forEach(s=>s.render(t));
+  for(const p of particles)p.render();
+  renderHUD();renderTouchControls();
+  if(player&&!player.alive){running=false;showGameOver();return;}
   requestAnimationFrame(loop);
 }
 
-// ============== 開始 / 重啟 ==============
-function startGame() {
-  const name = (document.getElementById('nameInput').value || '').trim() || '玩家';
-  document.getElementById('menu').style.display = 'none';
-  document.getElementById('gameover').style.display = 'none';
-  document.getElementById('hud').style.display = 'block';
-  snakes = []; foods = []; particles = [];
-  foodsEatenSinceQuiz = 0; paused = false;
-  document.getElementById('quizModal').style.display = 'none';
-  player = new Snake({ x: WORLD_SIZE/2, y: WORLD_SIZE/2, name, isPlayer: true, hue: 140, length: MIN_LENGTH });
-  snakes.push(player);
-  cam.x = player.x; cam.y = player.y;
-  spawnFoods(); spawnBots();
-  timeStarted = performance.now();
-  running = true; requestAnimationFrame(loop);
+function startGame(){
+  const name=(document.getElementById('nameInput').value||'').trim()||'玩家';
+  document.getElementById('menu').style.display='none';
+  ['gameover','timeup','pauseScreen'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('topBar').style.display='flex';
+  document.getElementById('hud').style.display='block';
+  document.getElementById('pauseBtn').textContent='⏸ 暫停';
+  snakes=[];foods=[];particles=[];
+  foodsEatenSinceQuiz=0;quizPaused=false;pausedByBtn=false;correctAnswers=0;
+  document.getElementById('scoreDisplay').textContent='✓ 0';
+  document.getElementById('quizModal').style.display='none';
+  player=new Snake({x:WORLD_SIZE/2,y:WORLD_SIZE/2,name,isPlayer:true,hue:140,length:MIN_LENGTH});
+  snakes.push(player);cam.x=player.x;cam.y=player.y;
+  spawnFoods();spawnBots();startTimer();
+  running=true;requestAnimationFrame(loop);
 }
 
-function restart() {
-  document.getElementById('gameover').style.display = 'none';
-  document.getElementById('menu').style.display = 'flex';
+function showGameOver(){
+  if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+  document.getElementById('finalCorrect').textContent=correctAnswers;
+  document.getElementById('finalLength').textContent=Math.floor(player.length);
+  document.getElementById('finalKills').textContent=player.kills;
+  document.getElementById('gameover').style.display='flex';
+  document.getElementById('topBar').style.display='none';
+  document.getElementById('hud').style.display='none';
 }
 
-function showGameOver() {
-  const allRanked = [...snakes].sort((a,b) => b.length - a.length);
-  let rank = allRanked.indexOf(player) + 1;
-  if (rank <= 0) rank = allRanked.length || 1;
-  document.getElementById('finalLength').textContent = Math.floor(player.length);
-  document.getElementById('finalKills').textContent = player.kills;
-  document.getElementById('finalRank').textContent = '#' + rank;
-  document.getElementById('gameover').style.display = 'flex';
-  document.getElementById('hud').style.display = 'none';
-}
-
-document.getElementById('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') startGame(); });
+document.getElementById('nameInput').addEventListener('keydown', e=>{ if(e.key==='Enter') startGame(); });
 </script>
 </body>
 </html>
