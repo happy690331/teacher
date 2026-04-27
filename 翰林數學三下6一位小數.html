@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>數學小達人：認識一位小數</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body { touch-action: manipulation; font-family: 'Comic Sans MS', 'Microsoft JhengHei', sans-serif; background-color: #f0fdf4; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        .btn-press { transition: transform 0.1s; }
+        .btn-press:active { transform: scale(0.95); }
+        .fraction-bar { display: flex; width: 100%; height: 30px; border: 2px solid #333; border-radius: 4px; overflow: hidden; }
+        .fraction-part { flex: 1; border-right: 1px solid #333; }
+        .fraction-part:last-child { border-right: none; }
+        .filled { background-color: #fcd34d; }
+    </style>
+</head>
+<body class="text-slate-800 select-none">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Icons ---
+        const Icon = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        const Play = (props) => <Icon {...props}><polygon points="5 3 19 12 5 21 5 3"/></Icon>;
+        const BookOpen = (props) => <Icon {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></Icon>;
+        const CheckCircle = (props) => <Icon {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></Icon>;
+        const Star = (props) => <Icon {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></Icon>;
+        const HomeIcon = (props) => <Icon {...props}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></Icon>;
+        const Printer = (props) => <Icon {...props}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></Icon>;
+
+        // --- Data: Units & Questions ---
+        const unitsData = {
+            "6-1": {
+                title: "6-1 認識一位小數",
+                color: "green",
+                learnContent: () => (
+                    <div className="space-y-4 text-lg">
+                        <div className="bg-white p-4 rounded-xl shadow-sm border-2 border-green-200">
+                            <h3 className="font-bold text-green-700 text-xl mb-2">什麼是一位小數？</h3>
+                            <p>把一個完整的東西（例如1條巧克力），平分成 <strong className="text-red-500 text-xl">10</strong> 等分。</p>
+                            <div className="fraction-bar my-3">
+                                {[...Array(10)].map((_, i) => <div key={i} className={`fraction-part ${i < 1 ? 'filled' : 'bg-green-50'}`}></div>)}
+                            </div>
+                            <p>其中的 1 等分，叫做分數的 <strong className="text-blue-600">1/10</strong>，也可以記作小數的 <strong className="text-red-500 text-2xl">0.1</strong>。</p>
+                            <p className="mt-2 text-slate-500 text-base">讀作：「零點一」</p>
+                        </div>
+                        <div className="bg-white p-4 rounded-xl shadow-sm border-2 border-green-200">
+                            <h3 className="font-bold text-green-700 text-xl mb-2">幾個 0.1？</h3>
+                            <ul className="list-disc ml-6 space-y-2">
+                                <li>5個 0.1 合起來是 <strong>0.5</strong></li>
+                                <li>10個 0.1 合起來是 <strong>1.0</strong> (也就是 <strong>1</strong>)</li>
+                                <li>12個 0.1 合起來是 <strong>1.2</strong></li>
+                            </ul>
+                        </div>
+                    </div>
+                ),
+                questions: [
+                    { q: "1條蛋糕平分成10等分，1等分是幾條？", options: ["0.1 條", "1 條", "10 條"], ans: 0 },
+                    { q: "「零點八」用數字怎麼記？", options: ["0.08", "0.8", "8.0"], ans: 1 },
+                    { q: "5個0.1合起來是多少？", options: ["5", "0.05", "0.5"], ans: 2 },
+                    { q: "10個0.1合起來是多少？", options: ["0.10", "1", "10"], ans: 1 },
+                    { q: "1.2是幾個0.1合起來的？", options: ["12個", "2個", "1個"], ans: 0 },
+                    { q: "尺上1公分有10小格，1小格是幾公分？", options: ["1公分", "10公分", "0.1公分"], ans: 2 }
+                ]
+            },
+            "6-2": {
+                title: "6-2 一位小數的比較",
+                color: "blue",
+                learnContent: () => (
+                    <div className="space-y-4 text-lg">
+                        <div className="bg-white p-4 rounded-xl shadow-sm border-2 border-blue-200">
+                            <h3 className="font-bold text-blue-700 text-xl mb-2">比大小秘訣</h3>
+                            <p>比較小數的時候，我們要從 <strong className="text-red-500">左邊（大單位）</strong> 開始比！</p>
+                            <ol className="list-decimal ml-6 mt-2 space-y-2 text-slate-700">
+                                <li>先比小數點左邊的整數（個位數）。</li>
+                                <li>如果整數一樣大，再比小數點右邊的數字（十分位）。</li>
+                            </ol>
+                        </div>
+                        <div className="flex gap-4">
+                            <div className="flex-1 bg-white p-4 rounded-xl shadow-sm border-2 border-blue-100 text-center">
+                                <p className="font-bold mb-2">整數不一樣</p>
+                                <p className="text-2xl"><strong className="text-red-500">2</strong>.1 &gt; <strong className="text-red-500">1</strong>.8</p>
+                                <p className="text-sm text-slate-500 mt-1">因為 2 &gt; 1</p>
+                            </div>
+                            <div className="flex-1 bg-white p-4 rounded-xl shadow-sm border-2 border-blue-100 text-center">
+                                <p className="font-bold mb-2">整數一樣</p>
+                                <p className="text-2xl">1.<strong className="text-red-500">5</strong> &gt; 1.<strong className="text-red-500">2</strong></p>
+                                <p className="text-sm text-slate-500 mt-1">因為 5 &gt; 2</p>
+                            </div>
+                        </div>
+                    </div>
+                ),
+                questions: [
+                    { q: "哪一個數比較大？", options: ["0.8", "0.5", "一樣大"], ans: 0 },
+                    { q: "哪一個數比較小？", options: ["2.5", "3.1", "2.1"], ans: 2 },
+                    { q: "把 0.3、1.1、0.7 由大排到小，哪一個正確？", options: ["1.1 > 0.7 > 0.3", "0.3 > 0.7 > 1.1", "0.7 > 1.1 > 0.3"], ans: 0 },
+                    { q: "哥哥有1.5塊蛋糕，弟弟有1.8塊蛋糕，誰的比較多？", options: ["哥哥", "弟弟", "一樣多"], ans: 1 },
+                    { q: "在數線上，0.6 在 0.4 的哪一邊？", options: ["左邊", "右邊", "重疊"], ans: 1 },
+                    { q: "下面哪一個數字比 1 大？", options: ["0.9", "1.0", "1.2"], ans: 2 }
+                ]
+            },
+            "6-3": {
+                title: "6-3 一位小數的加法",
+                color: "orange",
+                learnContent: () => (
+                    <div className="space-y-4 text-lg">
+                        <div className="bg-white p-4 rounded-xl shadow-sm border-2 border-orange-200">
+                            <h3 className="font-bold text-orange-700 text-xl mb-2">加法直式怎麼寫？</h3>
+                            <p>小數加法最重要的秘訣就是：<strong className="text-red-500 text-xl">小數點要對齊！</strong></p>
+                            
+                            <div className="mt-4 flex justify-center">
+                                <div className="bg-orange-50 p-4 rounded-xl font-mono text-3xl font-bold tracking-widest text-right inline-block border-2 border-orange-200">
+                                    <div className="text-slate-700">&nbsp;&nbsp;1.2</div>
+                                    <div className="text-slate-700 border-b-4 border-slate-700 pb-1">+&nbsp;0.5</div>
+                                    <div className="text-red-600 pt-1">&nbsp;&nbsp;1.7</div>
+                                </div>
+                            </div>
+                            <p className="text-center text-slate-500 mt-2 text-sm">小數點要排成一直線喔！</p>
+                        </div>
+                    </div>
+                ),
+                questions: [
+                    { q: "0.3 + 0.4 = ?", options: ["0.7", "0.1", "7"], ans: 0, isCalc: true },
+                    { q: "0.5 + 0.5 = ?", options: ["0.10", "1.0", "10"], ans: 1, isCalc: true },
+                    { q: "1.2 + 0.6 = ?", options: ["0.18", "18", "1.8"], ans: 2, isCalc: true },
+                    { q: "2.4 + 1.5 = ?", options: ["3.9", "4.0", "3.8"], ans: 0, isCalc: true },
+                    { q: "0.8 + 0.4 = ?", options: ["0.12", "1.2", "12"], ans: 1, isCalc: true },
+                    { q: "小明喝了0.4公升牛奶，又喝0.3公升，共喝多少？", options: ["0.7公升", "0.1公升", "7公升"], ans: 0 }
+                ]
+            },
+            "6-4": {
+                title: "6-4 一位小數的減法",
+                color: "purple",
+                learnContent: () => (
+                    <div className="space-y-4 text-lg">
+                        <div className="bg-white p-4 rounded-xl shadow-sm border-2 border-purple-200">
+                            <h3 className="font-bold text-purple-700 text-xl mb-2">減法直式怎麼寫？</h3>
+                            <p>和小數加法一樣，<strong className="text-red-500 text-xl">小數點一定要對齊！</strong></p>
+                            <p className="mt-2 text-slate-600">如果不夠減，記得向左邊的整數借位喔。</p>
+                            
+                            <div className="mt-4 flex justify-around">
+                                <div className="bg-purple-50 p-4 rounded-xl font-mono text-3xl font-bold tracking-widest text-right inline-block border-2 border-purple-200 relative">
+                                    <div className="text-slate-700">&nbsp;&nbsp;1.8</div>
+                                    <div className="text-slate-700 border-b-4 border-slate-700 pb-1">-&nbsp;0.5</div>
+                                    <div className="text-red-600 pt-1">&nbsp;&nbsp;1.3</div>
+                                </div>
+                                
+                                <div className="bg-purple-50 p-4 rounded-xl font-mono text-3xl font-bold tracking-widest text-right inline-block border-2 border-purple-200 relative">
+                                    <div className="absolute top-1 right-8 text-sm text-red-500 line-through">1</div>
+                                    <div className="absolute top-1 right-2 text-sm text-red-500">10</div>
+                                    <div className="text-slate-700">&nbsp;&nbsp;1.2</div>
+                                    <div className="text-slate-700 border-b-4 border-slate-700 pb-1">-&nbsp;0.7</div>
+                                    <div className="text-red-600 pt-1">&nbsp;&nbsp;0.5</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ),
+                questions: [
+                    { q: "0.9 - 0.5 = ?", options: ["0.4", "0.5", "1.4"], ans: 0, isCalc: true },
+                    { q: "1.5 - 0.3 = ?", options: ["1.2", "1.8", "0.8"], ans: 0, isCalc: true },
+                    { q: "1.0 - 0.4 = ?", options: ["1.4", "0", "0.6"], ans: 2, isCalc: true },
+                    { q: "2.2 - 0.7 = ?", options: ["1.5", "2.5", "1.9"], ans: 0, isCalc: true },
+                    { q: "3.0 - 1.2 = ?", options: ["2.8", "1.8", "2.2"], ans: 1, isCalc: true },
+                    { q: "繩子長1.8公尺，剪掉0.5公尺，剩下多少？", options: ["1.3公尺", "2.3公尺", "1.5公尺"], ans: 0 }
+                ]
+            }
+        };
+
+        // --- Export to Word Logic ---
+        const exportToWord = () => {
+            let htmlContent = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head><meta charset='utf-8'><title>數學學習單</title>
+                <style>
+                    body { font-family: '標楷體', 'Microsoft JhengHei', sans-serif; font-size: 14pt; }
+                    h1 { text-align: center; font-size: 20pt; }
+                    h2 { margin-top: 20px; font-size: 16pt; border-bottom: 1px solid #000; padding-bottom: 5px; }
+                    .question { margin-bottom: 15px; }
+                    .options { margin-left: 20px; }
+                    .calc-box { margin-top: 10px; width: 150px; height: 120px; border: 1px dashed #ccc; display: inline-block; }
+                    .vertical-math { font-family: 'Courier New', monospace; font-size: 18pt; text-align: right; width: 80px; margin-left: 20px; display: inline-block;}
+                    .page-break { page-break-before: always; }
+                </style>
+                </head>
+                <body>
+                    <h1>三下數學：一位小數 學習單</h1>
+                    <p>姓名：_____________ 座號：_____ 得分：_______</p>
+            `;
+
+            // --- Questions Page ---
+            Object.keys(unitsData).forEach(unitKey => {
+                const unit = unitsData[unitKey];
+                htmlContent += `<h2>${unit.title}</h2>`;
+                unit.questions.forEach((q, idx) => {
+                    htmlContent += `<div class="question">`;
+                    htmlContent += `<p>${idx + 1}. ${q.q}</p>`;
+                    if (q.isCalc) {
+                        htmlContent += `<div class="calc-box"></div>`; // 留計算空間
+                    } else {
+                        htmlContent += `<p class="options">(1) ${q.options[0]} &nbsp;&nbsp; (2) ${q.options[1]} &nbsp;&nbsp; (3) ${q.options[2]}</p>`;
+                    }
+                    htmlContent += `</div>`;
+                });
+            });
+
+            // --- Page Break ---
+            htmlContent += `<div class="page-break"></div>`;
+
+            // --- Answers Page ---
+            htmlContent += `<h1>三下數學：一位小數 解答卷</h1>`;
+            Object.keys(unitsData).forEach(unitKey => {
+                const unit = unitsData[unitKey];
+                htmlContent += `<h2>${unit.title} - 解答</h2>`;
+                unit.questions.forEach((q, idx) => {
+                    htmlContent += `<div class="question">`;
+                    htmlContent += `<p>${idx + 1}. ${q.q}</p>`;
+                    
+                    if (q.isCalc) {
+                        // 處理直式解答
+                        const parts = q.q.split(' ');
+                        let num1 = parts[0];
+                        let op = parts[1];
+                        let num2 = parts[2];
+                        let ans = q.options[q.ans];
+                        
+                        htmlContent += `
+                            <div class="vertical-math">
+                                &nbsp;&nbsp;${num1}<br>
+                                ${op}&nbsp;${num2}<br>
+                                -------<br>
+                                &nbsp;&nbsp;${ans}
+                            </div>
+                        `;
+                    } else {
+                        htmlContent += `<p style="color:red; font-weight:bold;">答：(${q.ans + 1}) ${q.options[q.ans]}</p>`;
+                    }
+                    htmlContent += `</div>`;
+                });
+            });
+
+            htmlContent += `</body></html>`;
+
+            // 建立 Blob 並下載
+            const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = '一位小數學習單.doc';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        // --- Components ---
+
+        // 1. 首頁 (Home)
+        const Home = ({ setView, score }) => (
+            <div className="animate-in fade-in duration-500 pb-20">
+                {/* 英雄區 */}
+                <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 text-center mb-6 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10"><Star size={100} /></div>
+                    <h1 className="text-3xl font-black text-green-600 mb-2">認識一位小數</h1>
+                    <p className="text-slate-500 mb-6 font-medium">跟著小達人一起進入小數的奇妙世界！</p>
+                    
+                    {/* 影片按鈕 */}
+                    <button onClick={() => setView('video')} className="btn-press w-full bg-blue-500 hover:bg-blue-600 text-white rounded-2xl py-4 flex items-center justify-center font-bold text-lg shadow-lg shadow-blue-500/30">
+                        <Play className="mr-2 fill-current" /> 觀看教學影片
+                    </button>
+                </div>
+
+                {/* 單元列表 */}
+                <h2 className="text-xl font-bold text-slate-700 mb-4 px-2">闖關地圖</h2>
+                <div className="grid grid-cols-1 gap-4">
+                    {Object.keys(unitsData).map((key) => {
+                        const unit = unitsData[key];
+                        const colorMap = {
+                            green: "bg-green-100 text-green-700 border-green-300",
+                            blue: "bg-blue-100 text-blue-700 border-blue-300",
+                            orange: "bg-orange-100 text-orange-700 border-orange-300",
+                            purple: "bg-purple-100 text-purple-700 border-purple-300"
+                        };
+                        const btnColorMap = {
+                            green: "bg-green-500 hover:bg-green-600 shadow-green-500/30",
+                            blue: "bg-blue-500 hover:bg-blue-600 shadow-blue-500/30",
+                            orange: "bg-orange-500 hover:bg-orange-600 shadow-orange-500/30",
+                            purple: "bg-purple-500 hover:bg-purple-600 shadow-purple-500/30"
+                        };
+
+                        return (
+                            <div key={key} className={`rounded-2xl p-4 border-2 ${colorMap[unit.color]} relative flex flex-col`}>
+                                <h3 className="font-bold text-lg mb-3 flex items-center"><BookOpen size={20} className="mr-2"/> {unit.title}</h3>
+                                <div className="flex space-x-3 mt-auto">
+                                    <button onClick={() => setView(`learn_${key}`)} className={`btn-press flex-1 py-2 rounded-xl text-white font-bold text-sm shadow-md ${btnColorMap[unit.color]}`}>重點教學</button>
+                                    <button onClick={() => setView(`practice_${key}`)} className="btn-press flex-1 bg-white text-slate-700 py-2 rounded-xl font-bold text-sm shadow-sm border border-slate-200">開始闖關</button>
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+
+                {/* 列印學習單按鈕 */}
+                <div className="mt-8 text-center">
+                    <button onClick={exportToWord} className="btn-press inline-flex items-center justify-center bg-slate-800 text-white px-6 py-4 rounded-full font-bold shadow-lg">
+                        <Printer className="mr-2" /> 產生 Word 學習單 (附解答)
+                    </button>
+                    <p className="text-xs text-slate-400 mt-2">老師專用：點擊下載包含直式計算的練習卷</p>
+                </div>
+            </div>
+        );
+
+        // 2. 影片頁面
+        const VideoView = ({ setView }) => (
+            <div className="animate-in slide-in-from-right duration-300">
+                <button onClick={() => setView('home')} className="mb-4 flex items-center text-slate-500 font-bold bg-white px-4 py-2 rounded-full shadow-sm"><HomeIcon className="mr-2" size={18}/> 回首頁</button>
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                    <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center"><Play className="mr-2 text-blue-500 fill-current" /> 小數觀念教學</h2>
+                    <div className="aspect-video w-full bg-slate-900 rounded-xl overflow-hidden shadow-inner relative">
+                        {/* 這裡放入小數教學影片，使用均一教育平台的開放資源影片做為範例 */}
+                        <iframe src="https://www.youtube.com/embed/Pj15x9FzQ-g" title="一位小數" className="absolute top-0 left-0 w-full h-full" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+                    </div>
+                    <p className="mt-4 text-slate-600 font-medium text-center">看完影片後，就可以去各單元闖關囉！</p>
+                </div>
+            </div>
+        );
+
+        // 3. 學習頁面 (教學內容)
+        const LearnView = ({ unitKey, setView }) => {
+            const unit = unitsData[unitKey];
+            return (
+                <div className="animate-in zoom-in-95 duration-300 pb-10">
+                    <button onClick={() => setView('home')} className="mb-4 flex items-center text-slate-500 font-bold bg-white px-4 py-2 rounded-full shadow-sm"><HomeIcon className="mr-2" size={18}/> 回地圖</button>
+                    
+                    <h2 className="text-2xl font-black text-slate-800 mb-6">{unit.title} - 重點整理</h2>
+                    
+                    {unit.learnContent()}
+
+                    <button onClick={() => setView(`practice_${unitKey}`)} className="btn-press w-full mt-8 bg-blue-500 hover:bg-blue-600 text-white py-4 rounded-2xl font-bold text-xl shadow-lg shadow-blue-500/30">
+                        我懂了，開始測驗！
+                    </button>
+                </div>
+            );
+        };
+
+        // 4. 測驗頁面 (闖關)
+        const PracticeView = ({ unitKey, setView, score, setScore }) => {
+            const unit = unitsData[unitKey];
+            const [qIndex, setQIndex] = useState(0);
+            const [feedback, setFeedback] = useState(null); // 'correct' | 'incorrect'
+            const [finished, setFinished] = useState(false);
+            const [shuffledOptions, setShuffledOptions] = useState([]);
+            const [realAnsIdx, setRealAnsIdx] = useState(0);
+
+            const question = unit.questions[qIndex];
+
+            // 進入新題目時，打亂選項
+            useEffect(() => {
+                if (!question) return;
+                const opts = [...question.options].map((text, originalIndex) => ({ text, originalIndex }));
+                const shuffled = opts.sort(() => Math.random() - 0.5);
+                setShuffledOptions(shuffled);
+                setRealAnsIdx(shuffled.findIndex(o => o.originalIndex === question.ans));
+            }, [qIndex, question]);
+
+            const handleAnswer = (selectedIdx) => {
+                if (feedback) return;
+                
+                if (selectedIdx === realAnsIdx) {
+                    setFeedback('correct');
+                    setScore(s => s + 10);
+                } else {
+                    setFeedback('incorrect');
+                }
+
+                setTimeout(() => {
+                    setFeedback(null);
+                    if (qIndex + 1 < unit.questions.length) {
+                        setQIndex(i => i + 1);
+                    } else {
+                        setFinished(true);
+                    }
+                }, 1500);
+            };
+
+            if (finished) {
+                return (
+                    <div className="text-center py-10 animate-in slide-in-from-bottom">
+                        <div className="inline-block p-4 bg-yellow-100 rounded-full mb-4 ring-8 ring-yellow-50"><Star className="text-yellow-500 fill-current" size={64} /></div>
+                        <h2 className="text-3xl font-bold mb-2 text-slate-800">恭喜過關！</h2>
+                        <p className="text-slate-600 mb-8">你完成了 {unit.title}</p>
+                        <button onClick={() => setView('home')} className="btn-press w-full bg-green-500 text-white py-4 rounded-2xl font-bold text-xl shadow-xl">回闖關地圖</button>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="animate-in slide-in-from-right duration-300">
+                    <div className="flex justify-between items-center mb-6">
+                        <button onClick={() => setView('home')} className="text-slate-400 font-bold bg-white px-3 py-1 rounded-full text-sm">放棄離開</button>
+                        <div className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full font-bold text-sm">第 {qIndex + 1} / {unit.questions.length} 題</div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 mb-6">
+                        <h3 className="text-2xl font-bold text-slate-800 leading-relaxed text-center">{question?.q}</h3>
+                    </div>
+
+                    <div className="space-y-3">
+                        {shuffledOptions.map((opt, i) => (
+                            <button key={i} onClick={() => handleAnswer(i)} disabled={!!feedback}
+                                className={`btn-press w-full p-4 rounded-2xl text-xl font-bold border-2 transition-colors
+                                ${feedback === 'correct' && i === realAnsIdx ? 'bg-green-100 border-green-500 text-green-700' : 
+                                  feedback === 'incorrect' && i !== realAnsIdx && feedback ? 'bg-red-50 border-red-200 text-red-400 opacity-50' : 
+                                  feedback === 'incorrect' && i === realAnsIdx ? 'bg-green-50 border-green-300 text-green-600' :
+                                  'bg-white border-slate-200 hover:border-blue-300 text-slate-700'}`}>
+                                {opt.text}
+                                {feedback === 'correct' && i === realAnsIdx && <CheckCircle className="inline-block ml-2 text-green-600" size={20}/>}
+                            </button>
+                        ))}
+                    </div>
+
+                    {feedback === 'incorrect' && <div className="mt-6 text-center text-red-500 font-bold text-lg animate-bounce">再仔細想一想喔！</div>}
+                    {feedback === 'correct' && <div className="mt-6 text-center text-green-500 font-bold text-lg animate-bounce">太棒了！答對囉！</div>}
+                </div>
+            );
+        };
+
+        // --- Main App ---
+        const App = () => {
+            const [view, setView] = useState('home'); // 'home', 'video', 'learn_6-1', 'practice_6-1'...
+            const [score, setScore] = useState(0);
+
+            // 頂部狀態列
+            const Header = () => (
+                <header className="bg-white shadow-sm p-3 sticky top-0 z-10">
+                    <div className="max-w-md mx-auto flex justify-between items-center">
+                        <h1 className="font-bold text-slate-700 flex items-center">
+                            <span className="bg-green-500 w-8 h-8 rounded-lg flex items-center justify-center text-white mr-2">CH6</span>
+                            一位小數
+                        </h1>
+                        <div className="flex items-center bg-yellow-50 px-3 py-1 rounded-full border border-yellow-200">
+                            <Star className="text-yellow-500 mr-1 fill-current" size={16} />
+                            <span className="font-bold text-yellow-700">{score} 寶石</span>
+                        </div>
+                    </div>
+                </header>
+            );
+
+            const renderView = () => {
+                if (view === 'home') return <Home setView={setView} score={score} />;
+                if (view === 'video') return <VideoView setView={setView} />;
+                if (view.startsWith('learn_')) {
+                    const unitKey = view.split('_')[1];
+                    return <LearnView unitKey={unitKey} setView={setView} />;
+                }
+                if (view.startsWith('practice_')) {
+                    const unitKey = view.split('_')[1];
+                    return <PracticeView unitKey={unitKey} setView={setView} score={score} setScore={setScore} />;
+                }
+                return <Home setView={setView} score={score} />;
+            };
+
+            return (
+                <div className="min-h-screen bg-[#f0fdf4] font-sans">
+                    <Header />
+                    <main className="max-w-md mx-auto p-4 pt-6">
+                        {renderView()}
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

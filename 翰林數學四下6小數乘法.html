@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>數學小達人：小數乘法</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body { touch-action: manipulation; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        @keyframes bounce-sm {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10%); }
+        }
+        .animate-bounce-sm { animation: bounce-sm 2s infinite ease-in-out; }
+    </style>
+</head>
+<body class="bg-emerald-50 text-slate-800 select-none">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Icons ---
+        const IconWrapper = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        const Play = (props) => <IconWrapper {...props}><polygon points="5 3 19 12 5 21 5 3"/></IconWrapper>;
+        const BookOpen = (props) => <IconWrapper {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconWrapper>;
+        const CheckCircle = (props) => <IconWrapper {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconWrapper>;
+        const Trophy = (props) => <IconWrapper {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></IconWrapper>;
+        const RotateCcw = (props) => <IconWrapper {...props}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></IconWrapper>;
+        const Printer = (props) => <IconWrapper {...props}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></IconWrapper>;
+        const Target = (props) => <IconWrapper {...props}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></IconWrapper>;
+        
+        const CircleNumber = ({ num }) => (
+            <div className="w-[22px] h-[22px] border-2 border-current rounded-full flex items-center justify-center text-[11px] font-black">
+                {num}
+            </div>
+        );
+
+        // --- Visual Equation Component (直式呈現) ---
+        const VerticalMath = ({ top, bottom, answer = "?" }) => (
+            <div className="flex flex-col items-end font-mono text-4xl tracking-widest text-slate-700 bg-white pt-6 pb-4 px-8 rounded-2xl shadow-sm border-4 border-emerald-100 mx-auto w-max my-6 relative overflow-hidden">
+                <div className="absolute -left-2 -top-2 opacity-10 text-6xl">✨</div>
+                <div className="flex justify-end w-full pr-2 relative z-10">{top}</div>
+                <div className="flex justify-between w-full border-b-4 border-slate-700 pb-2 mb-2 relative z-10">
+                    <span className="text-emerald-500 mr-6 font-sans">×</span>
+                    <span className="pr-2">{bottom}</span>
+                </div>
+                <div className="h-10 text-emerald-600 font-bold pr-2 flex justify-end w-full relative z-10">
+                   {answer}
+                </div>
+            </div>
+        );
+
+        // --- Main App Component ---
+        const MathGame = () => {
+          const [currentTab, setCurrentTab] = useState('learn');
+          const [score, setScore] = useState(0);
+          const [animateScore, setAnimateScore] = useState(false);
+
+          useEffect(() => {
+            if (score > 0) {
+              setAnimateScore(true);
+              const timer = setTimeout(() => setAnimateScore(false), 300);
+              return () => clearTimeout(timer);
+            }
+          }, [score]);
+
+          const renderTabContent = () => {
+            switch (currentTab) {
+              case 'learn': return <LearnSection onComplete={() => setCurrentTab('unit1')} />;
+              case 'unit1': return <UnitPractice unit={1} title="6-1 認識小數乘法" questions={qData.u1} score={score} setScore={setScore} onComplete={() => setCurrentTab('unit2')} />;
+              case 'unit2': return <UnitPractice unit={2} title="6-2 一位小數乘以整數" questions={qData.u2} score={score} setScore={setScore} onComplete={() => setCurrentTab('unit3')} />;
+              case 'unit3': return <UnitPractice unit={3} title="6-3 兩位小數乘以整數" questions={qData.u3} score={score} setScore={setScore} onComplete={() => setCurrentTab('quiz')} />;
+              case 'quiz':  return <QuizMode score={score} setScore={setScore} onRestart={() => { setScore(0); setCurrentTab('learn'); }} />;
+              case 'print': return <PrintSection />;
+              default: return <LearnSection />;
+            }
+          };
+
+          return (
+            <div className="h-screen flex flex-col bg-emerald-50 font-sans text-slate-800 overflow-hidden select-none">
+              <header className="bg-white shadow-sm p-3 z-10 flex-none border-b border-emerald-100">
+                <div className="max-w-2xl mx-auto flex justify-between items-center">
+                  <div className="flex items-center space-x-2">
+                    <div className="bg-emerald-500 p-2 rounded-xl text-white shadow-sm"><Target size={20} /></div>
+                    <h1 className="text-lg font-bold text-emerald-700 tracking-wide">小數乘法大師</h1>
+                  </div>
+                  <div className={`flex items-center bg-yellow-100 px-3 py-1.5 rounded-full border border-yellow-300 transition-transform duration-200 ${animateScore ? 'scale-110 ring-4 ring-yellow-200' : ''}`}>
+                    <Trophy className={`text-yellow-600 mr-1.5 ${animateScore ? 'animate-spin' : ''}`} size={16} />
+                    <span className="font-bold text-yellow-700">{score} 分</span>
+                  </div>
+                </div>
+              </header>
+
+              <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-24 scroll-smooth">
+                <div className="max-w-2xl mx-auto bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-5 min-h-[400px] animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  {renderTabContent()}
+                </div>
+              </main>
+
+              <nav className="bg-white border-t border-slate-200 pb-safe pt-2 px-1 fixed bottom-0 w-full z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+                <div className="max-w-2xl mx-auto flex justify-between items-end pb-2">
+                  <NavButton active={currentTab === 'learn'} onClick={() => setCurrentTab('learn')} icon={<BookOpen size={20} />} label="教學" />
+                  <NavButton active={currentTab === 'unit1'} onClick={() => setCurrentTab('unit1')} icon={<CircleNumber num="1" />} label="6-1" />
+                  <NavButton active={currentTab === 'unit2'} onClick={() => setCurrentTab('unit2')} icon={<CircleNumber num="2" />} label="6-2" />
+                  <NavButton active={currentTab === 'unit3'} onClick={() => setCurrentTab('unit3')} icon={<CircleNumber num="3" />} label="6-3" />
+                  <NavButton active={currentTab === 'quiz'}  onClick={() => setCurrentTab('quiz')} icon={<CheckCircle size={20} />} label="測驗" />
+                  <NavButton active={currentTab === 'print'} onClick={() => setCurrentTab('print')} icon={<Printer size={20} />} label="學習單" />
+                </div>
+              </nav>
+            </div>
+          );
+        };
+
+        const NavButton = ({ active, onClick, icon, label }) => (
+          <button onClick={onClick} className={`flex flex-col items-center justify-center w-full py-2 px-1 transition-all duration-300 rounded-xl active:scale-95 touch-manipulation ${active ? 'text-emerald-600 -translate-y-1' : 'text-slate-400 hover:text-slate-600'}`}>
+            <div className={`p-1.5 rounded-full transition-all duration-300 ${active ? 'bg-emerald-100 shadow-sm' : ''}`}>{icon}</div>
+            <span className={`text-[10px] font-medium mt-1 ${active ? 'opacity-100' : 'opacity-70'}`}>{label}</span>
+            {active && <div className="w-1 h-1 bg-emerald-500 rounded-full mt-1 absolute bottom-0"></div>}
+          </button>
+        );
+
+        // --- Question Data ---
+        const qData = {
+            u1: [
+                { top: "0.1", bot: "5", ans: "0.5", options: ["0.5", "5", "0.05"] },
+                { top: "0.1", bot: "8", ans: "0.8", options: ["0.8", "8", "0.08"] },
+                { top: "0.1", bot: "12", ans: "1.2", options: ["1.2", "0.12", "12"] },
+                { top: "0.01", bot: "4", ans: "0.04", options: ["0.04", "0.4", "4"] },
+                { top: "0.01", bot: "15", ans: "0.15", options: ["0.15", "1.5", "15"] },
+                { top: "0.1", bot: "20", ans: "2.0", options: ["2.0", "0.2", "20"] }
+            ],
+            u2: [
+                { top: "1.2", bot: "4", ans: "4.8", options: ["4.8", "48", "0.48"] },
+                { top: "3.5", bot: "2", ans: "7.0", options: ["7.0", "0.7", "70"] },
+                { top: "0.6", bot: "7", ans: "4.2", options: ["4.2", "42", "0.42"] },
+                { top: "2.4", bot: "3", ans: "7.2", options: ["7.2", "72", "0.72"] },
+                { top: "5.5", bot: "4", ans: "22.0", options: ["22.0", "2.2", "220"] },
+                { top: "10.2", bot: "5", ans: "51.0", options: ["51.0", "5.1", "510"] }
+            ],
+            u3: [
+                { top: "0.04", bot: "6", ans: "0.24", options: ["0.24", "2.4", "0.024"] },
+                { top: "1.15", bot: "3", ans: "3.45", options: ["3.45", "34.5", "0.345"] },
+                { top: "2.08", bot: "5", ans: "10.40", options: ["10.40", "1.04", "104"] },
+                { top: "0.25", bot: "4", ans: "1.00", options: ["1.00", "0.1", "10"] },
+                { top: "3.12", bot: "2", ans: "6.24", options: ["6.24", "62.4", "0.624"] },
+                { top: "5.05", bot: "4", ans: "20.20", options: ["20.20", "2.02", "202"] }
+            ]
+        };
+
+        // --- 1. Learning Section (Video) ---
+        const LearnSection = ({ onComplete }) => (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-800 flex items-center"><Play className="mr-2 text-emerald-500" style={{fill: 'currentColor'}} size={24} /> 觀念教學</h2>
+              <span className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded">CH6 小數乘法</span>
+            </div>
+            
+            <div className="aspect-video w-full bg-slate-900 rounded-2xl overflow-hidden shadow-lg ring-4 ring-emerald-50 relative" style={{paddingBottom: '56.25%', height: 0}}>
+              <iframe src="https://www.youtube.com/embed/Zzzj0ZffjrQ" title="小數乘法教學" style={{position:'absolute', top:0, left:0, width:'100%', height:'100%'}} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+            </div>
+
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-5 rounded-2xl border border-emerald-100 shadow-sm">
+              <h3 className="text-lg font-bold text-emerald-800 mb-3 flex items-center"><BookOpen className="w-5 h-5 mr-2" />學習重點搶先看</h3>
+              <div className="space-y-3 text-base text-slate-700">
+                <div className="flex bg-white p-3 rounded-xl shadow-sm border border-emerald-50 items-center">
+                  <div className="bg-emerald-100 text-emerald-700 font-bold rounded-lg w-10 h-10 flex items-center justify-center mr-3 flex-shrink-0 text-sm">重點</div>
+                  <div>小數乘以整數，可以<strong className="text-emerald-600">先當成整數來乘</strong>。</div>
+                </div>
+                <div className="flex bg-white p-3 rounded-xl shadow-sm border border-teal-50 items-center">
+                   <div className="bg-teal-100 text-teal-700 font-bold rounded-lg w-10 h-10 flex items-center justify-center mr-3 flex-shrink-0 text-sm">重點</div>
+                   <div>乘完之後，再把<strong className="text-teal-600">小數點點回去</strong>。被乘數有幾位小數，答案就有幾位小數！</div>
+                </div>
+              </div>
+            </div>
+            <button onClick={onComplete} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">開始 6-1 練習</button>
+          </div>
+        );
+
+        // --- 2. Generic Unit Practice Component ---
+        const UnitPractice = ({ unit, title, questions, score, setScore, onComplete }) => {
+            const [progress, setProgress] = useState(0);
+            const [feedback, setFeedback] = useState('');
+            const [options, setOptions] = useState([]);
+            
+            // Concept Text by Unit
+            const getConcept = () => {
+                if(unit === 1) return <p>0.1 乘以 5 就是 5 個 0.1，也就是 <strong className="text-emerald-600">0.5</strong>。</p>;
+                if(unit === 2) return <p>像整數一樣相乘，然後從右邊數來<strong className="text-emerald-600">點 1 位小數點</strong>。</p>;
+                if(unit === 3) return <p>像整數一樣相乘，然後從右邊數來<strong className="text-emerald-600">點 2 位小數點</strong>。末尾的 0 可以劃掉喔！</p>;
+            };
+
+            useEffect(() => {
+                if(progress < questions.length) {
+                    setFeedback('');
+                    const shuffled = [...questions[progress].options].sort(() => Math.random() - 0.5);
+                    setOptions(shuffled);
+                }
+            }, [progress, questions]);
+
+            const handleAnswer = (ans) => {
+                if (feedback) return;
+                const correctAns = questions[progress].ans;
+                if (ans === correctAns) {
+                    setFeedback('correct');
+                    setScore(s => s + 10);
+                    setTimeout(() => setProgress(p => p + 1), 1000);
+                } else {
+                    setFeedback('incorrect');
+                    setTimeout(() => setFeedback(''), 1000);
+                }
+            };
+
+            if (progress >= questions.length) return (
+                <div className="text-center py-12 animate-in zoom-in">
+                    <div className="inline-block p-4 bg-emerald-100 rounded-full mb-4 ring-8 ring-emerald-50"><Target className="text-emerald-600" size={64} /></div>
+                    <h2 className="text-2xl font-bold mb-2 text-slate-800">{title} 過關！</h2>
+                    <p className="text-slate-600 mb-8">你已經掌握這個單元的訣竅了</p>
+                    <button onClick={onComplete} className="w-full bg-emerald-500 text-white py-4 rounded-2xl font-bold text-xl shadow-xl active:scale-95 transition-all">前往下一關</button>
+                </div>
+            );
+
+            return (
+                <div className="text-center space-y-4">
+                    <div className="flex justify-between items-center border-b border-emerald-100 pb-4">
+                        <h2 className="text-lg font-bold text-slate-700 flex items-center">
+                            <span className="bg-emerald-100 text-emerald-600 w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm">{unit}</span>
+                            {title}
+                        </h2>
+                        <div className="flex space-x-1">{questions.map((_, i) => <div key={i} className={`w-2 h-2 rounded-full ${i < progress ? 'bg-emerald-500' : 'bg-slate-200'}`}></div>)}</div>
+                    </div>
+
+                    <div className="bg-teal-50 text-teal-800 text-sm p-3 rounded-lg border border-teal-100 animate-bounce-sm inline-block">
+                        💡 {getConcept()}
+                    </div>
+                    
+                    <VerticalMath top={questions[progress].top} bottom={questions[progress].bot} answer={feedback === 'correct' ? questions[progress].ans : "?"} />
+
+                    <div className="grid grid-cols-3 gap-3">
+                        {options.map((opt, idx) => (
+                            <button key={idx} onClick={() => handleAnswer(opt)} disabled={!!feedback} 
+                                className={`py-4 rounded-xl text-xl font-bold border-2 transition-all active:scale-95 
+                                ${feedback === 'correct' && opt === questions[progress].ans ? 'bg-green-100 border-green-500 text-green-700' : 
+                                  feedback === 'incorrect' && opt === questions[progress].ans ? 'bg-green-100 border-green-500 text-green-700 opacity-50' : 
+                                  'bg-white border-slate-200 hover:border-emerald-300 text-slate-700'}`}>
+                                {opt}
+                            </button>
+                        ))}
+                    </div>
+                    
+                    <div className="h-6 flex justify-center mt-2">
+                        {feedback === 'correct' && <span className="text-green-600 font-bold flex items-center"><CheckCircle className="mr-1" size={20}/> 答對了！小數點位置正確！</span>}
+                        {feedback === 'incorrect' && <span className="text-red-500 font-bold">算錯囉，注意小數點的位置！</span>}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 4. Quiz Mode (Mixed Word Problems) ---
+        const QuizMode = ({ score, setScore, onRestart }) => {
+            const [idx, setIdx] = useState(0);
+            const [finished, setFinished] = useState(false);
+            const [feedback, setFeedback] = useState(null);
+            
+            const [questions] = useState(() => {
+                const pool = [
+                    { q: "1瓶鮮奶 1.5 公升，媽媽買了 3 瓶，共有多少公升？", options: ["4.5 公升", "45 公升", "0.45 公升"], ansText: "4.5 公升" },
+                    { q: "鐵絲 1 公尺重 0.25 公斤，4 公尺重多少公斤？", options: ["1 公斤", "10 公斤", "0.1 公斤"], ansText: "1 公斤" },
+                    { q: "哥哥每天跑步 2.5 公里，一個星期(7天)共跑了多少公里？", options: ["17.5 公里", "14.5 公里", "1.75 公里"], ansText: "17.5 公里" },
+                    { q: "算出 1.24 × 5 = ?", options: ["6.2", "6.20", "62"], ansText: "6.2" },
+                    { q: "橡皮擦一個 0.8 元(外幣)，買 6 個要多少元？", options: ["4.8 元", "48 元", "0.48 元"], ansText: "4.8 元" },
+                    { q: "如果 34 × 6 = 204，那麼 3.4 × 6 等於多少？", options: ["20.4", "2.04", "204"], ansText: "20.4" }
+                ];
+                return pool.sort(() => Math.random() - 0.5).slice(0, 6).map(q => {
+                    const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
+                    return { ...q, options: shuffledOptions, ans: shuffledOptions.indexOf(q.ansText) };
+                });
+            });
+
+            const handleAnswer = (optIdx) => {
+                if (feedback) return;
+                if (optIdx === questions[idx].ans) {
+                    setFeedback('correct');
+                    setScore(s => s + 20);
+                } else {
+                    setFeedback('incorrect');
+                }
+                setTimeout(() => {
+                    if (idx + 1 < questions.length) {
+                        setIdx(i => i + 1);
+                        setFeedback(null);
+                    } else {
+                        setFinished(true);
+                    }
+                }, 1500);
+            };
+
+            if (finished) return (
+                <div className="text-center py-10 space-y-6 animate-in slide-in-from-bottom">
+                    <div className="inline-block p-6 bg-yellow-100 rounded-full mb-4 shadow-inner"><Trophy size={80} className="text-yellow-600" /></div>
+                    <h2 className="text-4xl font-bold text-slate-800">恭喜過關！</h2>
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <p className="text-sm text-slate-400 uppercase tracking-widest mb-2">總得分</p>
+                        <p className="text-6xl font-black text-emerald-500 mb-4">{score}</p>
+                        <p className="text-lg text-slate-600">你是最強的小數乘法大師！</p>
+                    </div>
+                    <button onClick={onRestart} className="w-full bg-slate-800 text-white py-4 rounded-xl font-bold hover:bg-slate-700 flex items-center justify-center shadow-lg active:scale-95 transition-all"><RotateCcw className="mr-2" size={20} /> 再玩一次</button>
+                </div>
+            );
+
+            return (
+                <div className="py-2">
+                    <div className="mb-6 flex justify-between items-center text-sm font-medium text-slate-400"><span className="bg-slate-100 px-3 py-1 rounded-full">第 {idx + 1} / {questions.length} 題</span><span>分數: {score}</span></div>
+                    <h3 className="text-xl font-bold text-slate-800 mb-6 leading-relaxed">{questions[idx].q}</h3>
+                    <div className="space-y-3">
+                        {questions[idx].options.map((opt, i) => (
+                            <button key={i} onClick={() => handleAnswer(i)} disabled={!!feedback}
+                             className={`w-full text-left p-4 rounded-xl text-lg font-medium border-2 transition-all active:scale-98 
+                             ${feedback === 'correct' && i === questions[idx].ans ? 'bg-green-100 border-green-500 text-green-800' : 
+                               feedback === 'incorrect' && i !== questions[idx].ans && feedback ? 'bg-red-50 border-red-200 text-red-800 opacity-50' : 
+                               'bg-white border-slate-200 hover:border-emerald-400'}`}>
+                                <div className="flex items-center">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 text-sm font-bold ${feedback === 'correct' && i === questions[idx].ans ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{String.fromCharCode(65+i)}</div>
+                                    {opt}
+                                    {feedback === 'correct' && i === questions[idx].ans && <CheckCircle className="ml-auto text-green-600" />}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                    {feedback && <div className={`mt-6 text-center font-bold text-xl ${feedback === 'correct' ? 'text-green-500' : 'text-red-500'}`}>{feedback === 'correct' ? '正確！' : '答錯囉...'}</div>}
+                </div>
+            );
+        };
+
+        // --- 5. Print / Export Section ---
+        const PrintSection = () => {
+            const worksheetData = [
+                {q: "0.2", m: "4", a: "0.8"}, {q: "0.5", m: "6", a: "3.0"}, {q: "0.9", m: "3", a: "2.7"},
+                {q: "1.4", m: "2", a: "2.8"}, {q: "2.5", m: "4", a: "10.0"},{q: "3.2", m: "5", a: "16.0"},
+                {q: "0.03", m:"8", a: "0.24"},{q: "0.15", m:"4", a: "0.60"},{q: "0.08", m:"5", a: "0.40"},
+                {q: "1.12", m:"3", a: "3.36"},{q: "2.05", m:"4", a: "8.20"},{q: "5.25", m:"2", a: "10.50"},
+                {q: "4.8", m: "5", a: "24.0"},{q: "10.5", m:"6", a: "63.0"},{q: "0.09", m:"9", a: "0.81"},
+                {q: "3.14", m:"2", a: "6.28"},{q: "6.06", m:"5", a: "30.30"},{q: "1.25", m:"8", a: "10.00"}
+            ];
+
+            const generateVerticalFormHTML = (top, bottom, showAnswer, qNum) => `
+                <table style="font-size: 22px; margin: 20px auto; text-align: right; width: 120px; font-family: 'Courier New', monospace; letter-spacing: 2px;">
+                    <tr><td style="text-align: left; font-size:16px;">(${qNum})</td><td colspan="2"></td></tr>
+                    <tr><td></td><td></td><td>${top}</td></tr>
+                    <tr><td></td><td>×</td><td>${bottom}</td></tr>
+                    <tr><td></td><td colspan="2" style="border-bottom: 2px solid black;"></td></tr>
+                    <tr><td></td><td></td><td style="height: 40px; color: ${showAnswer ? 'red' : 'transparent'}; font-weight: bold;">${showAnswer ? a : '&nbsp;'}</td></tr>
+                </table>
+            `;
+
+            const exportToWord = () => {
+                let html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head><meta charset='utf-8'><title>小數乘法學習單</title>
+                <style>
+                    body { font-family: 'DFKai-sb', 'MingLiU', '微軟正黑體', sans-serif; }
+                    .page-break { page-break-before: always; }
+                    .title { text-align: center; font-size: 28px; font-weight: bold; margin-bottom: 20px; }
+                    .subtitle { text-align: center; font-size: 20px; margin-bottom: 30px; }
+                    .student-info { margin-bottom: 20px; font-size: 18px; }
+                    table.grid { width: 100%; border-collapse: collapse; }
+                    table.grid td { width: 33%; vertical-align: top; padding: 10px; }
+                </style>
+                </head><body>`;
+
+                const buildPage = (isAnswerPage) => {
+                    let pageHtml = `<div class="title">國小數學：小數乘法學習單</div>`;
+                    pageHtml += `<div class="subtitle">${isAnswerPage ? '【解答卷】' : '【學生卷】'}</div>`;
+                    if(!isAnswerPage) pageHtml += `<div class="student-info">班級：_______ 座號：_______ 姓名：_________  得分：_______</div>`;
+                    
+                    pageHtml += `<table class="grid">`;
+                    for(let i=0; i<worksheetData.length; i+=3) {
+                        pageHtml += `<tr>`;
+                        for(let j=0; j<3; j++) {
+                            if(i+j < worksheetData.length) {
+                                const item = worksheetData[i+j];
+                                // Build vertical math table
+                                pageHtml += `<td>
+                                    <table style="font-size: 24px; margin: 20px auto; text-align: right; width: 120px; font-family: monospace;">
+                                        <tr><td style="text-align: left; font-size:16px;">(${i+j+1})</td><td colspan="2"></td></tr>
+                                        <tr><td></td><td></td><td>${item.q}</td></tr>
+                                        <tr><td></td><td>×</td><td>${item.m}</td></tr>
+                                        <tr><td></td><td colspan="2" style="border-bottom: 2px solid black;"></td></tr>
+                                        <tr><td></td><td></td><td style="height: 40px; color: ${isAnswerPage ? 'red' : 'transparent'}; font-weight: bold;">${isAnswerPage ? item.a : '&nbsp;'}</td></tr>
+                                    </table>
+                                </td>`;
+                            }
+                        }
+                        pageHtml += `</tr>`;
+                    }
+                    pageHtml += `</table>`;
+                    return pageHtml;
+                };
+
+                html += buildPage(false); // 題目卷
+                html += `<br clear="all" style="page-break-before:always" />`; // 分頁符號
+                html += buildPage(true);  // 解答卷
+                html += `</body></html>`;
+
+                const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = '四下數學_小數乘法_學習單.doc';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            return (
+                <div className="text-center py-8 space-y-6">
+                    <div className="inline-block p-5 bg-blue-100 rounded-full mb-2"><Printer size={50} className="text-blue-600" /></div>
+                    <h2 className="text-2xl font-bold text-slate-800">老師好幫手：自動出卷</h2>
+                    <p className="text-slate-600 bg-white p-4 rounded-xl shadow-sm border border-slate-100 text-left leading-relaxed">
+                        點擊下方按鈕，系統將自動為您產出一份包含 <strong>18題直式計算</strong> 的 Word 學習單。
+                        <br/><br/>
+                        ✅ <strong>題目與解答自動分頁</strong>，方便老師列印批改。<br/>
+                        ✅ 完全包含「一位小數」與「兩位小數」乘以整數的綜合練習。<br/>
+                        ✅ 採用標準數學直式排版。
+                    </p>
+                    
+                    <button onClick={exportToWord} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold text-xl flex items-center justify-center shadow-lg shadow-blue-500/30 active:scale-95 transition-all mt-6">
+                        <Printer className="mr-2" /> 下載 Word 學習單
+                    </button>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<MathGame />);
+    </script>
+</body>
+</html>

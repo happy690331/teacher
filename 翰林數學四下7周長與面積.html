@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>數學小達人：周長與面積</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body { touch-action: manipulation; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes dash { to { stroke-dashoffset: -24; } }
+        .animate-dash { animation: dash 2s linear infinite; }
+    </style>
+</head>
+<body class="bg-emerald-50 text-slate-800 select-none font-sans">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Icons ---
+        const IconWrapper = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        const Play = (props) => <IconWrapper {...props}><polygon points="5 3 19 12 5 21 5 3"/></IconWrapper>;
+        const Square = (props) => <IconWrapper {...props}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></IconWrapper>;
+        const Grid = (props) => <IconWrapper {...props}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></IconWrapper>;
+        const Shapes = (props) => <IconWrapper {...props}><path d="M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z"/><rect x="3" y="14" width="7" height="7" rx="1"/><circle cx="17.5" cy="17.5" r="3.5"/></IconWrapper>;
+        const CheckCircle = (props) => <IconWrapper {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconWrapper>;
+        const FileText = (props) => <IconWrapper {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></IconWrapper>;
+        const Download = (props) => <IconWrapper {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></IconWrapper>;
+        const Trophy = (props) => <IconWrapper {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></IconWrapper>;
+        const RotateCcw = (props) => <IconWrapper {...props}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></IconWrapper>;
+        const ArrowRight = (props) => <IconWrapper {...props}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></IconWrapper>;
+        const MathIcon = (props) => <IconWrapper {...props}><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></IconWrapper>;
+
+        // --- SVGs for Concepts ---
+        const PerimeterSVG = () => (
+            <svg viewBox="0 0 200 100" className="w-full h-auto mt-2 drop-shadow-sm bg-white rounded-xl p-2 border border-slate-100">
+                <rect x="30" y="20" width="140" height="60" fill="#e0f2fe" stroke="#0ea5e9" strokeWidth="4" strokeDasharray="8 4" className="animate-dash" />
+                <text x="100" y="55" textAnchor="middle" fill="#0369a1" className="font-bold text-lg">周長 = 外圍長度</text>
+                <text x="100" y="15" textAnchor="middle" fill="#0284c7" className="font-bold text-sm">長</text>
+                <text x="180" y="55" textAnchor="middle" fill="#0284c7" className="font-bold text-sm">寬</text>
+            </svg>
+        );
+
+        const AreaSVG = () => (
+            <svg viewBox="0 0 200 100" className="w-full h-auto mt-2 drop-shadow-sm bg-white rounded-xl p-2 border border-slate-100">
+                <rect x="30" y="20" width="140" height="60" fill="#fef08a" stroke="#ca8a04" strokeWidth="4" />
+                <path d="M65 20 V80 M100 20 V80 M135 20 V80 M30 50 H170" stroke="#ca8a04" strokeWidth="1.5" opacity="0.4" />
+                <text x="100" y="55" textAnchor="middle" fill="#854d0e" className="font-bold text-lg">面積 = 平面的大小</text>
+            </svg>
+        );
+
+        const CompositeSVG = () => (
+            <svg viewBox="0 0 200 120" className="w-full h-auto mt-2 drop-shadow-sm bg-white rounded-xl p-2 border border-slate-100">
+                <path d="M50 20 H150 V60 H100 V100 H50 Z" fill="#f3e8ff" stroke="#9333ea" strokeWidth="4" />
+                <line x1="100" y1="20" x2="100" y2="60" stroke="#9333ea" strokeWidth="3" strokeDasharray="5 5" />
+                <text x="75" y="65" textAnchor="middle" fill="#6b21a8" className="font-bold text-sm">切開分兩塊</text>
+            </svg>
+        );
+
+        // --- Data ---
+        const UNIT_DATA = {
+            unit1: {
+                id: 'unit1', title: '7-1 周長',
+                theme: { light: 'bg-blue-100', text: 'text-blue-600', bg: 'bg-blue-500', border: 'border-blue-200' },
+                concepts: [
+                    { text: "周長是圖形外圍一圈的總長度。", highlight: "外圍一圈" },
+                    { text: "正方形周長 = 邊長 × 4", highlight: "邊長 × 4" },
+                    { text: "長方形周長 = (長 + 寬) × 2", highlight: "(長 + 寬) × 2" }
+                ],
+                svg: <PerimeterSVG />,
+                questions: [
+                    { q: "正方形邊長 6 公分，周長是多少公分？", options: ["24", "36", "12"], ans: "24" },
+                    { q: "長方形的長是 8 公分，寬是 3 公分，周長是多少公分？", options: ["22", "24", "11"], ans: "22" },
+                    { q: "一個正方形花圃，周長是 40 公尺，它的邊長是多少公尺？", options: ["10", "8", "160"], ans: "10" },
+                    { q: "長方形的長 10 公分，寬 5 公分，周長是多少公分？", options: ["30", "50", "15"], ans: "30" },
+                    { q: "邊長 12 公分的正方形，周長是多少公分？", options: ["48", "24", "144"], ans: "48" },
+                    { q: "緞帶長 15 公分、寬 5 公分，繞一圈周長是多少公分？", options: ["40", "75", "20"], ans: "40" }
+                ]
+            },
+            unit2: {
+                id: 'unit2', title: '7-2 面積',
+                theme: { light: 'bg-amber-100', text: 'text-amber-600', bg: 'bg-amber-500', border: 'border-amber-200' },
+                concepts: [
+                    { text: "面積是圖形平面的大小。", highlight: "平面的大小" },
+                    { text: "正方形面積 = 邊長 × 邊長", highlight: "邊長 × 邊長" },
+                    { text: "長方形面積 = 長 × 寬", highlight: "長 × 寬" }
+                ],
+                svg: <AreaSVG />,
+                questions: [
+                    { q: "正方形邊長 7 公分，面積是多少平方公分？", options: ["49", "28", "14"], ans: "49" },
+                    { q: "長方形的長 9 公分，寬 4 公分，面積是多少平方公分？", options: ["36", "26", "13"], ans: "36" },
+                    { q: "面積 64 平方公分的正方形，邊長是多少公分？", options: ["8", "16", "32"], ans: "8" },
+                    { q: "一個長方形面積 50 平方公分，寬是 5 公分，長是多少？", options: ["10", "45", "250"], ans: "10" },
+                    { q: "正方形客廳，邊長 10 公尺，面積是多少平方公尺？", options: ["100", "40", "20"], ans: "100" },
+                    { q: "長方形卡紙的長 12 公分、寬 8 公分，面積是多少平方公分？", options: ["96", "40", "20"], ans: "96" }
+                ]
+            },
+            unit3: {
+                id: 'unit3', title: '7-3 複合圖形',
+                theme: { light: 'bg-purple-100', text: 'text-purple-600', bg: 'bg-purple-500', border: 'border-purple-200' },
+                concepts: [
+                    { text: "複雜的圖形可以「切割」成簡單的長方形或正方形來算面積。", highlight: "切割" },
+                    { text: "算周長時，可以把圖形的邊「平移」成大長方形來算。", highlight: "平移" }
+                ],
+                svg: <CompositeSVG />,
+                questions: [
+                    { q: "把一個長方形剪成兩半，它的「總面積」會改變嗎？", options: ["不會改變", "會變大", "會變小"], ans: "不會改變" },
+                    { q: "兩個邊長 5 公分的正方形拼在一起，新圖形的面積是多少平方公分？", options: ["50", "25", "40"], ans: "50" },
+                    { q: "承上題，拼在一起後，新圖形的「周長」是多少公分？", options: ["30", "40", "50"], ans: "30" },
+                    { q: "遇到 L 型的圖形，可以用什麼方法來計算面積？", options: ["切成兩個長方形", "只能放棄", "隨便猜"], ans: "切成兩個長方形" },
+                    { q: "大長方形面積 100 平方公分，挖掉面積 20 平方公分的小角，剩下多少面積？", options: ["80", "120", "100"], ans: "80" },
+                    { q: "圖形的邊如果往外「平移」，可以幫助我們更容易算出什麼？", options: ["周長", "面積", "重量"], ans: "周長" }
+                ]
+            }
+        };
+
+        const QUIZ_QUESTIONS = [
+            { q: "「周長」是指圖形的什麼？", options: ["外圍一圈的長度", "平面的大小", "圖形的重量"], ansText: "外圍一圈的長度" },
+            { q: "長方形的周長公式是哪一個？", options: ["(長+寬)×2", "長×寬", "邊長×4"], ansText: "(長+寬)×2" },
+            { q: "「面積」是指圖形的什麼？", options: ["平面的大小", "外圍一圈的長度", "圖形的高度"], ansText: "平面的大小" },
+            { q: "正方形的面積公式是哪一個？", options: ["邊長×邊長", "邊長×4", "長×寬"], ansText: "邊長×邊長" },
+            { q: "邊長 9 公分的正方形，它的面積是多少？", options: ["81 平方公分", "36 平方公分", "18 平方公分"], ansText: "81 平方公分" },
+            { q: "長方形的長 6 公分，寬 4 公分，它的周長是多少？", options: ["20 公分", "24 公分", "10 公分"], ansText: "20 公分" },
+            { q: "有兩個邊長 3 公分的正方形拼在一起，面積是多少？", options: ["18 平方公分", "9 平方公分", "36 平方公分"], ansText: "18 平方公分" },
+            { q: "面積 100 平方公分的正方形，它的邊長是多少？", options: ["10 公分", "25 公分", "50 公分"], ansText: "10 公分" },
+            { q: "大長方形面積 64 平方公分，剪掉一個 14 平方公分的小角，剩下多少面積？", options: ["50 平方公分", "78 平方公分", "64 平方公分"], ansText: "50 平方公分" },
+            { q: "把複雜圖形的邊界「平移」成一個大長方形，主要是為了算出什麼？", options: ["周長", "面積", "體積"], ansText: "周長" },
+        ];
+
+        // --- Sub-components ---
+        const VideoTab = ({ onNext }) => (
+            <div className="space-y-6 animate-in fade-in">
+                <div className="bg-emerald-100 p-4 rounded-2xl border border-emerald-200 text-emerald-800 flex justify-between items-center shadow-sm">
+                    <div>
+                        <h2 className="font-bold text-xl mb-1 flex items-center"><Play className="mr-2" size={20}/> 備課一點通</h2>
+                        <p className="text-sm opacity-90">四下 CH7 周長與面積 - 石玫芳老師</p>
+                    </div>
+                </div>
+                {/* 老師可替換此處 iframe src 成為您的 Youtube 連結 */}
+                <div className="aspect-video w-full bg-slate-900 rounded-2xl overflow-hidden shadow-lg border-4 border-emerald-100 relative">
+                    <iframe src="https://www.youtube.com/embed/videoseries?list=PLB9D33A894EB8F32C" title="周長與面積教學影片" style={{position:'absolute', top:0, left:0, width:'100%', height:'100%'}} frameBorder="0" allowFullScreen></iframe>
+                </div>
+                <div className="text-slate-600 text-[15px] p-4 bg-white rounded-xl shadow-sm border border-slate-100 font-medium text-center">
+                    💡 觀看影片後，請點擊下方的「各單元」按鈕開始學習與測驗喔！
+                </div>
+            </div>
+        );
+
+        const UnitPractice = ({ questions, setScore, onFinish, theme }) => {
+            const [qIndex, setQIndex] = useState(0);
+            const [feedback, setFeedback] = useState(null);
+            const [options, setOptions] = useState([]);
+
+            useEffect(() => {
+                if(qIndex < questions.length) {
+                    setFeedback(null);
+                    setOptions([...questions[qIndex].options].sort(() => Math.random() - 0.5));
+                }
+            }, [qIndex, questions]);
+
+            const handleAnswer = (opt) => {
+                if(feedback) return;
+                if(opt === questions[qIndex].ans) {
+                    setFeedback('correct');
+                    setScore(s => s + 10);
+                    setTimeout(() => setQIndex(i => i + 1), 1000);
+                } else {
+                    setFeedback('incorrect');
+                    setTimeout(() => setFeedback(null), 1200);
+                }
+            }
+
+            if (qIndex >= questions.length) {
+                return (
+                    <div className="text-center py-10 animate-in zoom-in">
+                        <div className={`inline-flex p-5 ${theme.light} rounded-full mb-6 ring-8 ring-white shadow-sm`}><CheckCircle className={`${theme.text} w-16 h-16`} /></div>
+                        <h2 className="text-3xl font-bold mb-3 text-slate-800">太棒了！過關！</h2>
+                        <p className="text-slate-500 mb-8 font-medium">你已經完全掌握這個單元囉！</p>
+                        <button onClick={onFinish} className={`w-full ${theme.bg} text-white py-4 rounded-xl font-bold text-lg active:scale-95 transition-all shadow-md`}>回到教學重點</button>
+                    </div>
+                )
+            }
+
+            return (
+                <div className="space-y-6 animate-in slide-in-from-right">
+                    <div className="flex justify-between items-center text-sm font-bold text-slate-400 mb-2 border-b border-slate-100 pb-3">
+                        <span className={`${theme.light} ${theme.text} px-3 py-1 rounded-full`}>練習 {qIndex + 1} / {questions.length}</span>
+                        <div className="flex space-x-1.5">
+                            {[...Array(questions.length)].map((_, i) => (
+                                <div key={i} className={`w-2 h-2 rounded-full ${i < qIndex ? theme.bg : 'bg-slate-200'}`}></div>
+                            ))}
+                        </div>
+                    </div>
+                    <h3 className="text-xl font-bold leading-relaxed text-slate-800">{questions[qIndex].q}</h3>
+                    
+                    <div className="space-y-3 pt-2">
+                        {options.map((opt, i) => (
+                            <button key={i} onClick={() => handleAnswer(opt)} disabled={!!feedback}
+                                className={`w-full p-4 rounded-xl text-lg font-bold border-2 text-left transition-all active:scale-95 flex items-center
+                                ${feedback === 'correct' && opt === questions[qIndex].ans ? 'bg-green-100 border-green-500 text-green-700' :
+                                  feedback === 'incorrect' && opt === questions[qIndex].ans ? 'bg-green-50 border-green-300 text-green-600 opacity-70' : 
+                                  `bg-white border-slate-200 hover:${theme.border} text-slate-700`}`}>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 text-sm ${feedback === 'correct' && opt === questions[qIndex].ans ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{String.fromCharCode(65+i)}</div>
+                                {opt}
+                                {feedback === 'correct' && opt === questions[qIndex].ans && <CheckCircle className="ml-auto text-green-600" />}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="h-6 flex justify-center font-bold items-center mt-2">
+                         {feedback === 'incorrect' && <span className="text-red-500 animate-pulse bg-red-50 px-4 py-1 rounded-full">答錯囉，再仔細想想！</span>}
+                    </div>
+                </div>
+            )
+        }
+
+        const UnitTab = ({ data, score, setScore }) => {
+            const [mode, setMode] = useState('learn');
+            useEffect(() => { setMode('learn'); }, [data.id]);
+
+            if (mode === 'practice') {
+                return <UnitPractice questions={data.questions} setScore={setScore} onFinish={() => setMode('learn')} theme={data.theme} />
+            }
+
+            return (
+                <div className="space-y-6 animate-in fade-in">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                        <h2 className="text-2xl font-bold text-slate-800 flex items-center">
+                            <span className={`${data.theme.light} ${data.theme.text} p-2 rounded-xl mr-3`}>{data.icon}</span>
+                            {data.title}
+                        </h2>
+                    </div>
+                    
+                    {data.svg}
+
+                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm mt-4 space-y-4">
+                        <h3 className="font-bold text-slate-700 mb-2 border-l-4 border-emerald-400 pl-2">學習重點</h3>
+                        <ul className="space-y-3">
+                            {data.concepts.map((c, i) => (
+                                <li key={i} className="text-slate-600 flex items-start">
+                                    <span className={`${data.theme.text} mr-2 mt-0.5`}>•</span>
+                                    <span>
+                                        {c.text.split(c.highlight).map((part, idx, arr) => 
+                                            <React.Fragment key={idx}>
+                                                {part}
+                                                {idx < arr.length - 1 && <strong className={`${data.theme.text} bg-slate-50 px-1 rounded`}>{c.highlight}</strong>}
+                                            </React.Fragment>
+                                        )}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    <button onClick={() => setMode('practice')} className={`w-full ${data.theme.bg} hover:opacity-90 text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center shadow-lg active:scale-95 transition-all mt-6`}>
+                        我學會了，馬上練習！ <ArrowRight className="ml-2" />
+                    </button>
+                </div>
+            )
+        };
+
+        const QuizTab = ({ score, setScore, onRestart }) => {
+            const [idx, setIdx] = useState(0);
+            const [finished, setFinished] = useState(false);
+            const [feedback, setFeedback] = useState(null);
+            
+            const [questions] = useState(() => {
+                return [...QUIZ_QUESTIONS].sort(() => Math.random() - 0.5).map(q => {
+                    const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
+                    return { ...q, options: shuffledOptions, ans: shuffledOptions.indexOf(q.ansText) };
+                });
+            });
+
+            const handleAnswer = (optIdx) => {
+                if (feedback) return;
+                if (optIdx === questions[idx].ans) {
+                    setFeedback('correct');
+                    setScore(s => s + 20);
+                } else {
+                    setFeedback('incorrect');
+                }
+                setTimeout(() => {
+                    if (idx + 1 < questions.length) {
+                        setIdx(i => i + 1);
+                        setFeedback(null);
+                    } else {
+                        setFinished(true);
+                    }
+                }, 1200);
+            };
+
+            if (finished) return (
+                <div className="text-center py-10 space-y-6 animate-in zoom-in">
+                    <div className="inline-block p-6 bg-yellow-100 rounded-full mb-4 shadow-sm"><Trophy size={80} className="text-yellow-500" /></div>
+                    <h2 className="text-4xl font-bold text-slate-800">總測驗完成！</h2>
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mx-4">
+                        <p className="text-sm text-slate-400 uppercase tracking-widest mb-2 font-bold">目前總得分</p>
+                        <p className="text-6xl font-black text-emerald-500 mb-4">{score}</p>
+                        <p className="text-lg text-slate-600 font-medium">你是最棒的數學小達人！</p>
+                    </div>
+                    <button onClick={onRestart} className="w-full bg-slate-800 text-white py-4 rounded-xl font-bold flex items-center justify-center shadow-lg active:scale-95 transition-all"><RotateCcw className="mr-2" size={20} /> 再挑戰一次</button>
+                </div>
+            );
+
+            return (
+                <div className="py-2 animate-in fade-in">
+                    <div className="mb-6 flex justify-between items-center text-sm font-bold text-slate-400 border-b border-slate-100 pb-4">
+                        <span className="bg-slate-100 px-4 py-1.5 rounded-full text-slate-600 flex items-center"><Trophy size={16} className="mr-1 text-yellow-500"/> 第 {idx + 1} / {questions.length} 題</span>
+                    </div>
+                    <h3 className="text-2xl font-bold text-slate-800 mb-6 leading-relaxed">{questions[idx].q}</h3>
+                    <div className="space-y-4">
+                        {questions[idx].options.map((opt, i) => (
+                            <button key={i} onClick={() => handleAnswer(i)} disabled={!!feedback}
+                             className={`w-full text-left p-5 rounded-2xl text-lg font-bold border-2 transition-all active:scale-95 shadow-sm
+                             ${feedback === 'correct' && i === questions[idx].ans ? 'bg-green-100 border-green-500 text-green-800' : 
+                               feedback === 'incorrect' && i !== questions[idx].ans && feedback ? 'bg-slate-50 border-slate-200 text-slate-400 opacity-50' : 
+                               'bg-white border-slate-200 hover:border-emerald-400 text-slate-700'}`}>
+                                <div className="flex items-center">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 text-sm font-bold ${feedback === 'correct' && i === questions[idx].ans ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{String.fromCharCode(65+i)}</div>
+                                    {opt}
+                                    {feedback === 'correct' && i === questions[idx].ans && <CheckCircle className="ml-auto text-green-600" size={28}/>}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                    <div className="h-8 mt-4 flex items-center justify-center">
+                        {feedback === 'incorrect' && <div className="text-center font-bold text-lg text-red-500 bg-red-50 px-6 py-2 rounded-full animate-bounce">答錯囉，沒關係下一題繼續加油！</div>}
+                    </div>
+                </div>
+            );
+        };
+
+        const WorksheetTab = () => {
+            const generateDoc = () => {
+                const htmlContent = `
+                    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                    <head>
+                        <meta charset="utf-8">
+                        <title>周長與面積 學習單</title>
+                        <style>
+                            body { font-family: "標楷體", "DFKai-sb", serif; font-size: 14pt; line-height: 1.8; color: #000; }
+                            h1 { text-align: center; font-size: 22pt; margin-bottom: 5px; font-weight: bold; }
+                            .header { margin-bottom: 20px; font-size: 14pt; border-bottom: 2px solid #000; padding-bottom: 10px; text-align: right; }
+                            .question { margin-bottom: 80px; font-size: 14pt; }
+                            .ans-question { margin-bottom: 40px; font-size: 14pt; }
+                            .vertical-math { font-family: "Courier New", Courier, monospace; font-size: 16pt; line-height: 1.2; letter-spacing: 2px; margin-left: 20px; margin-top: 15px; }
+                            .page-break { page-break-before: always; }
+                            .answer-text { font-weight: bold; color: red; margin-top: 15px; }
+                        </style>
+                    </head>
+                    <body>
+                        <!-- 第 1 頁：題目卷 -->
+                        <h1>第 7 單元：周長與面積 學習單</h1>
+                        <div class="header">班級：______ 座號：___ 姓名：____________</div>
+                        
+                        <div class="question">1. 一個正方形的邊長是 15 公分，請問它的「周長」是多少公分？<br><br><br></div>
+                        <div class="question">2. 一個長方形的長是 24 公分，寬是 12 公分，請問它的「面積」是多少平方公分？<br><br><br></div>
+                        <div class="question">3. 有一個大長方形面積是 250 平方公分，從裡面剪掉一個面積 50 平方公分的小正方形，剩下的圖形面積是多少平方公分？<br><br><br></div>
+                        <div class="question">4. 邊長 30 公尺的正方形花圃，周長是多少公尺？面積是多少平方公尺？<br><br><br></div>
+                        <div class="question">5. 長方形的長是寬的 2 倍，已知寬是 8 公分，請問長方形的面積是多少平方公分？<br><br><br></div>
+
+                        <!-- 換頁符號 -->
+                        <br clear="all" class="page-break" />
+                        <div style="page-break-before: always;"></div>
+
+                        <!-- 第 2 頁：解答卷 (包含直式) -->
+                        <h1>第 7 單元：周長與面積 學習單 (解答)</h1>
+                        <div class="header">※ 附詳細直式計算過程</div>
+                        
+                        <div class="ans-question">
+                            1. 一個正方形的邊長是 15 公分，請問它的「周長」是多少公分？
+                            <div class="vertical-math">
+                            &nbsp;&nbsp;15<br>
+                            x&nbsp;&nbsp;4<br>
+                            ----<br>
+                            &nbsp;&nbsp;60
+                            </div>
+                            <div class="answer-text">答：60 公分</div>
+                        </div>
+
+                        <div class="ans-question">
+                            2. 一個長方形的長是 24 公分，寬是 12 公分，請問它的「面積」是多少平方公分？
+                            <div class="vertical-math">
+                            &nbsp;&nbsp;24<br>
+                            x&nbsp;12<br>
+                            ----<br>
+                            &nbsp;&nbsp;48<br>
+                            &nbsp;24&nbsp;<br>
+                            ----<br>
+                            &nbsp;288
+                            </div>
+                            <div class="answer-text">答：288 平方公分</div>
+                        </div>
+
+                        <div class="ans-question">
+                            3. 有一個大長方形面積是 250 平方公分，從裡面剪掉一個面積 50 平方公分的小正方形，剩下的圖形面積是多少平方公分？
+                            <div class="vertical-math">
+                            &nbsp;250<br>
+                            -&nbsp;50<br>
+                            ----<br>
+                            &nbsp;200
+                            </div>
+                            <div class="answer-text">答：200 平方公分</div>
+                        </div>
+                        
+                        <div class="ans-question">
+                            4. 邊長 30 公尺的正方形花圃，周長是多少公尺？面積是多少平方公尺？
+                            <div class="vertical-math">
+                            [周長計算]<br>
+                            &nbsp;&nbsp;30<br>
+                            x&nbsp;&nbsp;4<br>
+                            ----<br>
+                            &nbsp;120<br><br>
+                            [面積計算]<br>
+                            &nbsp;&nbsp;30<br>
+                            x&nbsp;30<br>
+                            ----<br>
+                            &nbsp;900
+                            </div>
+                            <div class="answer-text">答：周長 120 公尺，面積 900 平方公尺</div>
+                        </div>
+
+                        <div class="ans-question">
+                            5. 長方形的長是寬的 2 倍，已知寬是 8 公分，請問長方形的面積是多少平方公分？
+                            <div class="vertical-math">
+                            [先算長度]<br>
+                            &nbsp;&nbsp;8 x 2 = 16<br><br>
+                            [再算面積]<br>
+                            &nbsp;&nbsp;16<br>
+                            x&nbsp;&nbsp;8<br>
+                            ----<br>
+                            &nbsp;128
+                            </div>
+                            <div class="answer-text">答：128 平方公分</div>
+                        </div>
+                    </body>
+                    </html>
+                `;
+                const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = '四下數學_周長與面積學習單.doc';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            };
+
+            return (
+                <div className="text-center space-y-6 animate-in fade-in py-4">
+                    <h2 className="text-2xl font-bold text-slate-800">列印學習單</h2>
+                    <div className="bg-slate-50 p-8 rounded-3xl border-2 border-dashed border-slate-300 mx-2">
+                        <FileText size={64} className="mx-auto text-emerald-400 mb-6 drop-shadow-sm" />
+                        <h3 className="text-lg font-bold text-slate-700 mb-2">提供給老師與小朋友的課後練習！</h3>
+                        <p className="text-sm text-slate-500 mb-8 leading-relaxed">點擊下方按鈕，系統將自動產生一份 Word 學習單檔案。內含<strong className="text-emerald-600">學卷</strong>與<strong className="text-emerald-600">附有直式計算的解答卷</strong>，方便列印使用。</p>
+                        <button onClick={generateDoc} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center shadow-lg shadow-emerald-500/30 active:scale-95 transition-all">
+                            <Download className="mr-2" size={24} /> 下載 Word 學習單
+                        </button>
+                    </div>
+                </div>
+            )
+        };
+
+        // --- Main App Component ---
+        const MathGame = () => {
+          const [currentTab, setCurrentTab] = useState('video');
+          const [score, setScore] = useState(0);
+          const [animateScore, setAnimateScore] = useState(false);
+
+          useEffect(() => {
+            if (score > 0) {
+              setAnimateScore(true);
+              const timer = setTimeout(() => setAnimateScore(false), 300);
+              return () => clearTimeout(timer);
+            }
+          }, [score]);
+
+          const renderTabContent = () => {
+            switch (currentTab) {
+              case 'video': return <VideoTab />;
+              case 'unit1': return <UnitTab data={UNIT_DATA.unit1} score={score} setScore={setScore} />;
+              case 'unit2': return <UnitTab data={UNIT_DATA.unit2} score={score} setScore={setScore} />;
+              case 'unit3': return <UnitTab data={UNIT_DATA.unit3} score={score} setScore={setScore} />;
+              case 'quiz': return <QuizMode />; // Wrap quiz to handle reset safely
+              case 'worksheet': return <WorksheetTab />;
+              default: return <VideoTab />;
+            }
+          };
+
+          const QuizMode = () => <QuizTab score={score} setScore={setScore} onRestart={() => setCurrentTab('video')} />;
+
+          return (
+            <div className="h-screen flex flex-col bg-emerald-50 font-sans text-slate-800 overflow-hidden select-none">
+              <header className="bg-white shadow-sm p-3 z-10 flex-none border-b border-emerald-100">
+                <div className="max-w-2xl mx-auto flex justify-between items-center">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-emerald-500 p-2 rounded-xl text-white shadow-sm"><MathIcon size={20} /></div>
+                    <h1 className="text-lg font-bold text-emerald-700 tracking-wide">周長與面積</h1>
+                  </div>
+                  <div className={`flex items-center bg-yellow-100 px-3 py-1.5 rounded-full border border-yellow-300 transition-transform duration-200 ${animateScore ? 'scale-110 ring-4 ring-yellow-200' : ''}`}>
+                    <Trophy className={`text-yellow-600 mr-1.5 ${animateScore ? 'animate-spin' : ''}`} size={16} />
+                    <span className="font-bold text-yellow-700">{score} 分</span>
+                  </div>
+                </div>
+              </header>
+
+              <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-24 scroll-smooth">
+                <div className="max-w-2xl mx-auto bg-white/90 backdrop-blur-sm rounded-3xl shadow-lg border border-white/50 p-5 min-h-[400px]">
+                  {renderTabContent()}
+                </div>
+              </main>
+
+              <nav className="bg-white border-t border-slate-200 pb-safe pt-2 px-1 fixed bottom-0 w-full z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.03)] overflow-x-auto hide-scrollbar snap-x">
+                <div className="flex justify-between w-full min-w-[380px] max-w-2xl mx-auto px-2 pb-2">
+                  <NavButton active={currentTab === 'video'} onClick={() => setCurrentTab('video')} icon={<Play size={22} />} label="影片" />
+                  <NavButton active={currentTab === 'unit1'} onClick={() => setCurrentTab('unit1')} icon={<Square size={22} />} label="7-1周長" />
+                  <NavButton active={currentTab === 'unit2'} onClick={() => setCurrentTab('unit2')} icon={<Grid size={22} />} label="7-2面積" />
+                  <NavButton active={currentTab === 'unit3'} onClick={() => setCurrentTab('unit3')} icon={<Shapes size={22} />} label="7-3複合" />
+                  <NavButton active={currentTab === 'quiz'} onClick={() => setCurrentTab('quiz')} icon={<CheckCircle size={22} />} label="總測驗" />
+                  <NavButton active={currentTab === 'worksheet'} onClick={() => setCurrentTab('worksheet')} icon={<FileText size={22} />} label="學習單" />
+                </div>
+              </nav>
+            </div>
+          );
+        };
+
+        const NavButton = ({ active, onClick, icon, label }) => (
+          <button onClick={onClick} className={`flex flex-col items-center justify-center w-[60px] py-2 px-1 transition-all duration-300 rounded-xl active:scale-90 snap-center touch-manipulation ${active ? 'text-emerald-600 -translate-y-2' : 'text-slate-400 hover:text-slate-600'}`}>
+            <div className={`p-2 rounded-full transition-all duration-300 ${active ? 'bg-emerald-100 shadow-sm' : ''}`}>{icon}</div>
+            <span className={`text-[11px] font-bold mt-1 ${active ? 'opacity-100' : 'opacity-70'}`}>{label}</span>
+            {active && <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1"></div>}
+          </button>
+        );
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<MathGame />);
+    </script>
+</body>
+</html>
