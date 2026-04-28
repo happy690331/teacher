@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>國語六下一到九課語詞解釋格鬥遊戲</title>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --success: #2ecc71;
+            --dark: #2c3e50;
+            --bg: #1a1a1a;
+        }
+        * { box-sizing: border-box; font-family: '微軟正黑體', 'Courier New', Courier, monospace; user-select: none; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: var(--bg); overflow: hidden; touch-action: none; }
+        
+        /* 容器與畫面切換 */
+        #app { width: 100%; height: 100%; position: relative; }
+        .screen { width: 100%; height: 100%; position: absolute; top: 0; left: 0; display: none; flex-direction: column; }
+        .screen.active { display: flex; }
+
+        /* === 主選單畫面 === */
+        #menu-screen { background: linear-gradient(135deg, #1e3c72, #2a5298); color: white; align-items: center; justify-content: center; overflow-y: auto; padding: 20px;}
+        .menu-box { background: rgba(0,0,0,0.7); padding: 30px; border-radius: 15px; border: 2px solid var(--primary); max-width: 95%; width: 550px; box-shadow: 0 0 20px rgba(0,0,0,0.5); margin: auto; }
+        h1 { text-align: center; color: #f1c40f; text-shadow: 2px 2px #000; font-size: 26px; margin-top: 0; }
+        .topic-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
+        .topic-item { display: flex; align-items: center; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .topic-item:hover { background: rgba(255,255,255,0.2); }
+        .topic-item input { transform: scale(1.5); margin-right: 12px; cursor: pointer; }
+        .topic-item label { font-size: 16px; cursor: pointer; flex: 1; font-weight: bold; }
+        
+        /* 頭像上傳區塊 */
+        .photo-upload-container { display: flex; align-items: center; justify-content: center; gap: 15px; margin: 15px 0; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px;}
+        .btn-upload { cursor: pointer; background: var(--warning); padding: 10px 15px; border-radius: 8px; font-weight: bold; color: white; transition: 0.2s; }
+        .btn-upload:hover { background: #d68910; }
+        .photo-preview { width: 60px; height: 60px; border-radius: 50%; border: 3px solid #fff; overflow: hidden; display: flex; justify-content: center; align-items: center; background: #333; }
+        .photo-preview img { width: 100%; height: 100%; object-fit: cover; display: none; }
+
+        .btn-start { width: 100%; padding: 15px; font-size: 20px; font-weight: bold; background: var(--success); color: white; border: none; border-radius: 8px; cursor: pointer; text-shadow: 1px 1px #000; transition: 0.2s; margin-top: 10px;}
+        .btn-start:hover { background: #27ae60; transform: scale(1.02); }
+        .btn-start:active { transform: scale(0.98); }
+
+        /* === 遊戲畫面 === */
+        #game-screen { background-color: #000; }
+        #game-canvas { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* 遊戲內 UI */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .top-bar { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; align-items: flex-start; }
+        
+        .status-box { background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px; border: 2px solid white; color: white; pointer-events: auto; }
+        .hp-bar-bg { width: 150px; height: 15px; background: #555; border: 2px solid #fff; margin-bottom: 5px; }
+        .hp-bar-fill { height: 100%; background: var(--success); width: 100%; transition: width 0.2s; }
+        .stats-text { font-size: 14px; font-weight: bold; margin: 2px 0; }
+        
+        .top-bar-right { display: flex; gap: 10px; pointer-events: auto; }
+        .btn-return { background: var(--danger); color: white; border: 2px solid white; padding: 10px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; text-shadow: 1px 1px #000; font-size: 14px; }
+        .btn-return:active { background: #c0392b; }
+        .btn-warning { background: var(--warning); color: white; border: 2px solid white; padding: 10px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; text-shadow: 1px 1px #000; font-size: 14px; }
+        .btn-warning:active { background: #d68910; }
+
+        /* 虛擬控制器 (手機/平板) */
+        .controls { position: absolute; bottom: 20px; left: 0; width: 100%; height: 150px; pointer-events: none; display: flex; justify-content: space-between; padding: 0 30px; align-items: center; }
+        
+        #joystick-zone { width: 120px; height: 120px; background: rgba(255,255,255,0.2); border-radius: 50%; border: 3px solid rgba(255,255,255,0.5); position: relative; pointer-events: auto; touch-action: none; display: flex; justify-content: center; align-items: center; }
+        #joystick-knob { width: 50px; height: 50px; background: rgba(255,255,255,0.8); border-radius: 50%; position: absolute; box-shadow: 0 0 10px rgba(0,0,0,0.5); pointer-events: none; transition: transform 0.05s ease-out; }
+        
+        #btn-attack { width: 90px; height: 90px; background: rgba(231, 76, 60, 0.6); border: 3px solid rgba(255,255,255,0.5); border-radius: 50%; color: white; font-weight: bold; font-size: 20px; pointer-events: auto; touch-action: none; display: flex; justify-content: center; align-items: center; user-select: none; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+        #btn-attack:active { background: rgba(231, 76, 60, 0.9); transform: scale(0.95); }
+
+        /* === 語詞答題彈窗 === */
+        #math-modal-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 100; pointer-events: auto; }
+        #math-modal-container.active { display: flex; }
+        .math-modal { background: #fff; padding: 25px; border-radius: 12px; border: 4px solid var(--primary); text-align: center; max-width: 95%; width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 0 0 30px rgba(0,100,255,0.5); }
+        .math-title { color: var(--dark); font-size: 20px; font-weight: bold; margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid #ccc; padding-bottom: 10px;}
+        .math-question { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 25px; line-height: 1.6; text-align: justify; padding: 0 10px;}
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .math-option { background: var(--primary); color: white; border: none; padding: 15px 5px; font-size: 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; letter-spacing: 2px;}
+        .math-option:hover { background: #357abd; }
+        .math-option:active { transform: scale(0.95); }
+        .math-feedback { position: absolute; top: 20%; left: 50%; transform: translateX(-50%); font-size: 40px; font-weight: bold; text-shadow: 2px 2px 0 #000; opacity: 0; pointer-events: none; transition: opacity 0.3s, top 0.3s; z-index: 200; white-space: nowrap;}
+        
+        #pause-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 50; color: white; font-size: 40px; font-weight: bold; text-shadow: 2px 2px 0 #000; letter-spacing: 5px; pointer-events: none;}
+
+        /* === 遊戲過關/結束結算彈窗 === */
+        #result-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 300; pointer-events: auto; }
+        #result-overlay.active { display: flex; }
+        .result-box { background: var(--dark); padding: 40px; border-radius: 15px; border: 4px solid #f1c40f; text-align: center; box-shadow: 0 0 30px rgba(0,0,0,0.8); }
+        .result-box h1 { font-size: 48px; margin-bottom: 20px; }
+        .result-box p { font-size: 32px; font-weight: bold; color: white; margin-bottom: 30px; }
+
+        @media (min-width: 768px) {
+            .controls { display: none; }
+            .top-bar { padding: 20px; }
+        }
+        @media (max-width: 600px) {
+            .topic-list { grid-template-columns: 1fr; }
+            .top-bar { flex-direction: column; gap: 10px;}
+            .top-bar-right { align-self: flex-end; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <!-- === 第一頁：主選單與單元選擇 === -->
+    <div id="menu-screen" class="screen active">
+        <div class="menu-box">
+            <h1>🥊 國語六下語詞解釋格鬥 🥊</h1>
+            <p style="text-align: center; margin-bottom: 5px;">請選擇要挑戰的課數 (可複選)</p>
+            <p style="text-align: center; font-size: 14px; color: #ccc; margin-top: 0;">電腦版: 方向鍵或WASD移動, 滑鼠點擊畫面攻擊<br>手機版: 左虛擬搖桿移動, 右鍵或點擊畫面攻擊</p>
+            
+            <div class="photo-upload-container">
+                <label class="btn-upload">
+                    📷 上傳大頭照 (角色用)
+                    <input type="file" id="upload-photo" accept="image/*" style="display: none;">
+                </label>
+                <div class="photo-preview">
+                    <img id="preview-photo" alt="預覽">
+                </div>
+            </div>
+
+            <div class="topic-list">
+                <label class="topic-item"><input type="checkbox" value="L1" checked> <span>第一課　馬達加斯加，出發！</span></label>
+                <label class="topic-item"><input type="checkbox" value="L2" checked> <span>第二課　沉睡的天空之城</span></label>
+                <label class="topic-item"><input type="checkbox" value="L3"> <span>第三課　走進太陽之城</span></label>
+                <label class="topic-item"><input type="checkbox" value="L4"> <span>第四課　送友人</span></label>
+                <label class="topic-item"><input type="checkbox" value="L5"> <span>第五課　蚵鄉風情</span></label>
+                <label class="topic-item"><input type="checkbox" value="L6"> <span>第六課　童年˙夏日˙棉花糖</span></label>
+                <label class="topic-item"><input type="checkbox" value="L7"> <span>第七課　我的少年夢</span></label>
+                <label class="topic-item"><input type="checkbox" value="L8"> <span>第八課　如何張開追夢的翅膀</span></label>
+                <label class="topic-item"><input type="checkbox" value="L9"> <span>第九課　成為人生的開拓者</span></label>
+            </div>
+            
+            <button class="btn-start" onclick="startGame()">開始戰鬥</button>
+        </div>
+    </div>
+
+    <!-- === 第二頁：遊戲畫面 === -->
+    <div id="game-screen" class="screen">
+        <canvas id="game-canvas"></canvas>
+        
+        <div id="ui-layer">
+            <div class="top-bar">
+                <div class="status-box">
+                    <div class="stats-text">Player HP</div>
+                    <div class="hp-bar-bg"><div id="ui-hp-fill" class="hp-bar-fill"></div></div>
+                    <div id="ui-score" class="stats-text" style="color: #f1c40f;">分數: 0</div>
+                    <div id="ui-level" class="stats-text">關卡: 1</div>
+                    <div id="ui-kills" class="stats-text">擊倒敵人: 0 / 20</div>
+                    <div id="ui-boss-warning" class="stats-text" style="color: #f1c40f; display: none;">⚠️ 擊敗所有敵人！ ⚠️</div>
+                </div>
+                <div class="top-bar-right">
+                    <button class="btn-warning" id="btn-pause" onclick="togglePause()">暫停</button>
+                    <button class="btn-return" onclick="returnToMenu()">重新選擇語詞課數</button>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <div id="joystick-zone">
+                    <div id="joystick-knob"></div>
+                </div>
+                <div id="btn-attack">攻擊</div>
+            </div>
+        </div>
+
+        <div id="pause-overlay">遊戲暫停</div>
+
+        <!-- 語詞答題彈窗 -->
+        <div id="math-modal-container">
+            <div class="math-modal">
+                <div class="math-title">破壞木箱！語詞挑戰</div>
+                <div style="color: #666; font-size: 14px; margin-bottom: 10px;">請根據下方解釋，選出正確的語詞：</div>
+                <div id="math-question" class="math-question">...</div>
+                <div class="options-grid" id="math-options">
+                    <!-- 動態生成按鈕 -->
+                </div>
+            </div>
+        </div>
+        
+        <div id="math-feedback" class="math-feedback">正確！HP +1</div>
+
+        <!-- 過關與結算畫面 -->
+        <div id="result-overlay">
+            <div class="result-box">
+                <h1 id="result-title">🌟 過關！🌟</h1>
+                <p id="result-score">總分: 0</p>
+                <button class="btn-start" style="width: 200px;" onclick="returnToMenu()">回到主選單</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/** ==========================================
+ * 語詞題庫資料庫 (已去除編號與例句)
+ * ========================================== */
+const VOCAB_DATA = {
+    "L1": [ { word: "島嶼", desc: "四周被水圍繞的小面積陸地。" }, { word: "獨立", desc: "⑴不倚靠他人而能自立。⑵獨自站立。⑶指國家有完全自主權，不受外來力量干涉。" }, { word: "心馳神往", desc: "心神專注、嚮往於事物上。" }, { word: "輾轉", desc: "⑴間接的。⑵翻來覆去。" }, { word: "櫛比鱗次", desc: "比喻緊密的連接排列。" }, { word: "錢幣", desc: "錢。多指金屬貨幣。" }, { word: "村莊", desc: "鄉民聚集居住的地方。" }, { word: "瀕危", desc: "接近危險的境地。多指人病危將死，或物種即將滅絕。" }, { word: "撒旦", desc: "基督教稱魔鬼為「撒旦」，原指反抗上帝而誘人犯罪的惡魔，他是善的仇敵，是上帝和人類的敵對者。" }, { word: "掠食者", desc: "捕食他種生物而藉以生存的動物。" }, { word: "覓食", desc: "尋找食物。" }, { word: "紳士", desc: "舊時多指地主或退職的官員。現泛指地方上有聲望的人或是舉止斯文有禮的人。" }, { word: "迷濛", desc: "形容景物朦朧不清。" }, { word: "高亢", desc: "態度高傲亢直或聲調、情緒高昂激動。" }, { word: "凌駕", desc: "超越、勝過。" }, { word: "岌岌可危", desc: "形容非常危險。" } ],
+    "L2": [ { word: "遺址", desc: "古代人類活動的地方。由此挖掘出來的古物和化石可供考古學家研究人類發展的歷史。" }, { word: "屏息", desc: "抑止呼吸，止住聲息。" }, { word: "秘魯", desc: "國名。位於南美洲西部。為西班牙語Peru的譯音。" }, { word: "璀璨", desc: "光采鮮明的樣子。" }, { word: "愜意", desc: "滿意、舒適。" }, { word: "振奮", desc: "振作奮發。" }, { word: "氛圍", desc: "周圍的氣氛和情調。" }, { word: "井然有序", desc: "條理分明而有秩序。" }, { word: "澎湃", desc: "⑴引申有聲勢浩大，氣勢壯闊之意。⑵波濤互相撞擊的聲音或氣勢。" }, { word: "堆砌", desc: "⑴將物體層疊累積。⑵在文章中使用大量華麗而與內容無關的詞藻。" }, { word: "梯田", desc: "山坡上呈階梯狀的田地。階與階之間以矮埂相隔，有利於耕作及蓄水。" }, { word: "玄妙", desc: "深奧微妙。" }, { word: "拴日石", desc: "馬丘比丘景點之一，是一塊巨大石雕。印加人相信拴日石能拴住太陽，使其依時序繞行天空。" }, { word: "興味盎然", desc: "興趣很高昂的樣子。" }, { word: "回眸", desc: "回過頭看。" } ],
+    "L3": [ { word: "佛萊堡", desc: "位於德國西南部，是一座著名的生態城市。" }, { word: "瑞士", desc: "國名，位於歐洲中部，為一永久中立國。" }, { word: "名列前茅", desc: "前茅，古代行軍打仗時，前行兵士所拿作為旗幟的茅草。名列前茅比喻名次排在前面" }, { word: "唯一", desc: "獨一無二。" }, { word: "爆發", desc: "⑴事情突然發生或被揭露。⑵情緒突然而猛烈的發作。⑶火山內部岩漿突然衝破地殼，向四方迸出。" }, { word: "供應", desc: "供給需要的錢財或物品。" }, { word: "政府", desc: "國家統治機關的總稱，為近代國家構成要素之一。凡具有制定法律及執行法律之權力的政治組織，稱為「政府」。" }, { word: "收購", desc: "收買購置。" }, { word: "騎士", desc: "騎機車的人。在本課是指騎自行車的人。" }, { word: "駕駛", desc: "⑴操控車船或飛機的人。⑵操控車船、飛機等交通工具。" }, { word: "冰箱", desc: "一種冷藏食物的電器用品。以降低溫度來製冰或保存食品，使之保鮮不敗壞。" }, { word: "嬉戲", desc: "遊戲玩耍。" }, { word: "乒乓球", desc: "⑴桌球的別名，一種球類運動。⑵乒乓球比賽所使用的球。為圓形，直徑三點八公分，重二點五公克，以賽璐珞或類似的塑料製成，呈白色或黃色，無光澤。" }, { word: "輕鬆自在", desc: "愉快適意。" }, { word: "護欄", desc: "設置於路邊、河岸等地的鐵柵或水泥柱等實物體。目的在防止超出範圍，發生危險。" } ],
+    "L4": [ { word: "蕭蕭", desc: "摹聲詞，形容馬鳴聲、風聲或落葉聲。本課是形容馬鳴聲。" }, { word: "清澈", desc: "澄淨透明。" }, { word: "辭別", desc: "辭行、告別。" }, { word: "橫臥", desc: "平躺。" }, { word: "行蹤", desc: "出現或來去的蹤跡。" }, { word: "重逢", desc: "再度相逢。" }, { word: "抒發", desc: "表達、發洩。" }, { word: "漂泊", desc: "比喻生活不固定，居無定所。" }, { word: "餘暉", desc: "夕照。" }, { word: "真摯", desc: "真實誠懇。" }, { word: "情誼", desc: "人與人之間彼此關愛的情感。" } ],
+    "L5": [ { word: "靠攏", desc: "靠近、聚攏。" }, { word: "笨拙", desc: "反應遲鈍、不靈巧。" }, { word: "疲憊", desc: "極為疲勞困倦。" }, { word: "鈔票", desc: "紙幣。" }, { word: "包裹", desc: "⑴包紮起來。⑵包紮成件的東西。⑶行李。" }, { word: "巡視", desc: "巡行視察。" }, { word: "甦醒", desc: "從昏迷中醒過來。" }, { word: "豎立", desc: "物體垂直地面立起來。" }, { word: "媒體", desc: "傳播資料訊息的工具。如電視、廣播、報章雜誌等。" }, { word: "沸騰", desc: "⑴渲染、高漲。⑵液體加熱至一定的溫度時，發生上湧汽化的現象。" }, { word: "宛如", desc: "彷彿。" } ],
+    "L6": [ { word: "扶疏", desc: "枝葉繁茂，四處伸展的樣子。" }, { word: "鳳凰木", desc: "植物名。蘇木科鳳凰木屬，落葉中喬木。夏季盛開，花瓣五片，焰紅色，雄蕊十枚，莢果扁平、木質。主供觀賞、為極佳的行道樹及庭園樹，木材亦可供為薪炭之用。" }, { word: "山巔", desc: "山的頂端。" }, { word: "戀戀不捨", desc: "十分留戀，捨不得離開。" }, { word: "綠蔭", desc: "樹蔭。" }, { word: "紡車", desc: "舊時稱有輪可轉動的紡紗器具。" }, { word: "經緯", desc: "⑴編織物品的直線與橫線。⑵指地球上通過南北兩極的經線及與赤道平行的緯線。" }, { word: "纖纖", desc: "微細。" }, { word: "裊裊", desc: "⑴縈迴繚繞、搖曳不定的樣子。⑵音調悠揚不絕。" }, { word: "袖珍", desc: "形容小型的或小巧的。" }, { word: "工廠", desc: "將原料或半成品製成成品的地方。" }, { word: "喜孜孜", desc: "歡喜的樣子。" }, { word: "猶在", desc: "還存在。" }, { word: "光陰", desc: "時間。" }, { word: "飛逝", desc: "快速消逝。" }, { word: "雀斑", desc: "皮膚表面所生的褐色細點，是因體質及日晒所引起的局部黑色素積集現象。" } ],
+    "L7": [ { word: "閣樓", desc: "建築於屋內的夾層矮樓。" }, { word: "匱乏", desc: "貧乏。" }, { word: "舊書攤", desc: "買賣過期的書報雜誌的店鋪或攤子。" }, { word: "冥冥之中", desc: "人無法預測、理解、控制的狀況。" }, { word: "帳篷", desc: "可拆卸自由搬運的組合式住宅。由支架及可折疊的皮革、布、塑膠等組合而成，除用於游牧、狩獵外，亦應用在露營登山、馬戲團等。" }, { word: "徒步", desc: "步行。" }, { word: "籌備", desc: "事先預備計畫。" }, { word: "埡口", desc: "狹窄的山口。" }, { word: "山脈", desc: "山巒相連並依一定方向起伏延伸，狀似脈絡而成系統的山群。" }, { word: "紮營", desc: "屯駐營寨。" }, { word: "窸窸窣窣", desc: "摹聲詞。摹擬斷續的細碎聲音。" }, { word: "背誦", desc: "熟記文句後能不看文句就能誦讀。" }, { word: "宇宙", desc: "時間與空間的總稱，即天地。" }, { word: "浩瀚", desc: "⑴廣大繁多的樣子。⑵水勢盛大的樣子。" } ],
+    "L8": [ { word: "瞻前顧後", desc: "⑴形容做事顧慮太多，猶豫不決。⑵指做事謹慎周密，能夠首尾兼顧。" }, { word: "汲取", desc: "吸取、吸收。" }, { word: "富庶", desc: "物資豐富，人口眾多。" }, { word: "鍥而不捨", desc: "比喻有恆心、毅力，堅持到底。" }, { word: "嶄新", desc: "全新、極新。" }, { word: "一輩子", desc: "一生、一世。" }, { word: "全力以赴", desc: "投入全部的心力以達成目的。" }, { word: "構築", desc: "建造修築。" }, { word: "諺語", desc: "民間流傳的俗語。句形簡短、音調和諧。" }, { word: "羊羹", desc: "一種用豆沙、麵粉及糖等材料做成的甜食。本課所指的羊羹材料略有不同，是「紅豆、砂糖、寒天」。" }, { word: "公斤", desc: "量詞。計算重量的單位。公制一公斤等於一千公克。" }, { word: "全神貫注", desc: "將心思和精神完全集中在某事物上。" }, { word: "拓展", desc: "開拓發展。" } ],
+    "L9": [ { word: "恭喜", desc: "向人表示慶賀之敬詞。" }, { word: "荊棘", desc: "⑴比喻困難、險境。⑵叢生而多刺的灌木。" }, { word: "俗話", desc: "流行通俗的語句。" }, { word: "窘境", desc: "艱難貧困的處境。" }, { word: "溝通", desc: "彼此間意見的交流或疏通。" }, { word: "生涯", desc: "原指人的生命有止境。今用以指所過的生活或經歷的人生。" }, { word: "曙光", desc: "⑴比喻轉機的希望。⑵清晨大地初現的亮光。" } ]
+};
+
+/** ==========================================
+ * 大頭照上傳邏輯
+ * ========================================== */
+let playerFaceImg = null;
+document.getElementById('upload-photo').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            playerFaceImg = new Image();
+            playerFaceImg.src = event.target.result;
+            const preview = document.getElementById('preview-photo');
+            preview.src = event.target.result;
+            preview.style.display = 'block';
+        }
+        reader.readAsDataURL(file);
+    }
+});
+
+/** ==========================================
+ * 語詞題目生成邏輯
+ * ========================================== */
+const VocabGen = {
+    lessons: [],
+    init(selected) { this.lessons = selected; },
+    shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    },
+    rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; },
+    generate() {
+        if(this.lessons.length === 0) return null;
+        let pool = [];
+        this.lessons.forEach(l => { if(VOCAB_DATA[l]) pool.push(...VOCAB_DATA[l]); });
+        if(pool.length < 4) return null;
+
+        let targetIdx = this.rand(0, pool.length - 1);
+        let target = pool[targetIdx];
+
+        let optionsSet = new Set([target.word]);
+        while(optionsSet.size < 4) {
+            let randomIdx = this.rand(0, pool.length - 1);
+            optionsSet.add(pool[randomIdx].word);
+        }
+
+        return { question: target.desc, options: this.shuffle(Array.from(optionsSet)), correct: target.word };
+    }
+};
+
+/** ==========================================
+ * 遊戲引擎與實體物件
+ * ========================================== */
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+const GAME_WIDTH = 800;
+const GAME_HEIGHT = 450;
+const GROUND_Y = 350; 
+const Z_MIN = 300;    
+const Z_MAX = 450;    
+
+let isGameRunning = false;
+let isPaused = false;
+let isManualPaused = false; 
+let lastTime = 0;
+
+// === 街機鎖定推進系統變數 ===
+let cameraX = 0;
+let lockX = 400; // 第一次遭遇敵人的鎖定點
+let waveState = 'cleared'; // 'cleared' 或 'locked'
+let showGoTimer = 0;
+
+let level = 1;
+let levelKills = 0;
+let totalKills = 0;
+let score = 0; // 新增：分數系統
+const KILLS_FOR_BOSS = 20;
+let bossActive = false;
+let screenShake = 0;
+
+// 輸入狀態 (加入方向鍵支援)
+const keys = { w:false, a:false, s:false, d:false, space:false, arrowup:false, arrowdown:false, arrowleft:false, arrowright:false };
+const joyInput = { x: 0, y: 0 };
+let isAttacking = false;
+
+// 實體清單
+let player = null;
+let enemies = [];
+let crates = [];
+let particles = [];
+
+// 音效
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playSound(type) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    if (type === 'hit') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+    } else if (type === 'heal') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+    } else if (type === 'error') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(80, audioCtx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.2);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+    }
+}
+
+// 基礎物件類別
+class GameObject {
+    constructor(x, z, w, h, color) {
+        this.x = x; this.z = z; this.y = 0; 
+        this.w = w; this.h = h; this.color = color;
+        this.vx = 0; this.vz = 0; this.speed = 0;
+        this.dir = 1; this.state = 'idle';
+        this.hp = 10; this.maxHp = 10; this.hitStun = 0;
+    }
+    getDrawPos() { return { x: this.x - cameraX, y: this.z - this.h - this.y }; }
+    drawShadow(ctx) {
+        const pos = this.getDrawPos();
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(pos.x, this.z, this.w/2, this.w/4, 0, 0, Math.PI*2);
+        ctx.fill();
+    }
+    draw(ctx) { this.drawShadow(ctx); }
+}
+
+// === 新增：具備完整身體四肢的「人形角色」類別 ===
+class Character extends GameObject {
+    constructor(x, z, w, h, color, isBoss = false) {
+        super(x, z, w, h, color);
+        this.isBoss = isBoss;
+        this.isMoving = false;
+        this.attackTimer = 0;
+    }
+
+    draw(ctx) {
+        this.drawShadow(ctx);
+        if (this.hitStun > 0 && Math.floor(Date.now() / 50) % 2 === 0) return; // 受傷閃爍
+
+        const pos = this.getDrawPos();
+        const cx = pos.x;
+        
+        const scale = this.isBoss ? 1.5 : 1;
+        const headR = 15 * scale;
+        const bodyH = 30 * scale;
+        const legH = 35 * scale;
+        
+        const headY = pos.y + headR;
+        const bodyY = headY + headR;
+        
+        // --- 畫雙腿 (走路動畫) ---
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 8 * scale;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        let walkCycle = 0;
+        if (this.isMoving) {
+            walkCycle = Math.sin(Date.now() / 100 * (this.speed / 100)); // 擺動幅度
+        }
+        
+        // 左腿
+        ctx.moveTo(cx, bodyY + bodyH);
+        ctx.lineTo(cx - 10 * scale * walkCycle, bodyY + bodyH + legH);
+        // 右腿
+        ctx.moveTo(cx, bodyY + bodyH);
+        ctx.lineTo(cx + 10 * scale * walkCycle, bodyY + bodyH + legH);
+        ctx.stroke();
+
+        // --- 畫身體 (軀幹) ---
+        ctx.fillStyle = this.color;
+        ctx.fillRect(cx - 15 * scale, bodyY, 30 * scale, bodyH);
+
+        // --- 畫頭部 (有照片則顯示大頭照) ---
+        if (this === player && playerFaceImg) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cx + (this.dir === 1 ? 5 : -5) * scale, headY, headR + 2, 0, Math.PI*2);
+            ctx.clip(); // 裁切成圓形
+            ctx.drawImage(playerFaceImg, cx - headR - 2 + (this.dir === 1 ? 5 : -5) * scale, headY - headR - 2, (headR+2)*2, (headR+2)*2);
+            ctx.restore();
+        } else {
+            ctx.fillStyle = this.isBoss ? '#c0392b' : '#f1c40f'; // 皮膚顏色
+            ctx.beginPath();
+            ctx.arc(cx + (this.dir === 1 ? 5 : -5) * scale, headY, headR, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        // --- 畫雙手 (攻擊揮拳) ---
+        ctx.beginPath();
+        const punchThreshold = this.isBoss ? 1.0 : 0.15; // Boss 揮拳時間較長
+        if (this.state === 'attack' && this.attackTimer > punchThreshold) {
+            // 出拳
+            ctx.moveTo(cx, bodyY + 10 * scale);
+            ctx.lineTo(cx + this.dir * 40 * scale, bodyY + 10 * scale);
+            ctx.strokeStyle = this.isBoss ? '#e74c3c' : '#f1c40f'; // 拳頭顏色
+            ctx.lineWidth = 10 * scale;
+            ctx.stroke();
+        } else {
+            // 正常擺臂
+            ctx.moveTo(cx, bodyY + 10 * scale);
+            ctx.lineTo(cx + this.dir * 10 * scale * walkCycle, bodyY + 25 * scale);
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 8 * scale;
+            ctx.stroke();
+        }
+    }
+}
+
+class Player extends Character {
+    constructor(x, z) {
+        super(x, z, 40, 80, '#3498db', false);
+        this.speed = 200;
+        this.maxHp = 5; // 修改：玩家最大血量改為 5
+        this.hp = 5;    // 修改：玩家初始血量改為 5
+    }
+
+    update(dt) {
+        if (this.hitStun > 0) {
+            this.hitStun -= dt;
+            this.isMoving = false;
+            return;
+        }
+
+        let dx = 0; let dz = 0;
+        // 支援 WASD 與 方向鍵
+        if (keys.a || keys.arrowleft || joyInput.x < -0.2) dx = -1;
+        if (keys.d || keys.arrowright || joyInput.x > 0.2) dx = 1;
+        if (keys.w || keys.arrowup || joyInput.y < -0.2) dz = -1;
+        if (keys.s || keys.arrowdown || joyInput.y > 0.2) dz = 1;
+
+        if (dx !== 0 && dz !== 0) {
+            const len = Math.sqrt(dx*dx + dz*dz);
+            dx /= len; dz /= len;
+        }
+
+        this.isMoving = (dx !== 0 || dz !== 0);
+        this.x += dx * this.speed * dt;
+        this.z += dz * this.speed * dt;
+
+        // 地圖上下邊界限制
+        if (this.z < Z_MIN) this.z = Z_MIN;
+        if (this.z > Z_MAX) this.z = Z_MAX;
+        
+        // 攝影機鎖定區域限制
+        if (waveState === 'locked') {
+            if (this.x < cameraX + 30) this.x = cameraX + 30;
+            if (this.x > cameraX + GAME_WIDTH - 40) this.x = cameraX + GAME_WIDTH - 40;
+        } else {
+            if (this.x < cameraX + 30) this.x = cameraX + 30; // 永遠不能往回走
+        }
+
+        if (dx > 0) this.dir = 1;
+        if (dx < 0) this.dir = -1;
+
+        if (this.attackTimer > 0) this.attackTimer -= dt;
+        if ((keys.space || isAttacking) && this.attackTimer <= 0) {
+            this.attack();
+            this.attackTimer = 0.3; 
+            isAttacking = false;
+        }
+    }
+
+    attack() {
+        this.state = 'attack';
+        const hitBox = {
+            x: this.dir === 1 ? this.x : this.x - 60,
+            z: this.z - 15,
+            w: 60,
+            h: 30
+        };
+
+        enemies.forEach(e => {
+            if (e.hp > 0 && Math.abs(e.z - this.z) < 20 && 
+                e.x > hitBox.x - e.w/2 && e.x < hitBox.x + hitBox.w + e.w/2) {
+                e.hp -= 10;
+                e.hitStun = 0.2;
+                e.x += this.dir * 15; 
+                playSound('hit');
+                screenShake = 5;
+                createParticles(e.x, e.z - e.h/2, '#e74c3c');
+            }
+        });
+
+        crates.forEach(c => {
+            if (c.hp > 0 && Math.abs(c.z - this.z) < 20 && 
+                c.x > hitBox.x - c.w/2 && c.x < hitBox.x + hitBox.w + c.w/2) {
+                c.hp = 0;
+                playSound('hit');
+                createParticles(c.x, c.z - c.h/2, '#e67e22');
+                triggerVocabQuestion(); 
+            }
+        });
+    }
+}
+
+class Enemy extends Character {
+    constructor(x, z, isBoss = false) {
+        super(x, z, isBoss ? 60 : 40, isBoss ? 120 : 80, isBoss ? '#8e44ad' : '#e74c3c', isBoss);
+        this.hp = isBoss ? 25 : 10; // 修改：Boss 血量改為 25
+        this.maxHp = this.hp;
+        this.speed = isBoss ? 50 : 80; // Boss 走慢一點
+    }
+
+    update(dt) {
+        if (this.hitStun > 0) {
+            this.hitStun -= dt;
+            this.isMoving = false;
+            return;
+        }
+        
+        const dist = Math.hypot(player.x - this.x, player.z - this.z);
+        this.isMoving = false;
+        if (dist < 1200) { // 修改：將追擊視野從 400 擴大到 1200，敵人會死命追著主角打
+            let dx = player.x - this.x;
+            let dz = player.z - this.z;
+            
+            this.dir = dx > 0 ? 1 : -1;
+
+            if (Math.abs(dx) > 50) { this.x += Math.sign(dx) * this.speed * dt; this.isMoving = true; }
+            if (Math.abs(dz) > 5) { this.z += Math.sign(dz) * this.speed * dt; this.isMoving = true; }
+
+            if (this.attackTimer > 0) this.attackTimer -= dt;
+            if (Math.abs(dx) <= 60 && Math.abs(dz) < 15 && this.attackTimer <= 0) {
+                this.attackTimer = 1.5;
+                this.state = 'attack';
+                if (player.hitStun <= 0) {
+                    player.hp -= this.isBoss ? 2 : 1; 
+                    player.hitStun = 0.3;
+                    screenShake = 10;
+                    playSound('hit');
+                }
+            } else {
+                this.state = 'idle';
+            }
+        }
+    }
+}
+
+class Crate extends GameObject {
+    constructor(x, z) {
+        super(x, z, 40, 40, '#d35400');
+        this.hp = 1;
+    }
+    draw(ctx) {
+        this.drawShadow(ctx);
+        const pos = this.getDrawPos();
+        ctx.fillStyle = this.color;
+        ctx.fillRect(pos.x - this.w/2, pos.y, this.w, this.h);
+        ctx.strokeStyle = '#a04000';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(pos.x - this.w/2, pos.y);
+        ctx.lineTo(pos.x + this.w/2, pos.y + this.h);
+        ctx.stroke();
+    }
+}
+
+function createParticles(x, y, color) {
+    for(let i=0; i<10; i++) {
+        particles.push({
+            x: x, y: y,
+            vx: (Math.random()-0.5)*200, vy: (Math.random()-0.5)*200,
+            life: 0.5, color: color
+        });
+    }
+}
+
+/** ==========================================
+ * 遊戲控制與關卡鎖定流程 (Beat 'em up Style)
+ * ========================================== */
+function spawnWave() {
+    if (levelKills >= KILLS_FOR_BOSS) {
+        bossActive = true;
+        document.getElementById('ui-boss-warning').innerText = '⚠️ BOSS 出現！不能前進 ⚠️';
+        document.getElementById('ui-boss-warning').style.color = '#f1c40f';
+        enemies.push(new Enemy(cameraX + GAME_WIDTH - 100, (Z_MIN+Z_MAX)/2, true));
+    } else {
+        document.getElementById('ui-boss-warning').innerText = '⚠️ 擊敗所有敵人才能前進！ ⚠️';
+        document.getElementById('ui-boss-warning').style.color = '#e67e22';
+        
+        // 每次遭遇生成 2~4 個敵人
+        let count = VocabGen.rand(2, 4);
+        for(let i=0; i<count; i++) {
+            // 修改：讓敵人出生點稍微往畫面內移，確保他們一出來就在畫面上
+            enemies.push(new Enemy(cameraX + GAME_WIDTH - 30 - Math.random()*80, VocabGen.rand(Z_MIN, Z_MAX), false));
+        }
+    }
+
+    // 順便生成 1~2 個木箱做為補給
+    let crateCount = VocabGen.rand(1, 2);
+    for(let i=0; i<crateCount; i++) {
+        crates.push(new Crate(cameraX + GAME_WIDTH - 100 - Math.random()*150, VocabGen.rand(Z_MIN, Z_MAX)));
+    }
+}
+
+function updateUI() {
+    const hpFill = document.getElementById('ui-hp-fill');
+    hpFill.style.width = Math.max(0, (player.hp / player.maxHp) * 100) + '%';
+    hpFill.style.background = player.hp > 2 ? 'var(--success)' : 'var(--danger)'; // 5滴血，大於2綠色，否則紅色
+    
+    document.getElementById('ui-score').innerText = `分數: ${score}`;
+    document.getElementById('ui-level').innerText = `關卡: ${level}`;
+    document.getElementById('ui-kills').innerText = `擊倒敵人: ${levelKills} / ${KILLS_FOR_BOSS}`;
+}
+
+// 顯示過關或失敗結果
+function showResult(isWin) {
+    isGameRunning = false;
+    const overlay = document.getElementById('result-overlay');
+    const title = document.getElementById('result-title');
+    const scoreText = document.getElementById('result-score');
+    
+    overlay.classList.add('active');
+    if (isWin) {
+        title.innerText = "🌟 過關！打倒 Boss 🌟";
+        title.style.color = "#2ecc71";
+    } else {
+        title.innerText = "💀 遊戲結束 💀";
+        title.style.color = "#e74c3c";
+    }
+    scoreText.innerText = `最終分數: ${score}`;
+}
+
+// 暫停切換
+function togglePause() {
+    if (!isGameRunning) return;
+    if (document.getElementById('math-modal-container').classList.contains('active')) return;
+    
+    isManualPaused = !isManualPaused;
+    const btnPause = document.getElementById('btn-pause');
+    const overlay = document.getElementById('pause-overlay');
+    
+    if (isManualPaused) {
+        btnPause.innerText = "繼續";
+        btnPause.style.background = "var(--success)";
+        overlay.style.display = "flex";
+    } else {
+        btnPause.innerText = "暫停";
+        btnPause.style.background = "var(--warning)";
+        overlay.style.display = "none";
+        lastTime = performance.now(); 
+        requestAnimationFrame(gameLoop);
+    }
+}
+
+function gameLoop(timestamp) {
+    if (!isGameRunning || isManualPaused) return; 
+    
+    const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+    lastTime = timestamp;
+
+    if (!isPaused) {
+        player.update(dt);
+        
+        // --- 攝影機推進與鎖定邏輯 (修正：必須在 cleared 狀態下才能推進鏡頭) ---
+        if (waveState === 'cleared') {
+            let targetCamX = player.x - GAME_WIDTH * 0.4;
+            if (targetCamX > cameraX) {
+                cameraX = targetCamX; // 攝影機跟隨玩家前進
+            }
+
+            // 觸發鎖定
+            if (cameraX >= lockX) {
+                cameraX = lockX;
+                waveState = 'locked'; // 嚴格鎖死鏡頭，不讓玩家繞過
+                spawnWave();
+                document.getElementById('ui-boss-warning').style.display = 'block';
+            }
+        }
+
+        // 解除鎖定判定
+        if (waveState === 'locked' && enemies.length === 0) {
+            waveState = 'cleared';
+            lockX = cameraX + 600; // 設定下一次鎖定點
+            showGoTimer = 3.0; // 顯示 GO! 的時間
+            document.getElementById('ui-boss-warning').style.display = 'none';
+        }
+
+        // --- Boss 戰鬥時不定時掉落木箱 ---
+        if (bossActive) {
+            // 隨機機率掉落木箱 (每秒約 30% 機率掉落，場上最多同時保留 3 個)
+            if (Math.random() < 0.3 * dt && crates.length < 3) {
+                let spawnX = cameraX + 50 + Math.random() * (GAME_WIDTH - 100);
+                let spawnZ = VocabGen.rand(Z_MIN, Z_MAX);
+                crates.push(new Crate(spawnX, spawnZ));
+                createParticles(spawnX, spawnZ - 20, '#f39c12'); // 掉落時的特效
+            }
+        }
+
+        // --- 更新實體 ---
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            let e = enemies[i];
+            e.update(dt);
+            if (e.hp <= 0) {
+                enemies.splice(i, 1);
+                
+                // 增加分數
+                score += e.isBoss ? 2000 : 100;
+                totalKills++;
+                levelKills++;
+
+                if (e.isBoss) {
+                    bossActive = false;
+                    // Boss 死亡直接過關
+                    setTimeout(() => showResult(true), 500);
+                }
+            }
+        }
+
+        crates = crates.filter(c => c.hp > 0);
+        
+        particles.forEach(p => {
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.life -= dt;
+        });
+        particles = particles.filter(p => p.life > 0);
+
+        if (showGoTimer > 0) showGoTimer -= dt;
+
+        updateUI();
+
+        // 玩家死亡
+        if (player.hp <= 0) {
+            showResult(false);
+            return;
+        }
+    }
+
+    drawGame();
+    if (isGameRunning) {
+        requestAnimationFrame(gameLoop);
+    }
+}
+
+function drawGame() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const scale = Math.min(canvas.width / GAME_WIDTH, canvas.height / GAME_HEIGHT);
+    
+    ctx.save();
+    ctx.translate(canvas.width/2 - (GAME_WIDTH*scale)/2, canvas.height/2 - (GAME_HEIGHT*scale)/2);
+    ctx.scale(scale, scale);
+
+    if (screenShake > 0) {
+        ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake);
+        screenShake -= 1;
+    }
+
+    // === 新增：街道與城市夜景背景 ===
+    // 夜空
+    ctx.fillStyle = '#0b0f19';
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    
+    // 遠方城市高樓群 (視差效果)
+    const bgOffset = -(cameraX * 0.1) % 400;
+    for(let i=0; i<GAME_WIDTH/400 + 2; i++) {
+        let bx = bgOffset + i*400;
+        
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(bx + 30, 100, 120, Z_MIN - 100);
+        ctx.fillStyle = '#f1c40f';
+        ctx.globalAlpha = 0.6;
+        ctx.fillRect(bx + 50, 130, 20, 30);
+        ctx.fillRect(bx + 100, 130, 20, 30);
+        ctx.fillRect(bx + 50, 180, 20, 30);
+        ctx.globalAlpha = 1.0;
+        
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(bx + 200, 50, 150, Z_MIN - 50);
+        ctx.fillStyle = '#f1c40f';
+        ctx.globalAlpha = 0.5;
+        ctx.fillRect(bx + 220, 80, 30, 20);
+        ctx.fillRect(bx + 280, 80, 30, 20);
+        ctx.fillRect(bx + 250, 150, 30, 20);
+        ctx.globalAlpha = 1.0;
+    }
+    
+    // 人行道
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(0, Z_MIN - 25, GAME_WIDTH, 25);
+    // 人行道格線
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 2;
+    const swOffset = -(cameraX) % 60; // 修改：將速度修正為 1.0 (跟隨攝影機)，讓地面看起來是一體的
+    for(let i=0; i<GAME_WIDTH/60 + 2; i++) {
+        ctx.beginPath();
+        ctx.moveTo(swOffset + i*60, Z_MIN - 25);
+        ctx.lineTo(swOffset + i*60 - 15, Z_MIN);
+        ctx.stroke();
+    }
+    
+    // 柏油馬路
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(0, Z_MIN, GAME_WIDTH, GAME_HEIGHT - Z_MIN);
+    // 馬路虛線
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 5;
+    ctx.setLineDash([30, 30]);
+    ctx.lineDashOffset = cameraX; // 新增：根據攝影機的位置偏移，產生真實的往前移動感
+    ctx.beginPath();
+    ctx.moveTo(0, Z_MIN + (GAME_HEIGHT - Z_MIN)/2);
+    ctx.lineTo(GAME_WIDTH, Z_MIN + (GAME_HEIGHT - Z_MIN)/2);
+    ctx.stroke();
+    ctx.setLineDash([]); // 重設
+    ctx.lineDashOffset = 0; // 重設
+    // === 背景結束 ===
+
+    const renderList = [player, ...enemies, ...crates].sort((a, b) => a.z - b.z);
+    renderList.forEach(obj => obj.draw(ctx));
+
+    particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life * 2;
+        ctx.fillRect(p.x - cameraX, p.y, 5, 5);
+    });
+    ctx.globalAlpha = 1.0;
+
+    // 顯示「GO 👉」提示
+    if (showGoTimer > 0) {
+        if (Math.floor(showGoTimer * 4) % 2 === 0) { // 閃爍效果
+            ctx.fillStyle = '#e74c3c';
+            ctx.font = 'bold 50px 微軟正黑體';
+            ctx.fillText('GO! 👉', GAME_WIDTH - 200, GAME_HEIGHT / 2);
+        }
+    }
+
+    if (waveState === 'locked') {
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 5;
+        ctx.strokeRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    }
+
+    ctx.restore();
+}
+
+/** ==========================================
+ * 語詞解題互動
+ * ========================================== */
+function triggerVocabQuestion() {
+    const qData = VocabGen.generate();
+    if (!qData) return;
+
+    isPaused = true;
+    document.getElementById('math-modal-container').classList.add('active');
+    document.getElementById('math-question').innerText = "「" + qData.question + "」";
+    
+    const optionsGrid = document.getElementById('math-options');
+    optionsGrid.innerHTML = '';
+    
+    qData.options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'math-option';
+        btn.innerText = opt;
+        btn.onclick = () => checkMathAnswer(opt === qData.correct);
+        optionsGrid.appendChild(btn);
+    });
+}
+
+function checkMathAnswer(isCorrect) {
+    const feedback = document.getElementById('math-feedback');
+    document.getElementById('math-modal-container').classList.remove('active');
+    
+    feedback.style.transition = 'none';
+    feedback.style.opacity = '1';
+    feedback.style.top = '20%';
+
+    if (isCorrect) {
+        playSound('heal');
+        player.hp = Math.min(player.maxHp, player.hp + 1); // 修改：答對回血 1 滴
+        score += 500; // 答對加 500 分
+        feedback.innerText = "正確！HP +1, 分數+500";
+        feedback.style.color = "var(--success)";
+        createParticles(player.x, player.z - player.h/2, '#2ecc71');
+    } else {
+        playSound('error');
+        feedback.innerText = "答錯了！";
+        feedback.style.color = "var(--danger)";
+    }
+    
+    setTimeout(() => {
+        feedback.style.transition = 'opacity 1s, top 1s';
+        feedback.style.opacity = '0';
+        feedback.style.top = '10%';
+        isPaused = false;
+    }, 100);
+}
+
+/** ==========================================
+ * 事件監聽與初始化
+ * ========================================== */
+window.addEventListener('keydown', e => {
+    let key = e.key.toLowerCase();
+    if (key === ' ') keys.space = true;
+    else if (keys.hasOwnProperty(key)) keys[key] = true;
+});
+window.addEventListener('keyup', e => {
+    let key = e.key.toLowerCase();
+    if (key === ' ') keys.space = false;
+    else if (keys.hasOwnProperty(key)) keys[key] = false;
+});
+
+// 虛擬搖桿邏輯
+const joyZone = document.getElementById('joystick-zone');
+const joyKnob = document.getElementById('joystick-knob');
+let joyActive = false;
+let joyBase = {x:0, y:0};
+let joyR = 35; 
+
+joyZone.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const rect = joyZone.getBoundingClientRect();
+    joyBase = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+    joyActive = true;
+    updateJoystick(e.touches[0]);
+}, {passive: false});
+
+joyZone.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if(joyActive) updateJoystick(e.touches[0]);
+}, {passive: false});
+
+const endJoystick = () => {
+    joyActive = false;
+    joyInput.x = 0; joyInput.y = 0;
+    joyKnob.style.transform = `translate(0px, 0px)`;
+};
+joyZone.addEventListener('touchend', endJoystick);
+joyZone.addEventListener('touchcancel', endJoystick);
+
+function updateJoystick(touch) {
+    let dx = touch.clientX - joyBase.x;
+    let dy = touch.clientY - joyBase.y;
+    let dist = Math.sqrt(dx*dx + dy*dy);
+    if(dist > joyR) {
+        dx = (dx/dist) * joyR;
+        dy = (dy/dist) * joyR;
+    }
+    joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+    joyInput.x = dx / joyR;
+    joyInput.y = dy / joyR;
+}
+
+// 虛擬攻擊鍵
+const btnAttack = document.getElementById('btn-attack');
+btnAttack.addEventListener('touchstart', e => { e.preventDefault(); isAttacking = true; });
+btnAttack.addEventListener('mousedown', e => { isAttacking = true; });
+
+// 新增：點擊遊戲畫面(Canvas)也能觸發攻擊
+canvas.addEventListener('mousedown', e => {
+    if (isGameRunning && !isPaused && !isManualPaused) isAttacking = true;
+});
+canvas.addEventListener('touchstart', e => {
+    if (isGameRunning && !isPaused && !isManualPaused) isAttacking = true;
+}, {passive: true});
+
+// 流程控制
+function startGame() {
+    const checkboxes = document.querySelectorAll('.topic-item input:checked');
+    if (checkboxes.length === 0) {
+        alert("請至少選擇一課！");
+        return;
+    }
+    
+    const selected = Array.from(checkboxes).map(cb => cb.value);
+    VocabGen.init(selected);
+
+    document.getElementById('menu-screen').classList.remove('active');
+    document.getElementById('game-screen').classList.add('active');
+    document.getElementById('result-overlay').classList.remove('active'); // 確保結算視窗隱藏
+
+    // 初始化遊戲狀態
+    player = new Player(100, (Z_MIN+Z_MAX)/2);
+    enemies = [];
+    crates = [];
+    particles = [];
+    
+    // 重設推進狀態
+    cameraX = 0;
+    lockX = 150; // 修改：將第一次遭遇點往前移，遊戲一開始為純走路，走到鎖定點才會開始出怪
+    waveState = 'cleared';
+    showGoTimer = 0;
+    
+    level = 1;
+    levelKills = 0;
+    totalKills = 0;
+    score = 0;
+    bossActive = false;
+    isPaused = false;
+    isManualPaused = false;
+    isGameRunning = true;
+    
+    document.getElementById('ui-boss-warning').style.display = 'none';
+    document.getElementById('pause-overlay').style.display = 'none';
+    
+    const btnPause = document.getElementById('btn-pause');
+    btnPause.innerText = "暫停";
+    btnPause.style.background = "var(--warning)";
+
+    lastTime = performance.now();
+    requestAnimationFrame(gameLoop);
+    
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function returnToMenu() {
+    isGameRunning = false;
+    document.getElementById('game-screen').classList.remove('active');
+    document.getElementById('result-overlay').classList.remove('active');
+    document.getElementById('menu-screen').classList.add('active');
+}
+
+// 防止橡皮筋滾動
+document.body.addEventListener('touchmove', function(e) {
+    if(document.getElementById('game-screen').classList.contains('active')) {
+        e.preventDefault();
+    }
+}, { passive: false });
+
+</script>
+</body>
+</html>
