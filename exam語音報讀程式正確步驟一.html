@@ -91,22 +91,26 @@
             box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
         }
 
-        .delete-btn {
+        .box-controls {
             display: none;
             position: absolute;
             top: 0;
             right: 0;
-            background: #ef4444;
+            z-index: 20;
+        }
+        .question-box:hover .box-controls {
+            display: flex;
+        }
+        .btn-copy, .btn-delete {
             color: white;
             font-size: 12px;
             padding: 2px 6px;
             cursor: pointer;
-            border-bottom-left-radius: 4px;
-            z-index: 20;
         }
-        .question-box:hover .delete-btn {
-            display: block;
-        }
+        .btn-copy { background: #3b82f6; border-bottom-left-radius: 4px; }
+        .btn-copy:hover { background: #2563eb; }
+        .btn-delete { background: #ef4444; }
+        .btn-delete:hover { background: #dc2626; }
 
         .question-box.selected {
             border: 3px solid #2563eb; 
@@ -144,17 +148,17 @@
                         </div>
                     </label>
                     <label class="cursor-pointer">
-                        <input type="radio" name="exam-format" value="horizontal-double" class="peer hidden">
+                        <input type="radio" name="exam-format" value="horizontal-updown-double" class="peer hidden">
                         <div class="border-2 border-gray-200 rounded-lg p-2 md:p-3 peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:bg-gray-100 transition text-center h-full flex flex-col justify-center">
-                            <div class="font-bold text-gray-700 text-sm md:text-base mb-0.5">橫式雙欄</div>
-                            <div class="text-[10px] md:text-xs text-gray-500 hidden sm:block">(由左至右)</div>
+                            <div class="font-bold text-gray-700 text-sm md:text-base mb-0.5">橫式上下雙欄</div>
+                            <div class="text-[10px] md:text-xs text-gray-500 hidden sm:block">(由右到左)</div>
                         </div>
                     </label>
                     <label class="cursor-pointer">
-                        <input type="radio" name="exam-format" value="horizontal-rl-single" class="peer hidden">
+                        <input type="radio" name="exam-format" value="horizontal-single" class="peer hidden">
                         <div class="border-2 border-gray-200 rounded-lg p-2 md:p-3 peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:bg-gray-100 transition text-center h-full flex flex-col justify-center">
                             <div class="font-bold text-gray-700 text-sm md:text-base mb-0.5">橫式單欄</div>
-                            <div class="text-[10px] md:text-xs text-gray-500 hidden sm:block">(右一左二)</div>
+                            <div class="text-[10px] md:text-xs text-gray-500 hidden sm:block">(由右到左)</div>
                         </div>
                     </label>
                 </div>
@@ -444,13 +448,18 @@
 
             const format = document.querySelector('input[name="exam-format"]:checked')?.value || 'vertical-double';
             const midX = pageWidth / 2;
+            const midY = pageHeight / 2;
+            
             let leftSpans = [], rightSpans = [];
+            let rightTopSpans = [], rightBottomSpans = [], leftTopSpans = [], leftBottomSpans = [];
 
             spans.forEach(span => {
                 const top = span.offsetTop;
                 const left = span.offsetLeft;
                 const width = span.offsetWidth;
-                const center = left + width / 2; // 改用文字中心點來判斷，防止邊界誤差
+                const height = span.offsetHeight;
+                const centerX = left + width / 2; 
+                const centerY = top + height / 2;
 
                 if (pageNum === 1) {
                     // 放寬標題過濾，只濾除確實橫跨兩側或極端上方的標題
@@ -459,17 +468,33 @@
                     }
                 }
 
-                if (center < midX) {
-                    leftSpans.push(span);
+                if (format === 'horizontal-updown-double') {
+                    if (centerX < midX) {
+                        if (centerY < midY) leftTopSpans.push(span);
+                        else leftBottomSpans.push(span);
+                    } else {
+                        if (centerY < midY) rightTopSpans.push(span);
+                        else rightBottomSpans.push(span);
+                    }
                 } else {
-                    rightSpans.push(span);
+                    if (centerX < midX) {
+                        leftSpans.push(span);
+                    } else {
+                        rightSpans.push(span);
+                    }
                 }
             });
 
-            if (format === 'vertical-double' || format === 'horizontal-double') {
+            if (format === 'vertical-double') {
                 processRegion(leftSpans, interactionLayer, { type: 'left', midX: midX });
                 processRegion(rightSpans, interactionLayer, { type: 'right', midX: midX });
-            } else if (format === 'horizontal-rl-single') {
+            } else if (format === 'horizontal-updown-double') {
+                // 順序：由右半部的上下半 -> 再到左半部的上下半
+                processRegion(rightTopSpans, interactionLayer, { type: 'right-top', midX: midX, midY: midY });
+                processRegion(rightBottomSpans, interactionLayer, { type: 'right-bottom', midX: midX, midY: midY });
+                processRegion(leftTopSpans, interactionLayer, { type: 'left-top', midX: midX, midY: midY });
+                processRegion(leftBottomSpans, interactionLayer, { type: 'left-bottom', midX: midX, midY: midY });
+            } else if (format === 'horizontal-single') {
                 processRegion(rightSpans, interactionLayer, { type: 'right', midX: midX });
                 processRegion(leftSpans, interactionLayer, { type: 'left', midX: midX });
             }
@@ -537,10 +562,19 @@
 
             questions.forEach(q => {
                 // 控制左右欄邊界，確保左欄框與右欄框之間保持 10px 間距 (各退縮 5px，並扣除 padding)
-                if (bounds.type === 'left') {
+                if (bounds.type.includes('left')) {
                     q.right = Math.min(q.right, bounds.midX - 5 - padding); 
-                } else if (bounds.type === 'right') {
+                } else if (bounds.type.includes('right')) {
                     q.left = Math.max(q.left, bounds.midX + 5 + padding);   
+                }
+                
+                // 控制上下欄邊界，確保上下欄框之間保持間距 (各退縮 2.5px，並扣除 padding)
+                if (bounds.midY) {
+                    if (bounds.type.includes('top')) {
+                        q.bottom = Math.min(q.bottom, bounds.midY - 2.5 - padding);
+                    } else if (bounds.type.includes('bottom')) {
+                        q.top = Math.max(q.top, bounds.midY + 2.5 + padding);
+                    }
                 }
             });
 
@@ -576,15 +610,44 @@
             box.style.width = width + 'px';
             box.style.height = height + 'px';
 
+            const controls = document.createElement('div');
+            controls.className = 'box-controls';
+
+            const copyBtn = document.createElement('div');
+            copyBtn.className = 'btn-copy';
+            copyBtn.innerHTML = '📄';
+            copyBtn.title = "複製此框";
+            copyBtn.onclick = (e) => {
+                e.stopPropagation();
+                if(body.dataset.mode === 'page2') {
+                    // 取得當前紅框的精確位置與大小，並在右下方偏移 20px 產生新框
+                    const currentLeft = parseFloat(box.style.left) || 0;
+                    const currentTop = parseFloat(box.style.top) || 0;
+                    const currentWidth = box.offsetWidth;
+                    const currentHeight = box.offsetHeight;
+                    const newBox = createBoxElement(layer, currentLeft + 20, currentTop + 20, currentWidth, currentHeight);
+                    newBox.classList.add('manual-added');
+                }
+            };
+
             const delBtn = document.createElement('div');
-            delBtn.className = 'delete-btn';
+            delBtn.className = 'btn-delete';
             delBtn.innerHTML = '✖';
             delBtn.title = "刪除此框";
             delBtn.onclick = (e) => {
                 e.stopPropagation();
-                if(body.dataset.mode === 'page2') box.remove();
+                if(body.dataset.mode === 'page2') {
+                    if (selectedBox === box) {
+                        selectedBox = null;
+                        deleteSelectedBtn.classList.add('hidden');
+                    }
+                    box.remove();
+                }
             };
-            box.appendChild(delBtn);
+
+            controls.appendChild(copyBtn);
+            controls.appendChild(delBtn);
+            box.appendChild(controls);
 
             layer.appendChild(box);
             setupBoxInteractions(box);
