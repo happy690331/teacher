@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>數學泡泡射擊</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{
+    background:#050410;display:flex;align-items:center;justify-content:center;
+    min-height:100vh;font-family:'Nunito',system-ui,sans-serif;overflow:hidden;
+  }
+  #wrapper{
+    position:relative;width:390px;height:700px;border-radius:20px;overflow:hidden;
+    box-shadow:0 0 0 1px rgba(124,58,237,0.3),0 20px 80px rgba(0,0,0,0.8),0 0 80px rgba(124,58,237,0.15);
+  }
+  /* Page 1 */
+  #p1{
+    position:absolute;inset:0;
+    background:linear-gradient(160deg,#0e0a22 0%,#140b28 60%,#0a0618 100%);
+    display:flex;flex-direction:column;align-items:center;
+    padding:0 18px 16px;overflow-y:auto;overflow-x:hidden;
+    scrollbar-width:thin;scrollbar-color:rgba(124,58,237,0.4) transparent;
+  }
+  #p1::-webkit-scrollbar{width:4px;}
+  #p1::-webkit-scrollbar-thumb{background:rgba(124,58,237,0.4);border-radius:4px;}
+  .page-header{width:100%;text-align:center;padding:18px 0 10px;}
+  .logo-bubble{font-size:36px;display:block;animation:float 3s ease-in-out infinite;filter:drop-shadow(0 0 16px rgba(168,85,247,0.5));}
+  @keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+  .game-title{color:#fff;font-size:20px;font-weight:900;margin:6px 0 2px;letter-spacing:1px;text-shadow:0 0 24px rgba(168,85,247,0.6);}
+  .game-subtitle{color:#8b5cf6;font-size:11px;letter-spacing:2px;}
+  .section-label{color:#475569;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0 0 6px;}
+  .section-header{width:100%;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .sel-count{color:#7c3aed;font-size:9px;font-weight:700;background:rgba(124,58,237,0.15);padding:2px 7px;border-radius:20px;}
+  .type-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;width:100%;margin-bottom:10px;}
+  .type-card{
+    background:rgba(255,255,255,0.04);border:2px solid rgba(255,255,255,0.08);
+    border-radius:12px;padding:9px 10px;text-align:center;cursor:pointer;
+    position:relative;transition:all 0.2s;user-select:none;
+  }
+  .type-card:hover{background:rgba(124,58,237,0.15);border-color:rgba(124,58,237,0.4);}
+  .type-card.sel{background:rgba(124,58,237,0.22);border-color:#7c3aed;}
+  .type-check{
+    position:absolute;top:6px;right:7px;width:16px;height:16px;border-radius:4px;
+    border:2px solid rgba(255,255,255,0.2);background:transparent;
+    display:flex;align-items:center;justify-content:center;
+    font-size:10px;font-weight:700;color:#fff;transition:all 0.15s;
+  }
+  .type-card.sel .type-check{background:#7c3aed;border-color:#7c3aed;}
+  .type-emoji{font-size:18px;margin-bottom:3px;display:block;}
+  .type-name{color:#e2e8f0;font-size:12px;font-weight:700;}
+  .type-ex{color:#475569;font-size:9px;margin-top:2px;}
+  .diff-row{display:flex;gap:7px;width:100%;margin-bottom:7px;}
+  .diff-btn{
+    flex:1;padding:8px 4px;border-radius:10px;
+    border:2px solid rgba(255,255,255,0.12);background:transparent;
+    color:#4b5563;font-size:11px;font-weight:700;cursor:pointer;
+    transition:all 0.2s;font-family:'Nunito',sans-serif;
+  }
+  .diff-btn.sel{border-color:#f59e0b;background:rgba(245,158,11,0.14);color:#fbbf24;}
+  .diff-desc{
+    width:100%;border-radius:10px;padding:8px 12px;
+    display:flex;gap:9px;align-items:center;margin-bottom:12px;
+  }
+  .diff-desc-icon{font-size:16px;}
+  .diff-desc-text{color:#94a3b8;font-size:10px;line-height:1.4;}
+  .diff-desc-label{font-size:11px;font-weight:700;margin-bottom:1px;}
+  #startBtn{
+    width:100%;padding:13px;border-radius:13px;border:none;
+    background:linear-gradient(135deg,#6d28d9,#7c3aed,#ec4899);
+    color:#fff;font-size:15px;font-weight:800;cursor:not-allowed;opacity:0.4;
+    letter-spacing:1.5px;transition:all 0.25s;font-family:'Nunito',sans-serif;
+  }
+  #startBtn:not(:disabled){cursor:pointer;opacity:1;animation:pulse-btn 2s ease-in-out infinite;}
+  #startBtn:not(:disabled):hover{transform:translateY(-1px);}
+  @keyframes pulse-btn{0%,100%{box-shadow:0 4px 16px rgba(124,58,237,0.3);}50%{box-shadow:0 4px 26px rgba(236,72,153,0.5);}}
+  .start-hint{color:#1e293b;font-size:10px;margin-top:7px;text-align:center;}
+  /* Page 2 */
+  #p2{position:absolute;inset:0;display:none;}
+  #gc{display:block;border-radius:20px;}
+  #topbar{
+    position:absolute;top:0;left:0;right:0;height:58px;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 12px;pointer-events:none;
+  }
+  .tb-btn{
+    pointer-events:all;width:40px;height:40px;border-radius:11px;
+    border:1.5px solid rgba(255,255,255,0.18);background:rgba(8,5,25,0.75);
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+    backdrop-filter:blur(8px);transition:all 0.15s;
+  }
+  .tb-btn:hover{background:rgba(124,58,237,0.3);border-color:#7c3aed;}
+  .tb-score{
+    background:rgba(8,5,25,0.75);border:1.5px solid rgba(255,255,255,0.1);
+    border-radius:11px;padding:5px 16px;text-align:center;backdrop-filter:blur(8px);
+  }
+  .tb-score-label{color:rgba(255,255,255,0.3);font-size:9px;letter-spacing:2px;}
+  #scdisp{color:#fbbf24;font-size:20px;font-weight:800;line-height:1.2;}
+  .overlay{
+    position:absolute;inset:0;background:rgba(4,3,16,0.94);border-radius:20px;
+    display:none;flex-direction:column;align-items:center;justify-content:center;
+    padding:28px 22px;gap:14px;backdrop-filter:blur(6px);
+  }
+  .overlay.show{display:flex;}
+  .q-badge{
+    padding:5px 16px;border-radius:20px;font-size:11px;font-weight:700;
+    letter-spacing:1.5px;background:linear-gradient(135deg,#6d28d9,#1d4ed8);color:#fff;
+  }
+  #ptext{color:#fff;font-size:30px;font-weight:800;text-align:center;}
+  #popts{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;}
+  .qo{
+    background:rgba(255,255,255,0.06);border:2px solid rgba(255,255,255,0.12);
+    border-radius:13px;padding:14px;color:#fff;font-size:20px;font-weight:800;
+    cursor:pointer;text-align:center;width:100%;transition:all 0.15s;
+    font-family:'Nunito',sans-serif;
+  }
+  .qo:hover{background:rgba(124,58,237,0.28);border-color:#7c3aed;}
+  .qo.ok{background:rgba(34,197,94,0.2)!important;border-color:#22c55e!important;color:#4ade80!important;}
+  .qo.no{background:rgba(239,68,68,0.2)!important;border-color:#ef4444!important;color:#f87171!important;}
+  #pres{font-size:14px;text-align:center;font-weight:700;min-height:22px;display:none;}
+  .btn-primary{
+    padding:13px 0;width:210px;border-radius:13px;border:none;
+    background:linear-gradient(135deg,#6d28d9,#ec4899);color:#fff;font-size:15px;
+    font-weight:800;cursor:pointer;letter-spacing:1px;transition:all 0.2s;font-family:'Nunito',sans-serif;
+  }
+  .btn-primary:hover{transform:translateY(-1px);}
+  .btn-secondary{
+    padding:11px 0;width:210px;border-radius:13px;
+    border:2px solid rgba(124,58,237,0.4);background:transparent;
+    color:#a78bfa;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:'Nunito',sans-serif;
+  }
+  .btn-secondary:hover{background:rgba(124,58,237,0.15);}
+  .btn-ghost{
+    padding:10px 0;width:210px;border-radius:13px;
+    border:2px solid rgba(255,255,255,0.1);background:transparent;
+    color:#4b5563;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:'Nunito',sans-serif;
+  }
+  .btn-ghost:hover{color:#94a3b8;}
+  #pnext{display:none;}
+</style>
+</head>
+<body>
+<div id="wrapper">
+  <!-- Page 1 -->
+  <div id="p1">
+    <div class="page-header">
+      <span class="logo-bubble">🫧</span>
+      <div class="game-title">數學泡泡射擊</div>
+      <div class="game-subtitle">消泡泡，練數學！</div>
+    </div>
+    <div style="width:100%;margin-bottom:2px;">
+      <div class="section-header">
+        <span class="section-label">題型（可複選）</span>
+        <span id="selCount" class="sel-count" style="display:none;"></span>
+      </div>
+      <div class="type-grid">
+        <div class="type-card" data-t="addition" onclick="togT(this)">
+          <div class="type-check" id="ck_addition"></div>
+          <span class="type-emoji">➕</span><div class="type-name">加法</div><div class="type-ex">23 + 5 = ?</div>
+        </div>
+        <div class="type-card" data-t="subtraction" onclick="togT(this)">
+          <div class="type-check" id="ck_subtraction"></div>
+          <span class="type-emoji">➖</span><div class="type-name">減法</div><div class="type-ex">87 − 4 = ?</div>
+        </div>
+        <div class="type-card" data-t="multiplication" onclick="togT(this)">
+          <div class="type-check" id="ck_multiplication"></div>
+          <span class="type-emoji">✖️</span><div class="type-name">乘法</div><div class="type-ex">7 × 8 = ?</div>
+        </div>
+        <div class="type-card" data-t="division" onclick="togT(this)">
+          <div class="type-check" id="ck_division"></div>
+          <span class="type-emoji">➗</span><div class="type-name">除法</div><div class="type-ex">48 ÷ 6 = ?</div>
+        </div>
+      </div>
+    </div>
+    <div style="width:100%;">
+      <div class="section-label">難度（單選）</div>
+      <div class="diff-row">
+        <button class="diff-btn sel" data-d="easy" onclick="selD(this)">🌱 簡單</button>
+        <button class="diff-btn" data-d="medium" onclick="selD(this)">🔥 中等</button>
+        <button class="diff-btn" data-d="hard" onclick="selD(this)">⚡ 困難</button>
+      </div>
+    </div>
+    <div id="diffDesc" class="diff-desc" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);">
+      <span class="diff-desc-icon">🌱</span>
+      <div><div class="diff-desc-label" style="color:#fbbf24;">簡單</div><div class="diff-desc-text">個位數 ○ 個位數（1–9）</div></div>
+    </div>
+    <button id="startBtn" onclick="goGame()" disabled>請先選擇題型</button>
+    <p class="start-hint">消除同色泡泡（4顆以上）→ 答題得分！</p>
+  </div>
+
+  <!-- Page 2 -->
+  <div id="p2">
+    <canvas id="gc" width="390" height="700"></canvas>
+    <div id="topbar">
+      <button class="tb-btn" onclick="doH()">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M11 14L6 9l5-5" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <div class="tb-score">
+        <div class="tb-score-label">分數</div>
+        <div id="scdisp">0</div>
+      </div>
+      <button class="tb-btn" onclick="togglePause()">
+        <svg id="pauseIcon" width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <rect x="3.5" y="2.5" width="4" height="13" rx="1.5" fill="#94a3b8"/>
+          <rect x="10.5" y="2.5" width="4" height="13" rx="1.5" fill="#94a3b8"/>
+        </svg>
+      </button>
+    </div>
+    <div id="pauseOverlay" class="overlay">
+      <div style="font-size:50px;">⏸</div>
+      <div style="color:#fff;font-size:24px;font-weight:800;letter-spacing:3px;">已暫停</div>
+      <div id="pauseStat" style="color:#4b5563;font-size:12px;"></div>
+      <button class="btn-primary" onclick="togglePause()" style="margin-top:6px;">繼續遊戲 ▶</button>
+      <button class="btn-secondary" onclick="doRestart()">重新開始 🔄</button>
+      <button class="btn-ghost" onclick="doH()">返回選單 ←</button>
+    </div>
+    <div id="pop" class="overlay">
+      <div id="pbadge" class="q-badge"></div>
+      <div id="ptext"></div>
+      <div id="popts"></div>
+      <div id="pres"></div>
+      <button id="pnext" class="btn-primary" onclick="closePop()">繼續遊戲 →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 選單 ──────────────────────────────────────────────────
+var selTypes = new Set(), gD = 'easy';
+var DIFF_INFO = {
+  easy:   {icon:'🌱',label:'簡單',desc:'個位數 ○ 個位數（1–9）',          c:'#fbbf24',bg:'rgba(245,158,11,0.08)',  bd:'rgba(245,158,11,0.2)'},
+  medium: {icon:'🔥',label:'中等',desc:'十位數 ○ 個位數（10–99 和 1–9）',  c:'#fb923c',bg:'rgba(251,146,60,0.08)',  bd:'rgba(251,146,60,0.2)'},
+  hard:   {icon:'⚡',label:'困難',desc:'百位數 ○ 個位數（100–999 和 1–9）', c:'#c084fc',bg:'rgba(192,132,252,0.08)',bd:'rgba(192,132,252,0.2)'}
+};
+function togT(el) {
+  var t = el.dataset.t, ck = document.getElementById('ck_'+t);
+  if (selTypes.has(t)) { selTypes.delete(t); el.classList.remove('sel'); ck.textContent = ''; }
+  else                 { selTypes.add(t);    el.classList.add('sel');    ck.textContent = '✓'; }
+  var sc = document.getElementById('selCount');
+  if (selTypes.size > 0) { sc.style.display=''; sc.textContent='已選 '+selTypes.size+' 項'; }
+  else sc.style.display = 'none';
+  var b = document.getElementById('startBtn');
+  if (selTypes.size > 0) { b.disabled=false; b.textContent='開始遊戲 ▶'; }
+  else { b.disabled=true; b.textContent='請先選擇題型'; }
+}
+function selD(e) {
+  document.querySelectorAll('.diff-btn').forEach(function(b){ b.classList.remove('sel'); });
+  e.classList.add('sel'); gD = e.dataset.d;
+  var di = DIFF_INFO[gD], dd = document.getElementById('diffDesc');
+  dd.style.background=di.bg; dd.style.border='1px solid '+di.bd;
+  dd.innerHTML='<span class="diff-desc-icon">'+di.icon+'</span><div><div class="diff-desc-label" style="color:'+di.c+'">'+di.label+'</div><div class="diff-desc-text">'+di.desc+'</div></div>';
+}
+function goGame() {
+  if (!selTypes.size) return;
+  document.getElementById('p1').style.display='none';
+  document.getElementById('p2').style.display='block';
+  initG(Array.from(selTypes), gD);
+}
+
+// ── 遊戲常數 ──────────────────────────────────────────────
+var W=390, H=700, R=19;
+var ROW_H = Math.round(R * Math.sqrt(3));  // 列高 ≈ 32.9
+var COLS = 9;           // 偶數列格子數
+var SX=195, SY=625, SPD=700;
+var TOP_Y = 68;         // 第 0 列泡泡圓心 Y
+
+// 顏色
+var CL=['#EF4444','#F97316','#EAB308','#22C55E','#3B82F6','#A855F7'];
+var LL=['#FCA5A5','#FDBA74','#FDE047','#86EFAC','#93C5FD','#D8B4FE'];
+var DL=['#7F1D1D','#7C2D12','#713F12','#14532D','#1E3A8A','#581C87'];
+
+// 狀態
+var cv, cx;
+var grid = [];   // grid[r][c] = 顏色索引(-1=空)
+var fb = null;   // 飛行泡泡 {x,y,vx,vy,c}
+var cC=0, nC=1;  // 當前/下一顆顏色
+var ang = -Math.PI/2;
+var sc=0, qCt=0;
+var mTypes, mD;
+var isA=false, gOn=false, isPaused=false;
+var pEl=[], particles=[], raf=null, lTs=0, cQ=null, shotN=0;
+
+// ── 格子工具 ──────────────────────────────────────────────
+// 每列格子數：偶數列 COLS，奇數列 COLS-1
+function colsInRow(r) { return r % 2 === 0 ? COLS : COLS-1; }
+
+// 格子中心像素座標
+// 偶數列：x = R + c*(2R)
+// 奇數列：x = 2R + c*(2R)  (整體右移一個 R)
+function cellXY(r, c) {
+  var x = (r % 2 === 0) ? R + c*2*R : 2*R + c*2*R;
+  var y = TOP_Y + r * ROW_H;
+  return { x:x, y:y };
+}
+
+// 確保格子陣列長度
+function ensureRows(maxR) {
+  while (grid.length <= maxR) {
+    var nr = grid.length;
+    var row = [];
+    for (var i=0; i<colsInRow(nr); i++) row.push(-1);
+    grid.push(row);
+  }
+}
+
+// 六角鄰居
+function neighbors(r, c) {
+  // 偶數列鄰居偏移
+  var even = [[-1,-1],[-1,0],[0,-1],[0,1],[1,-1],[1,0]];
+  // 奇數列鄰居偏移
+  var odd  = [[-1, 0],[-1,1],[0,-1],[0,1],[1, 0],[1,1]];
+  var offs = (r % 2 === 0) ? even : odd;
+  var res = [];
+  for (var i=0; i<offs.length; i++) {
+    var nr = r + offs[i][0], nc = c + offs[i][1];
+    if (nr >= 0 && nr < grid.length && nc >= 0 && nc < colsInRow(nr))
+      res.push([nr, nc]);
+  }
+  return res;
+}
+
+// 初始格子（8 列隨機）
+function initGrid() {
+  grid = [];
+  for (var r=0; r<8; r++) {
+    var row = [];
+    for (var c=0; c<colsInRow(r); c++) row.push(Math.floor(Math.random()*CL.length));
+    grid.push(row);
+  }
+}
+
+// ── 落點計算（關鍵修正）────────────────────────────────────
+// 傳入撞擊時的飛行泡泡位置 (bx,by)，以及被撞到的格子 [hr,hc]（-1,-1 代表撞頂）
+// 返回應該放置的 [row, col]
+function findLandCell(bx, by, hr, hc) {
+  var candidates = [];
+
+  if (hr === -1) {
+    // 撞頂：在 row=0 找最近空格
+    ensureRows(0);
+    for (var c=0; c<colsInRow(0); c++) {
+      if (grid[0][c] === -1) {
+        var p = cellXY(0, c);
+        candidates.push({ r:0, c:c, d:Math.hypot(bx-p.x, by-p.y) });
+      }
+    }
+    // 若 row0 全滿，找最近空格（任何列）
+    if (!candidates.length) {
+      for (var r2=0; r2<Math.min(grid.length,3); r2++) {
+        for (var c2=0; c2<colsInRow(r2); c2++) {
+          if (grid[r2][c2]===-1) {
+            var p2=cellXY(r2,c2);
+            candidates.push({r:r2,c:c2,d:Math.hypot(bx-p2.x,by-p2.y)});
+          }
+        }
+      }
+    }
+  } else {
+    // 撞到泡泡 [hr,hc]：從它的空鄰居中找最近
+    var nb = neighbors(hr, hc);
+    for (var i=0; i<nb.length; i++) {
+      var nr=nb[i][0], nc=nb[i][1];
+      ensureRows(nr);
+      if (grid[nr][nc] === -1) {
+        var p3 = cellXY(nr, nc);
+        candidates.push({ r:nr, c:nc, d:Math.hypot(bx-p3.x, by-p3.y) });
+      }
+    }
+    // 若直接鄰居全滿，繼續找鄰居的鄰居
+    if (!candidates.length) {
+      var visited = {};
+      visited[hr+','+hc] = 1;
+      var queue = nb.slice();
+      for (var qi=0; qi<queue.length && !candidates.length; qi++) {
+        var qr=queue[qi][0], qc=queue[qi][1], qk=qr+','+qc;
+        if (visited[qk]) continue; visited[qk]=1;
+        ensureRows(qr);
+        if (grid[qr][qc]===-1) {
+          var p4=cellXY(qr,qc);
+          candidates.push({r:qr,c:qc,d:Math.hypot(bx-p4.x,by-p4.y)});
+        } else {
+          var nb2=neighbors(qr,qc);
+          for (var j=0; j<nb2.length; j++) {
+            if (!visited[nb2[j][0]+','+nb2[j][1]]) queue.push(nb2[j]);
+          }
+        }
+      }
+    }
+  }
+
+  if (!candidates.length) {
+    // 最終備援：在飛行位置附近強制找空格
+    var baseR = Math.max(0, Math.round((by - TOP_Y) / ROW_H));
+    ensureRows(baseR+1);
+    for (var dr=-1; dr<=2; dr++) {
+      var tr = baseR+dr; if (tr<0) continue;
+      for (var tc=0; tc<colsInRow(tr); tc++) {
+        if (grid[tr][tc]===-1) {
+          var pp=cellXY(tr,tc);
+          candidates.push({r:tr,c:tc,d:Math.hypot(bx-pp.x,by-pp.y)});
+        }
+      }
+      if (candidates.length) break;
+    }
+  }
+
+  if (!candidates.length) return null;
+  candidates.sort(function(a,b){ return a.d-b.d; });
+  return [candidates[0].r, candidates[0].c];
+}
+
+// ── 射擊物理 ──────────────────────────────────────────────
+function shoot() {
+  if (fb || isA || isPaused) return;
+  fb = { x:SX, y:SY, vx:Math.cos(ang)*SPD, vy:Math.sin(ang)*SPD, c:cC };
+}
+
+function upd(dt) {
+  // 更新粒子
+  for (var i=particles.length-1; i>=0; i--) {
+    var p=particles[i];
+    p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=250*dt; p.l-=dt*1.8;
+    if (p.l<=0) particles.splice(i,1);
+  }
+  if (!fb || isA || isPaused) return;
+
+  fb.x += fb.vx*dt; fb.y += fb.vy*dt;
+
+  // 左右牆反彈
+  if (fb.x-R < 0)  { fb.x=R;   fb.vx= Math.abs(fb.vx); }
+  if (fb.x+R > W)  { fb.x=W-R; fb.vx=-Math.abs(fb.vx); }
+
+  // 撞頂
+  if (fb.y - R <= TOP_Y) {
+    land(fb.x, TOP_Y+R, -1, -1);
+    return;
+  }
+
+  // 撞現有泡泡
+  outer:
+  for (var r=0; r<grid.length; r++) {
+    for (var c=0; c<colsInRow(r); c++) {
+      if (grid[r][c] === -1) continue;
+      var pos = cellXY(r,c);
+      if (Math.hypot(fb.x-pos.x, fb.y-pos.y) < R*1.9) {
+        land(fb.x, fb.y, r, c);
+        break outer;
+      }
+    }
+  }
+
+  // 超出畫面底部
+  if (fb.y > H) { fb=null; adv(); }
+}
+
+function land(bx, by, hr, hc) {
+  var col = fb.c; fb = null;
+  var pos = findLandCell(bx, by, hr, hc);
+  if (!pos) { adv(); return; }
+
+  var sr=pos[0], sc2=pos[1];
+  ensureRows(sr);
+  grid[sr][sc2] = col;
+
+  // 找同色連通
+  var matched = floodFill(sr, sc2, col);
+  if (matched.length >= 4) {
+    // 先清除消除格
+    for (var i=0; i<matched.length; i++) grid[matched[i][0]][matched[i][1]] = -1;
+    // 找浮空泡泡並立即清除
+    var floating = findFloating();
+    for (var i=0; i<floating.length; i++) grid[floating[i][0]][floating[i][1]] = -1;
+    // 記錄要動畫的格（含浮空），還原格子以便淡出顯示
+    for (var i=0; i<matched.length; i++) grid[matched[i][0]][matched[i][1]] = col;
+    for (var i=0; i<floating.length; i++) {
+      var fv = grid[floating[i][0]][floating[i][1]];
+      // floating 已被清除，記下原色以動畫
+    }
+    pEl = matched.slice();
+    // 粒子
+    for (var i=0; i<matched.length; i++) {
+      var p=cellXY(matched[i][0],matched[i][1]);
+      spawnParticles(p.x,p.y,col);
+    }
+    isA = true;
+    setTimeout(showQ, 350);
+  } else {
+    adv(); chkOver();
+  }
+}
+
+function adv() {
+  cC = nC; nC = Math.floor(Math.random()*CL.length);
+  shotN++;
+  if (shotN % 10 === 0) addRow();
+}
+
+function addRow() {
+  var nr = [];
+  for (var c=0; c<colsInRow(grid.length); c++) nr.push(Math.floor(Math.random()*CL.length));
+  grid.push(nr);
+}
+
+// 同色連通 flood fill
+function floodFill(r, c, col) {
+  var vis={}, q=[[r,c]], res=[];
+  while (q.length) {
+    var cur=q.shift(), cr=cur[0], cc=cur[1], k=cr+','+cc;
+    if (vis[k]) continue; vis[k]=1;
+    if (cr<0||cr>=grid.length||cc<0||cc>=colsInRow(cr)) continue;
+    if (grid[cr][cc]!==col) continue;
+    res.push([cr,cc]);
+    var nb=neighbors(cr,cc);
+    for (var i=0;i<nb.length;i++) if (!vis[nb[i][0]+','+nb[i][1]]) q.push(nb[i]);
+  }
+  return res;
+}
+
+// 找未連接到頂排的浮空泡泡
+function findFloating() {
+  var conn={}, q=[];
+  for (var c=0; c<colsInRow(0); c++) {
+    if (grid[0] && grid[0][c]!==-1) { q.push([0,c]); conn['0,'+c]=1; }
+  }
+  while (q.length) {
+    var cur=q.shift(), nb=neighbors(cur[0],cur[1]);
+    for (var i=0;i<nb.length;i++) {
+      var nr=nb[i][0],nc=nb[i][1],k=nr+','+nc;
+      if (!conn[k]&&nr<grid.length&&nc<colsInRow(nr)&&grid[nr][nc]!==-1) { conn[k]=1; q.push([nr,nc]); }
+    }
+  }
+  var res=[];
+  for (var r=0;r<grid.length;r++)
+    for (var c=0;c<colsInRow(r);c++)
+      if (grid[r][c]!==-1&&!conn[r+','+c]) res.push([r,c]);
+  return res;
+}
+
+function spawnParticles(x,y,ci) {
+  for (var i=0;i<12;i++) {
+    var a=Math.random()*Math.PI*2, s=60+Math.random()*180;
+    particles.push({x:x,y:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,c:CL[ci],r:2+Math.random()*3,l:0.7+Math.random()*0.3});
+  }
+}
+
+function chkOver() {
+  var danger = SY - 55;
+  for (var r=0;r<grid.length;r++)
+    for (var c=0;c<colsInRow(r);c++)
+      if (grid[r][c]!==-1 && cellXY(r,c).y > danger) { endG(); return; }
+}
+
+// ── 繪製 ──────────────────────────────────────────────────
+function drawBubble(x,y,r,ci,al) {
+  if (al===undefined) al=1;
+  cx.save(); cx.globalAlpha=al;
+  var g=cx.createRadialGradient(x-r*.34,y-r*.34,r*.05,x,y,r);
+  g.addColorStop(0,LL[ci]); g.addColorStop(.5,CL[ci]); g.addColorStop(1,DL[ci]);
+  cx.beginPath(); cx.arc(x,y,r-1,0,Math.PI*2); cx.fillStyle=g; cx.fill();
+  cx.beginPath(); cx.arc(x-r*.3,y-r*.32,r*.22,0,Math.PI*2); cx.fillStyle='rgba(255,255,255,0.55)'; cx.fill();
+  cx.beginPath(); cx.arc(x-r*.3,y-r*.32,r*.1, 0,Math.PI*2); cx.fillStyle='rgba(255,255,255,0.9)';  cx.fill();
+  cx.strokeStyle='rgba(0,0,0,0.2)'; cx.lineWidth=1.5;
+  cx.beginPath(); cx.arc(x,y,r-1,0,Math.PI*2); cx.stroke();
+  cx.restore();
+}
+
+function drawBG() {
+  var bg=cx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#07061a'); bg.addColorStop(1,'#0f0620');
+  cx.fillStyle=bg; cx.fillRect(0,0,W,H);
+  cx.strokeStyle='rgba(255,255,255,0.015)'; cx.lineWidth=1;
+  for (var x=0;x<W;x+=36){cx.beginPath();cx.moveTo(x,0);cx.lineTo(x,H);cx.stroke();}
+  for (var y=0;y<H;y+=36){cx.beginPath();cx.moveTo(0,y);cx.lineTo(W,y);cx.stroke();}
+  cx.strokeStyle='rgba(236,72,153,0.2)'; cx.setLineDash([4,8]); cx.lineWidth=1.5;
+  cx.beginPath(); cx.moveTo(0,SY-50); cx.lineTo(W,SY-50); cx.stroke();
+  cx.setLineDash([]);
+  var tg=cx.createLinearGradient(0,58,0,TOP_Y);
+  tg.addColorStop(0,'rgba(124,58,237,0.4)'); tg.addColorStop(1,'transparent');
+  cx.fillStyle=tg; cx.fillRect(0,58,W,TOP_Y-58);
+}
+
+function drawAim() {
+  if (fb||isA||isPaused) return;
+  cx.save(); cx.strokeStyle='rgba(255,255,255,0.22)'; cx.lineWidth=2; cx.setLineDash([6,10]);
+  var x=SX,y=SY,dx=Math.cos(ang),dy=Math.sin(ang);
+  cx.beginPath(); cx.moveTo(x,y);
+  for (var b=0;b<4;b++){
+    var tT=(TOP_Y-y)/dy, tW=dx>0?(W-R-x)/dx:(R-x)/dx;
+    if (tT<=tW){x+=dx*tT;y=TOP_Y;cx.lineTo(x,y);break;}
+    else{x+=dx*tW;y+=dy*tW;cx.lineTo(x,y);dx=-dx;}
+  }
+  cx.stroke(); cx.setLineDash([]); cx.restore();
+}
+
+function drawShooter() {
+  cx.save();
+  var sg=cx.createRadialGradient(SX,SY,4,SX,SY,34);
+  sg.addColorStop(0,'#1a0e3e'); sg.addColorStop(1,'#08041a');
+  cx.beginPath(); cx.arc(SX,SY,34,0,Math.PI*2); cx.fillStyle=sg; cx.fill();
+  cx.strokeStyle='rgba(124,58,237,0.8)'; cx.lineWidth=2.5;
+  cx.beginPath(); cx.arc(SX,SY,34,0,Math.PI*2); cx.stroke();
+  cx.strokeStyle='rgba(124,58,237,0.2)'; cx.lineWidth=8;
+  cx.beginPath(); cx.arc(SX,SY,38,0,Math.PI*2); cx.stroke();
+  drawBubble(SX,SY,R,cC);
+  cx.translate(SX,SY); cx.rotate(ang);
+  cx.beginPath(); cx.moveTo(26,0); cx.lineTo(36,-5); cx.lineTo(36,5); cx.closePath();
+  cx.fillStyle='rgba(255,255,255,0.55)'; cx.fill();
+  cx.restore();
+  cx.save();
+  cx.fillStyle='rgba(0,0,0,0.5)';
+  cx.beginPath(); cx.arc(W-52,H-50,26,0,Math.PI*2); cx.fill();
+  cx.strokeStyle='rgba(255,255,255,0.15)'; cx.lineWidth=1.5; cx.stroke();
+  drawBubble(W-52,H-50,R-4,nC);
+  cx.fillStyle='rgba(255,255,255,0.3)'; cx.font='9px Nunito,system-ui'; cx.textAlign='center';
+  cx.fillText('下一顆',W-52,H-18);
+  cx.restore();
+}
+
+function drawGrid() {
+  var fadeSet={};
+  for (var i=0;i<pEl.length;i++) fadeSet[pEl[i][0]+','+pEl[i][1]]=1;
+  for (var r=0;r<grid.length;r++) {
+    if (!grid[r]) continue;
+    for (var c=0;c<colsInRow(r);c++) {
+      if (grid[r][c]===-1) continue;
+      var pos=cellXY(r,c);
+      drawBubble(pos.x,pos.y,R,grid[r][c],fadeSet[r+','+c]?0.25:1);
+    }
+  }
+}
+
+function drawParticles() {
+  for (var i=0;i<particles.length;i++) {
+    var p=particles[i];
+    cx.save(); cx.globalAlpha=Math.max(0,p.l);
+    cx.beginPath(); cx.arc(p.x,p.y,p.r,0,Math.PI*2); cx.fillStyle=p.c; cx.fill();
+    cx.restore();
+  }
+}
+
+function drawHUD() {
+  cx.save();
+  var label=mD==='easy'?'🌱 簡單':mD==='medium'?'🔥 中等':'⚡ 困難';
+  cx.fillStyle='rgba(255,255,255,0.2)'; cx.font='bold 11px Nunito,system-ui'; cx.textAlign='center';
+  cx.fillText(label+'  ·  答題 '+qCt+' 題',W/2,H-10);
+  cx.restore();
+}
+
+function render() {
+  cx.clearRect(0,0,W,H);
+  drawBG(); drawGrid(); drawParticles(); drawAim(); drawShooter();
+  if (fb) drawBubble(fb.x,fb.y,R,fb.c);
+  drawHUD();
+  document.getElementById('scdisp').textContent=sc;
+}
+
+function loop(ts) {
+  if (!gOn||isPaused) return;
+  var dt=Math.min((ts-lTs)/1000,0.05); lTs=ts;
+  upd(dt); render();
+  raf=requestAnimationFrame(loop);
+}
+
+// ── 題目 ──────────────────────────────────────────────────
+function rnd(lo,hi){ return lo+Math.floor(Math.random()*(hi-lo+1)); }
+function genQ() {
+  var t=mTypes[Math.floor(Math.random()*mTypes.length)];
+  var bigLo=mD==='easy'?1:mD==='medium'?10:100;
+  var bigHi=mD==='easy'?9:mD==='medium'?99:999;
+  var BADGE={addition:'加法練習 ➕',subtraction:'減法練習 ➖',multiplication:'乘法練習 ✖️',division:'除法練習 ➗'};
+  var q,ans;
+  if (t==='addition')       { var a=rnd(bigLo,bigHi),b=rnd(1,9); q=a+' + '+b+' = ?'; ans=a+b; }
+  else if (t==='subtraction') { var a=rnd(bigLo,bigHi),b=rnd(1,Math.min(9,a)); q=a+' − '+b+' = ?'; ans=a-b; }
+  else if (t==='multiplication') { var a=rnd(bigLo,bigHi),b=rnd(1,9); q=a+' × '+b+' = ?'; ans=a*b; }
+  else { var q2=rnd(bigLo,bigHi),d=rnd(1,9); q=(q2*d)+' ÷ '+d+' = ?'; ans=q2; }
+  var spread=mD==='easy'?3:mD==='medium'?10:35;
+  var opts={}; opts[ans]=1;
+  for (var tries=0; Object.keys(opts).length<4&&tries<400; tries++){
+    var delta=1+Math.floor(Math.random()*spread);
+    var v=Math.random()<0.5?ans+delta:Math.max(1,ans-delta);
+    if (v!==ans) opts[v]=1;
+  }
+  return {q:q,ans:ans,opts:Object.keys(opts).map(Number).sort(function(){return Math.random()-.5;}),badge:BADGE[t]};
+}
+
+function showQ() {
+  cQ=genQ();
+  document.getElementById('pbadge').textContent=cQ.badge;
+  document.getElementById('ptext').textContent=cQ.q;
+  document.getElementById('pres').style.display='none';
+  document.getElementById('pnext').style.display='none';
+  var oc=document.getElementById('popts'); oc.innerHTML='';
+  for (var i=0;i<cQ.opts.length;i++){
+    (function(opt){
+      var btn=document.createElement('button'); btn.className='qo'; btn.textContent=opt;
+      btn.addEventListener('click',function(){ ansQ(opt,btn); }); oc.appendChild(btn);
+    })(cQ.opts[i]);
+  }
+  document.getElementById('pop').classList.add('show');
+}
+
+function ansQ(val,btn) {
+  document.querySelectorAll('.qo').forEach(function(b){ b.style.pointerEvents='none'; });
+  var ok=val===cQ.ans;
+  if (ok) {
+    btn.classList.add('ok');
+    var pts=pEl.length*100*(mD==='easy'?1:mD==='medium'?2:3);
+    sc+=pts; qCt++;
+    var r=document.getElementById('pres'); r.style.color='#4ade80'; r.innerHTML='🎉 答對了！ +'+pts+' 分';
+  } else {
+    btn.classList.add('no');
+    document.querySelectorAll('.qo').forEach(function(b){ if (+b.textContent===cQ.ans) b.classList.add('ok'); });
+    sc=Math.max(0,sc-20); qCt++;
+    var r=document.getElementById('pres'); r.style.color='#f87171'; r.innerHTML='❌ 答錯了，正確答案是 '+cQ.ans;
+  }
+  document.getElementById('pres').style.display='block';
+  document.getElementById('pnext').style.display='block';
+}
+
+function closePop() {
+  document.getElementById('pop').classList.remove('show');
+  // 清除消除格
+  for (var i=0;i<pEl.length;i++) {
+    var r=pEl[i][0],c=pEl[i][1];
+    if (r<grid.length && c<colsInRow(r)) grid[r][c]=-1;
+  }
+  // 再次清除浮空
+  var fl=findFloating();
+  for (var i=0;i<fl.length;i++) grid[fl[i][0]][fl[i][1]]=-1;
+  pEl=[]; isA=false; adv(); chkOver();
+}
+
+function endG() {
+  gOn=false; isPaused=false;
+  var pp=document.getElementById('pop');
+  pp.innerHTML=
+    '<div style="font-size:52px;">🎯</div>'+
+    '<div style="color:#fff;font-size:26px;font-weight:900;">遊戲結束！</div>'+
+    '<div style="color:#475569;font-size:13px;">最終得分</div>'+
+    '<div style="color:#fbbf24;font-size:56px;font-weight:900;line-height:1;">'+sc+'</div>'+
+    '<div style="color:#7c3aed;font-size:12px;font-weight:700;">共答題 '+qCt+' 題 🧮</div>'+
+    '<button class="btn-primary" onclick="doRestart()" style="margin-top:6px;">再玩一次 🔄</button>'+
+    '<button class="btn-ghost" onclick="doH()">返回選單</button>';
+  pp.classList.add('show');
+}
+
+function togglePause() {
+  if (!gOn) return; isPaused=!isPaused;
+  var icon=document.getElementById('pauseIcon');
+  if (isPaused) {
+    document.getElementById('pauseOverlay').classList.add('show');
+    document.getElementById('pauseStat').textContent='目前分數 '+sc+' 分 · 已答 '+qCt+' 題';
+    icon.innerHTML='<polygon points="4,2 15,9 15,9 4,16" fill="#94a3b8"/>';
+  } else {
+    document.getElementById('pauseOverlay').classList.remove('show');
+    icon.innerHTML='<rect x="3.5" y="2.5" width="4" height="13" rx="1.5" fill="#94a3b8"/><rect x="10.5" y="2.5" width="4" height="13" rx="1.5" fill="#94a3b8"/>';
+    lTs=performance.now(); if (raf) cancelAnimationFrame(raf); raf=requestAnimationFrame(loop);
+  }
+}
+function doRestart() {
+  document.getElementById('pauseOverlay').classList.remove('show');
+  document.getElementById('pop').classList.remove('show');
+  initG(mTypes,mD);
+}
+function doH() {
+  gOn=false; isPaused=false;
+  if (raf){ cancelAnimationFrame(raf); raf=null; }
+  document.getElementById('pauseOverlay').classList.remove('show');
+  document.getElementById('pop').classList.remove('show');
+  document.getElementById('p2').style.display='none';
+  document.getElementById('p1').style.display='flex';
+}
+
+// ── 初始化 ────────────────────────────────────────────────
+function initG(types,diff) {
+  cv=document.getElementById('gc'); cx=cv.getContext('2d');
+  mTypes=types; mD=diff;
+  initGrid();
+  sc=0; qCt=0; particles=[]; isA=false; fb=null; pEl=[];
+  shotN=0; isPaused=false;
+  cC=Math.floor(Math.random()*CL.length);
+  nC=Math.floor(Math.random()*CL.length);
+  gOn=true; ang=-Math.PI/2;
+  document.getElementById('pauseOverlay').classList.remove('show');
+  document.getElementById('pop').classList.remove('show');
+  document.getElementById('pauseIcon').innerHTML=
+    '<rect x="3.5" y="2.5" width="4" height="13" rx="1.5" fill="#94a3b8"/>'+
+    '<rect x="10.5" y="2.5" width="4" height="13" rx="1.5" fill="#94a3b8"/>';
+
+  function updateAng(mx,my) {
+    var a=Math.atan2(my-SY,mx-SX);
+    ang=Math.max(-Math.PI+.12,Math.min(-.12,a));
+  }
+  cv.onmousemove=function(e){
+    if (!gOn||isA||fb||isPaused) return;
+    var rect=cv.getBoundingClientRect(); updateAng(e.clientX-rect.left,e.clientY-rect.top);
+  };
+  cv.ontouchmove=function(e){
+    e.preventDefault(); if (!gOn||isA||fb||isPaused) return;
+    var rect=cv.getBoundingClientRect(),t=e.touches[0]; updateAng(t.clientX-rect.left,t.clientY-rect.top);
+  };
+  cv.onclick=function(e){
+    var rect=cv.getBoundingClientRect(); if (e.clientY-rect.top<58) return;
+    if (!gOn||isA||fb||isPaused) return; shoot();
+  };
+  cv.ontouchend=function(e){
+    e.preventDefault(); if (!gOn||isA||fb||isPaused) return;
+    var rect=cv.getBoundingClientRect(),t=e.changedTouches[0];
+    if (t.clientY-rect.top<58) return;
+    updateAng(t.clientX-rect.left,t.clientY-rect.top); shoot();
+  };
+  lTs=performance.now(); if (raf) cancelAnimationFrame(raf);
+  raf=requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
