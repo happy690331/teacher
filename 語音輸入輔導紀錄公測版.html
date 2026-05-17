@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>語音輔導紀錄系統</title>
+  <title>語音輔導紀錄系統(測試版)</title>
   
-  <!-- 載入 Tailwind CSS (負責排版與美化) -->
+  <!-- 載入 Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
   <!-- 載入 React 核心庫 -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   
-  <!-- 載入 Babel (讓瀏覽器能看懂 React 語法) -->
+  <!-- 載入 Babel -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="bg-emerald-50">
@@ -21,7 +21,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    // === SVG 圖示元件 (取代原本的 lucide-react) ===
+    // === SVG 圖示元件 ===
     const Icon = ({ path, size = 24, className = "" }) => (
       <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} dangerouslySetInnerHTML={{ __html: path }} />
     );
@@ -35,20 +35,23 @@
     const CheckCircle = ({ size, className }) => <Icon size={size} className={className} path='<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>' />;
     const AlertCircle = ({ size, className }) => <Icon size={size} className={className} path='<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>' />;
     const Key = ({ size, className }) => <Icon size={size} className={className} path='<path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"/><path d="m21 2-9.6 9.6"/><circle cx="7.5" cy="15.5" r="5.5"/>' />;
+    const ExternalLink = ({ size, className }) => <Icon size={size} className={className} path='<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/>' />;
 
+    const STUDENT_LIST = ["吳杰諾", "鍾芷語", "胡丞峰", "邱瀚毅", "陳蘋萱"];
 
-    // === 設定與常數 ===
-    const STUDENT_LIST = [
-      "林楷晟", "張語晴", "陳泓愷", "白政弘", "陳奕安", "吳杰諾", 
-      "鍾芷語", "胡丞峰", "邱瀚毅", "陳蘋萱", "藍浩軒", "蔡姍庭", 
-      "哈星柔", "張帝暘", "黃新宇", "彭昱閎", "鄭紹宇", "陳宥辰"
-    ];
-
-    const SHEET_ID = "1ca-6j8jPLqerQo0wEOxyfEPQ-c38I1s6MmvpwNN_jG8";
-    const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?usp=sharing`;
+    const anonymizeName = (name) => {
+      if (!name || typeof name !== 'string') return '';
+      const trimmedName = name.trim();
+      const len = trimmedName.length;
+      if (len <= 1) return trimmedName;
+      if (len === 2) return trimmedName[0] + '０'; 
+      const firstChar = trimmedName.charAt(0);
+      const lastChar = trimmedName.charAt(len - 1);
+      const middleChars = '０'.repeat(len - 2); 
+      return firstChar + middleChars + lastChar;
+    };
 
     const App = () => {
-      // === 狀態管理 ===
       const [isRecording, setIsRecording] = useState(false);
       const [rawText, setRawText] = useState('');
       const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -56,23 +59,23 @@
       const [exportStatus, setExportStatus] = useState(null);
       
       const [analyzedData, setAnalyzedData] = useState({
-        date: '',
-        studentName: '',
-        interviewee: '',
-        content: ''
+        date: '', studentName: '', interviewee: '', counselingPoints: '', contactMatters: ''
       });
 
-      // 設定 Modal 與本機儲存狀態
       const [showSettingsModal, setShowSettingsModal] = useState(false);
-      const [appsScriptUrl, setAppsScriptUrl] = useState(() => localStorage.getItem('appsScriptUrl') || 'https://script.google.com/macros/s/AKfycbzUFprfqPEYkn9kmQ7vuylj2Gtar6gyc7mS6BBzbJt_bl_QRWsYatpZJyZyUUlLoMk0/exec');
+      
+      // 【修改點】直接將預設網址寫入並固定為您提供的網址
+      const [appsScriptUrl, setAppsScriptUrl] = useState(() => localStorage.getItem('appsScriptUrl') || 'https://script.google.com/macros/s/AKfycbxkdgIQfyytnr8xdughhuxc1vxmL8R64wkoSUlsdJAkXU_l53YyX_JxgTkoGKbxHvCY/exec');
       const [geminiApiKey, setGeminiApiKey] = useState(() => localStorage.getItem('geminiApiKey') || '');
+      
+      // 固定試算表檢視網址
+      const spreadsheetUrl = 'https://docs.google.com/spreadsheets/d/14KYaTnp5uKxKno6W9EefhzkWH0iXGdsDEgJ9i1iKlMQ/edit?usp=drive_link';
 
       const [showClearModal, setShowClearModal] = useState(false);
       const [alertMessage, setAlertMessage] = useState('');
 
       const recognitionRef = useRef(null);
 
-      // === 初始化語音辨識 ===
       useEffect(() => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
@@ -84,41 +87,29 @@
           recognition.onresult = (event) => {
             let finalTranscript = '';
             let interimTranscript = '';
-
             for (let i = event.resultIndex; i < event.results.length; ++i) {
-              if (event.results[i].isFinal) {
-                finalTranscript += event.results[i][0].transcript;
-              } else {
-                interimTranscript += event.results[i][0].transcript;
-              }
+              if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+              else interimTranscript += event.results[i][0].transcript;
             }
-
-            if (finalTranscript) {
-              setRawText((prev) => prev + finalTranscript + '，');
-            }
+            if (finalTranscript) setRawText((prev) => prev + finalTranscript + '，');
           };
 
           recognition.onerror = (event) => {
             console.error("Speech recognition error:", event.error);
             setIsRecording(false);
-            
-            // 針對 Chrome 本機開啟 (file://) 阻擋麥克風的明確提示
             if (event.error === 'network' && window.location.protocol === 'file:') {
-               setAlertMessage("【語音無法使用】因為瀏覽器安全限制，直接點擊 HTML 檔 (file://) 時無法啟動麥克風（會被誤判為無網路連線）。請改用打字，或將此檔案上傳至學校網站空間才能使用語音功能喔！");
+               setAlertMessage("【語音無法使用】因為瀏覽器安全限制，直接點擊 HTML 檔 (file://) 時無法啟動麥克風（會被誤判為無網路連線）。請改用打字，或將此檔案上傳至網站空間才能使用語音功能喔！");
             } else if (event.error === 'not-allowed') {
                setAlertMessage("請允許瀏覽器使用麥克風權限！");
             }
           };
 
-          recognition.onend = () => {
-            setIsRecording(false);
-          };
-
+          recognition.onend = () => setIsRecording(false);
           recognitionRef.current = recognition;
         } else {
           console.warn("此瀏覽器不支援語音辨識 API，請使用 Google Chrome。");
         }
-      }, []);
+      }, []); 
 
       const toggleRecording = () => {
         if (isRecording) {
@@ -134,32 +125,21 @@
         }
       };
 
-      // === 一鍵清空功能 ===
-      const handleClear = () => {
-        setShowClearModal(true);
-      };
+      const handleClear = () => setShowClearModal(true);
 
       const confirmClear = () => {
         setRawText('');
-        setAnalyzedData({
-          date: '',
-          studentName: '',
-          interviewee: '',
-          content: ''
-        });
+        setAnalyzedData({ date: '', studentName: '', interviewee: '', counselingPoints: '', contactMatters: '' });
         setExportStatus(null);
         setShowClearModal(false);
       };
 
-      // === AI 分析與潤飾邏輯 ===
       const analyzeContent = async () => {
-        // 新增：最優先檢查是否已填寫 API Key
         if (!geminiApiKey.trim()) {
           setAlertMessage("【缺少 API 金鑰】請先至右上角「系統設定」貼上您的 Gemini API Key 才能進行 AI 分析喔！");
           setShowSettingsModal(true);
           return;
         }
-
         if (!rawText.trim()) {
           setAlertMessage("請先輸入或語音錄製內容！");
           return;
@@ -172,21 +152,21 @@
         const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
         
         const prompt = `你是一個專業的國小老師輔導紀錄助手。請先判斷以下語音輸入的逐字稿是否與「學生輔導、班級經營、親師溝通、學校教育事務」相關。
-
 如果內容完全無關（例如日常閒聊、無意義的字詞、天氣、買東西等非教育事務），請將 isRelevant 設為 false，其他欄位留白即可。
-
-如果內容相關，請將 isRelevant 設為 true，並萃取/潤飾出以下四個欄位：
+如果內容相關，請將 isRelevant 設為 true，並萃取/潤飾出以下五個欄位：
 1. 日期：擷取逐字稿中提到的日期（格式 YYYY-MM-DD）。如果完全沒有提到日期，請使用今天的日期：${todayStr}。
-2. 學生姓名：請從語音內容中擷取學生的姓名。優先從以下學生名單中比對：${STUDENT_LIST.join(', ')}（若發音相近請自動校正）。如果是名單外的學生，也請直接擷取該名字。若完全沒提到則留白。
+2. 學生姓名：請從語音內容中擷取學生的姓名。優先從以下測試名單中比對：${STUDENT_LIST.join(', ')}（若發音相近請自動校正）。如果是名單外的學生，也請直接擷取該名字。若完全沒提到則留白。
 3. 訪談對象：判斷老師主要是跟誰進行訪談對話（例如：學生本人、家長、某老師）。如果無特別提及，預設為「學生本人」。
-4. 輔導內容：將原始口語的逐字稿，潤飾成專業、客觀、通順的書面輔導紀錄，去除口語冗言贅字（如「嗯」、「那個」），保留核心重點與後續追蹤事項。
-
+4. 輔導內容要點：針對學生訪談的原因，例如突發狀況事件經過以及行為表現問題進行紀錄。
+5. 聯絡事項：老師事後的通知對象（如家長、學務處等）以及後續的處理方式。
+【重要潤飾規則】：
+- 必須自動潤飾語句和語氣，使其專業、客觀、通順。
+- 必須將負面且具有貶低性的語詞轉換成中性或正向說法。例如：將「偷竊」、「小偷」轉換為「沒有經過他人同意就拿取物品」；將「打人」轉換為「發生肢體衝突」等。
 原始逐字稿內容：
 "${rawText}"`;
 
         const apiKeyToUse = geminiApiKey || ""; 
-        // 為了讓您的公開金鑰順利運作，若有填寫金鑰則使用正式版模型
-        const modelName = geminiApiKey ? "gemini-2.5-flash" : "gemini-2.5-flash-preview-09-2025";
+        const modelName = "gemini-2.5-flash";
 
         try {
           let result = null;
@@ -204,34 +184,30 @@
                   body: JSON.stringify({
                     contents: [{ parts: [{ text: prompt }] }],
                     generationConfig: {
-                      responseMimeType: "application/json",
-                      responseSchema: {
-                        type: "OBJECT",
-                        properties: {
-                          isRelevant: { type: "BOOLEAN", description: "內容是否與輔導或學生事務相關" },
-                          date: { type: "STRING", description: "日期 YYYY-MM-DD" },
-                          studentName: { type: "STRING", description: "學生姓名" },
-                          interviewee: { type: "STRING", description: "訪談對象" },
-                          content: { type: "STRING", description: "潤飾後的輔導內容" }
-                        }
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                      type: "OBJECT",
+                      properties: {
+                        isRelevant: { type: "BOOLEAN", description: "內容是否與輔導或學生事務相關" },
+                        date: { type: "STRING", description: "日期 YYYY-MM-DD" },
+                        studentName: { type: "STRING", description: "學生姓名(未去識別化前)" },
+                        interviewee: { type: "STRING", description: "訪談對象" },
+                        counselingPoints: { type: "STRING", description: "輔導內容要點" },
+                        contactMatters: { type: "STRING", description: "聯絡事項" }
                       }
                     }
-                  })
+                  }
+                })
                 }
               );
 
               if (!response.ok) {
-                if (response.status === 400 && !geminiApiKey) {
-                  throw new Error("MISSING_API_KEY");
-                }
+                if (response.status === 400 && !geminiApiKey) throw new Error("MISSING_API_KEY");
                 throw new Error(`HTTP error! status: ${response.status}`);
               }
               result = await response.json();
             } catch (err) {
-              // 優化：如果沒有 API Key 且發生網路層級錯誤 (CORS)，直接判定為缺少金鑰，不要再傻傻等 30 秒
-              if (err.message === "MISSING_API_KEY" || (!geminiApiKey && err.name === "TypeError")) {
-                 throw new Error("MISSING_API_KEY");
-              }
+              if (err.message === "MISSING_API_KEY" || (!geminiApiKey && err.name === "TypeError")) throw new Error("MISSING_API_KEY");
               retries++;
               if (retries >= maxRetries) throw err;
               await new Promise(resolve => setTimeout(resolve, delays[retries - 1]));
@@ -239,25 +215,43 @@
           }
 
           if (result && result.candidates && result.candidates[0]) {
-            const jsonText = result.candidates[0].content.parts[0].text;
-            const parsedData = JSON.parse(jsonText);
-            
+            const parsedData = JSON.parse(result.candidates[0].content.parts[0].text);
             if (parsedData.isRelevant === false) {
               setAlertMessage("無法執行：輸入內容似乎與學生輔導無關，請確認訊息正確！");
               return;
             }
 
+            const finalName = anonymizeName(parsedData.studentName || '');
+            let finalCp = parsedData.counselingPoints || '';
+            let finalCm = parsedData.contactMatters || '';
+            
+            const namesToAnonymize = new Set(STUDENT_LIST);
+            if (parsedData.studentName) namesToAnonymize.add(parsedData.studentName);
+
+            namesToAnonymize.forEach(name => {
+              if (name && name.length > 1) {
+                const anonName = anonymizeName(name);
+                const regex = new RegExp(name, 'g');
+                finalCp = finalCp.replace(regex, anonName);
+                finalCm = finalCm.replace(regex, anonName);
+              }
+            });
+
             setAnalyzedData({
               date: parsedData.date || todayStr,
-              studentName: parsedData.studentName || '',
+              studentName: finalName,
               interviewee: parsedData.interviewee || '學生本人',
-              content: parsedData.content || ''
+              counselingPoints: finalCp,
+              contactMatters: finalCm
             });
+
+            if (!parsedData.counselingPoints || !parsedData.contactMatters) {
+              setTimeout(() => setAlertMessage("【系統提醒】AI 未能完整抓取到「輔導內容要點」或「聯絡事項」，請確認輸入內容是否包含這兩部分，或於右側直接手動補充修改。"), 500);
+            }
           }
         } catch (error) {
-          console.error("AI Analysis failed:", error);
           if (error.message === "MISSING_API_KEY") {
-            setAlertMessage("【缺少 API 金鑰】您目前為單機下載版，請先至右上角「系統設定」貼上您的 Gemini API Key 才能連線到 AI 喔！");
+            setAlertMessage("【缺少 API 金鑰】請至右上角「系統設定」貼上您的 Gemini API Key 才能連線到 AI 喔！");
             setShowSettingsModal(true);
           } else {
             setAlertMessage("分析失敗，請檢查網路連線或確認您的 API Key 是否正確有效。");
@@ -267,15 +261,15 @@
         }
       };
 
-      // === 匯出至 Google Sheets 邏輯 ===
       const exportToCloud = async () => {
         if (!appsScriptUrl) {
+          setAlertMessage("請先至右上角「系統設定」貼上您的【雲端試算表串接網址】才能匯出！");
           setShowSettingsModal(true);
           return;
         }
 
-        if (!analyzedData.content || !analyzedData.studentName) {
-          setAlertMessage("請先完成分析並確保有學生姓名與輔導內容！");
+        if (!analyzedData.studentName || (!analyzedData.counselingPoints && !analyzedData.contactMatters)) {
+          setAlertMessage("請確保有學生姓名，且至少填寫一項「輔導內容要點」或「聯絡事項」！");
           return;
         }
 
@@ -283,37 +277,28 @@
         setExportStatus(null);
 
         try {
-          const response = await fetch(appsScriptUrl, {
+          await fetch(appsScriptUrl, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'text/plain;charset=utf-8', 
-            },
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(analyzedData)
           });
-
-          const result = await response.json();
-          
-          if (result.status === 'success') {
-            setExportStatus('success');
-          } else {
-            throw new Error(result.error || "未知錯誤");
-          }
+          setExportStatus('success');
         } catch (error) {
           console.error("Export failed:", error);
+          setAlertMessage("【連線失敗】無法連線到雲端試算表。\n請至「系統設定」確認您的 Apps Script 網址是否正確。");
           setExportStatus('error');
         } finally {
           setIsExporting(false);
         }
       };
 
-      // === UI 元件 ===
       return (
         <div className="min-h-screen bg-emerald-50 text-gray-800 font-sans">
-          {/* 頂部導航 */}
           <header className="bg-emerald-600 text-white shadow-md p-4 flex justify-between items-center sticky top-0 z-10">
             <div className="flex items-center space-x-2">
               <FileText size={24} />
-              <h1 className="text-xl font-bold tracking-wider">語音輔導紀錄系統</h1>
+              <h1 className="text-xl font-bold tracking-wider">語音輔導紀錄系統(測試版)</h1>
             </div>
             <button 
               onClick={() => setShowSettingsModal(true)}
@@ -326,7 +311,7 @@
 
           <main className="max-w-5xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
             
-            {/* 左側：語音輸入區 */}
+            {/* 左側：輸入區 */}
             <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-5 flex flex-col h-full">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold text-emerald-800 flex items-center">
@@ -334,43 +319,23 @@
                   輸入內容
                 </h2>
                 <div className="flex items-center space-x-2">
-                  <button
-                    onClick={handleClear}
-                    disabled={isRecording}
-                    className="flex items-center space-x-1 px-3 py-2 rounded-full font-medium transition-all shadow-sm bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50"
-                    title="清空所有內容"
-                  >
+                  <button onClick={handleClear} disabled={isRecording} className="flex items-center space-x-1 px-3 py-2 rounded-full font-medium transition-all shadow-sm bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50">
                     <Trash2 size={18} />
                     <span className="hidden sm:inline">一鍵清空</span>
                   </button>
-                  <button
-                    onClick={toggleRecording}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-full font-medium transition-all shadow-sm ${
-                      isRecording 
-                        ? 'bg-red-50 text-red-600 border border-red-200 animate-pulse' 
-                        : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                    }`}
-                  >
+                  <button onClick={toggleRecording} className={`flex items-center space-x-2 px-4 py-2 rounded-full font-medium transition-all shadow-sm ${isRecording ? 'bg-red-50 text-red-600 border border-red-200 animate-pulse' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
                     {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
                     <span>{isRecording ? '停止收音' : '點擊開始語音'}</span>
                   </button>
                 </div>
               </div>
-              
               <textarea
                 className="flex-grow w-full border border-gray-200 rounded-xl p-4 focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none text-gray-700 leading-relaxed"
-                placeholder="建議直接打字輸入...&#10;&#10;例如：「今天下午學生姓名跟同學發生爭執，我跟她談過後...」&#10;&#10;【提醒】如果本檔案是直接點擊開啟(本機版)，可能無法使用麥克風功能。"
-                rows="10"
-                value={rawText}
-                onChange={(e) => setRawText(e.target.value)}
+                placeholder="建議直接打字輸入...&#10;&#10;【請包含以下兩部分】&#10;1. 輔導內容要點 (事發經過、行為表現)&#10;2. 聯絡事項 (通知對象、後續處理)&#10;&#10;例如：「今天下午學生姓名跟同學發生爭執，未經同意拿取別人的文具。我跟她談過後... 已經聯絡家長說明情況，並請家長協助留意。」&#10;&#10;※ 系統會自動潤飾負面詞彙（如將「偷竊」轉換為「未經同意拿取物品」）。"
+                rows="10" value={rawText} onChange={(e) => setRawText(e.target.value)}
               />
-
               <div className="mt-4 flex justify-center">
-                <button
-                  onClick={analyzeContent}
-                  disabled={isAnalyzing || !rawText.trim()}
-                  className="w-full md:w-auto flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-8 py-3 rounded-xl font-bold transition-colors shadow-md text-lg"
-                >
+                <button onClick={analyzeContent} disabled={isAnalyzing || !rawText.trim()} className="w-full md:w-auto flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-8 py-3 rounded-xl font-bold transition-colors shadow-md text-lg">
                   {isAnalyzing ? <Loader2 className="animate-spin" size={24} /> : <FileText size={24} />}
                   <span>{isAnalyzing ? 'AI 分析與潤飾中...' : '開始分析與潤飾'}</span>
                 </button>
@@ -385,74 +350,56 @@
                   分析結果與編輯
                 </h2>
               </div>
-
-              <div className="space-y-4 flex-grow">
+              <div className="space-y-4 flex-grow flex flex-col">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-600 mb-1">日期</label>
-                    <input 
-                      type="date" 
-                      value={analyzedData.date}
-                      onChange={(e) => setAnalyzedData({...analyzedData, date: e.target.value})}
-                      className="w-full border border-gray-200 rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500"
-                    />
+                    <input type="date" value={analyzedData.date} onChange={(e) => setAnalyzedData({...analyzedData, date: e.target.value})} className="w-full border border-gray-200 rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600 mb-1">學生姓名</label>
-                    <input
-                      type="text"
-                      list="student-list"
-                      value={analyzedData.studentName}
-                      onChange={(e) => setAnalyzedData({...analyzedData, studentName: e.target.value})}
-                      className="w-full border border-gray-200 rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 bg-white"
-                      placeholder="自動擷取或手動輸入"
-                    />
+                    <input type="text" list="student-list" value={analyzedData.studentName} onChange={(e) => setAnalyzedData({...analyzedData, studentName: e.target.value})} className="w-full border border-gray-200 rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 bg-white" placeholder="自動擷取或手動輸入" />
                     <datalist id="student-list">
-                      {STUDENT_LIST.map(name => (
-                        <option key={name} value={name} />
-                      ))}
+                      {STUDENT_LIST.map(name => <option key={name} value={anonymizeName(name)} />)}
                     </datalist>
                   </div>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1">訪談對象</label>
-                  <input 
-                    type="text" 
-                    value={analyzedData.interviewee}
-                    onChange={(e) => setAnalyzedData({...analyzedData, interviewee: e.target.value})}
-                    placeholder="例如：學生本人、家長、導師"
-                    className="w-full border border-gray-200 rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500"
-                  />
+                  <input type="text" value={analyzedData.interviewee} onChange={(e) => setAnalyzedData({...analyzedData, interviewee: e.target.value})} placeholder="例如：學生本人、家長、導師" className="w-full border border-gray-200 rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500" />
                 </div>
-
-                <div className="flex flex-col flex-grow">
-                  <label className="block text-sm font-medium text-gray-600 mb-1">輔導內容 (已潤飾)</label>
-                  <textarea
-                    value={analyzedData.content}
-                    onChange={(e) => setAnalyzedData({...analyzedData, content: e.target.value})}
-                    className="w-full flex-grow border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-emerald-500 resize-none text-gray-700 leading-relaxed min-h-[150px]"
-                    placeholder="分析後的輔導內容會顯示在這裡，您可在此進行最終微調..."
-                  />
+                <div className="flex flex-col flex-grow gap-4">
+                  <div className="flex flex-col flex-1">
+                    <label className="block text-sm font-medium text-gray-600 mb-1">輔導內容要點 (事發經過與行為表現)</label>
+                    <textarea value={analyzedData.counselingPoints} onChange={(e) => setAnalyzedData({...analyzedData, counselingPoints: e.target.value})} className="w-full flex-grow border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-emerald-500 resize-none text-gray-700 leading-relaxed min-h-[120px]" placeholder="AI 分析出的輔導原因、事發經過會顯示在這裡..." />
+                  </div>
+                  <div className="flex flex-col flex-1">
+                    <label className="block text-sm font-medium text-gray-600 mb-1">聯絡事項 (通知對象與後續處理)</label>
+                    <textarea value={analyzedData.contactMatters} onChange={(e) => setAnalyzedData({...analyzedData, contactMatters: e.target.value})} className="w-full flex-grow border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-emerald-500 resize-none text-gray-700 leading-relaxed min-h-[80px]" placeholder="AI 分析出的聯絡對象與後續處置會顯示在這裡..." />
+                  </div>
                 </div>
               </div>
-
-              {/* 匯出區域 */}
               <div className="mt-6 pt-4 border-t border-gray-100">
-                <button
-                  onClick={exportToCloud}
-                  disabled={isExporting || !analyzedData.studentName || !analyzedData.content}
-                  className="w-full flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white px-6 py-3.5 rounded-xl font-bold transition-colors shadow-md text-lg"
-                >
-                  {isExporting ? <Loader2 className="animate-spin" size={20} /> : <CloudUpload size={20} />}
-                  <span>{isExporting ? '匯出中...' : '匯出雲端試算表'}</span>
-                </button>
-                
-                {/* 匯出狀態提示 */}
+                <div className="flex space-x-3">
+                  <button onClick={exportToCloud} disabled={isExporting || !analyzedData.studentName || (!analyzedData.counselingPoints && !analyzedData.contactMatters)} className="flex-1 flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white px-6 py-3.5 rounded-xl font-bold transition-colors shadow-md text-lg">
+                    {isExporting ? <Loader2 className="animate-spin" size={20} /> : <CloudUpload size={20} />}
+                    <span>{isExporting ? '匯出中...' : '匯出雲端試算表'}</span>
+                  </button>
+                  <button 
+                    onClick={() => {
+                      window.open(spreadsheetUrl, '_blank');
+                    }}
+                    className="flex items-center justify-center space-x-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-5 py-3.5 rounded-xl font-bold transition-colors shadow-sm text-lg whitespace-nowrap"
+                    title="開啟 Google 試算表"
+                  >
+                    <ExternalLink size={20} />
+                    <span className="hidden sm:inline">檢視試算表</span>
+                  </button>
+                </div>
                 {exportStatus === 'success' && (
                   <div className="mt-3 p-3 bg-green-50 text-green-700 rounded-lg flex items-center justify-center space-x-2">
                     <CheckCircle size={18} />
-                    <span>匯出成功！您可以至 <a href={SHEET_URL} target="_blank" rel="noreferrer" className="underline font-bold">雲端試算表</a> 查看。</span>
+                    <span>匯出請求已送出！（若資料未出現，請檢查 Apps Script 設定）</span>
                   </div>
                 )}
                 {exportStatus === 'error' && (
@@ -478,10 +425,7 @@
                     </h3>
                     <button onClick={() => setShowSettingsModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl font-bold">&times;</button>
                   </div>
-
                   <div className="space-y-8 text-gray-600">
-                    
-                    {/* 區塊 1：API Key 設定 */}
                     <div className="bg-blue-50/50 p-5 rounded-xl border border-blue-100">
                       <h4 className="font-bold text-gray-800 mb-2 flex items-center text-lg">
                         <Key className="mr-2 text-blue-600" size={20} />
@@ -491,46 +435,21 @@
                         本機下載版必須填入 API Key 才能連線至 AI。<br/>
                         <span className="text-blue-700 font-medium">※ 此金鑰僅會保存在您當前使用的瀏覽器中，非常安全，且輸入一次後便會永久記住！</span>
                       </p>
-                      <input
-                        type="password"
-                        placeholder="請貼上您的 Gemini API Key..."
-                        value={geminiApiKey}
-                        onChange={(e) => {
-                          setGeminiApiKey(e.target.value);
-                          localStorage.setItem('geminiApiKey', e.target.value);
-                        }}
-                        className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 font-mono text-sm bg-white"
-                      />
+                      <input type="password" placeholder="請貼上您的 Gemini API Key..." value={geminiApiKey} onChange={(e) => { setGeminiApiKey(e.target.value); localStorage.setItem('geminiApiKey', e.target.value); }} className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 font-mono text-sm bg-white" />
                     </div>
-
-                    {/* 區塊 2：Google Sheets 設定 */}
                     <div className="bg-emerald-50/50 p-5 rounded-xl border border-emerald-100">
                       <h4 className="font-bold text-gray-800 mb-2 flex items-center text-lg">
                         <CloudUpload className="mr-2 text-emerald-600" size={20} />
                         2. 雲端試算表串接網址 (Apps Script URL)
                       </h4>
                       <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                        用於將分析結果自動匯出至 Google 表格。此欄位已有預設網址，如無更換表格需求，請<strong className="text-emerald-700">保持原樣即可</strong>。
+                        請將您在 Apps Script 部署後獲得的「網頁應用程式網址」貼在此處。
                       </p>
-                      <input
-                        type="text"
-                        placeholder="https://script.google.com/macros/s/..."
-                        value={appsScriptUrl}
-                        onChange={(e) => {
-                          setAppsScriptUrl(e.target.value);
-                          localStorage.setItem('appsScriptUrl', e.target.value);
-                        }}
-                        className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-emerald-500 font-mono text-sm bg-white"
-                      />
+                      <input type="text" placeholder="https://script.google.com/macros/s/.../exec" value={appsScriptUrl} onChange={(e) => { setAppsScriptUrl(e.target.value); localStorage.setItem('appsScriptUrl', e.target.value); }} className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-emerald-500 font-mono text-sm bg-white" />
                     </div>
-
                   </div>
-
                   <div className="mt-8 flex justify-end">
-                    <button
-                      onClick={() => setShowSettingsModal(false)}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-2.5 rounded-lg font-bold transition-colors shadow-sm"
-                    >
+                    <button onClick={() => setShowSettingsModal(false)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-2.5 rounded-lg font-bold transition-colors shadow-sm">
                       儲存並關閉
                     </button>
                   </div>
@@ -547,10 +466,7 @@
                   <AlertCircle className="h-6 w-6 text-red-600" />
                 </div>
                 <p className="text-gray-800 font-medium mb-6 leading-relaxed">{alertMessage}</p>
-                <button
-                  onClick={() => setAlertMessage('')}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg font-bold transition-colors"
-                >
+                <button onClick={() => setAlertMessage('')} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg font-bold transition-colors">
                   我知道了
                 </button>
               </div>
@@ -567,16 +483,10 @@
                 <h3 className="text-lg font-bold text-gray-800 mb-2">確定要清空嗎？</h3>
                 <p className="text-gray-500 text-sm mb-6">這將會清除所有語音輸入內容與分析結果，且無法復原。</p>
                 <div className="flex space-x-3">
-                  <button
-                    onClick={() => setShowClearModal(false)}
-                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-lg font-bold transition-colors"
-                  >
+                  <button onClick={() => setShowClearModal(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-lg font-bold transition-colors">
                     取消
                   </button>
-                  <button
-                    onClick={confirmClear}
-                    className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-lg font-bold transition-colors shadow-sm"
-                  >
+                  <button onClick={confirmClear} className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-lg font-bold transition-colors shadow-sm">
                     確定清空
                   </button>
                 </div>
@@ -588,7 +498,6 @@
       );
     };
 
-    // 啟動應用程式
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>
