@@ -50,7 +50,7 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- 常數定義 (新增乘法與除法) ---
+        // --- 常數定義 ---
         const MODES = {
             ADD_1_1: { id: 'add_1_1', label: '一位數 + 一位數' },
             ADD_2_1: { id: 'add_2_1', label: '二位數 + 一位數' },
@@ -108,6 +108,159 @@
             </svg>
         );
 
+        // --- Canvas 拔河動畫元件 ---
+        const CanvasTugOfWar = ({ score, isResetting, goalDifference, bearOffset }) => {
+            const canvasRef = useRef(null);
+            // 用 ref 儲存當前繪製狀態，避免依賴閉包問題
+            const drawState = useRef({
+                score: score,
+                isResetting: isResetting,
+                progress: 0, // 動畫進度 0~1
+                targetScore: score,
+                startScore: score,
+                animating: false,
+                bouncePhase: 0 // 角色跳躍的相位
+            });
+
+            // 當分數改變時，觸發動畫
+            useEffect(() => {
+                if (isResetting) {
+                    drawState.current.score = 0;
+                    drawState.current.targetScore = 0;
+                    drawState.current.startScore = 0;
+                    drawState.current.progress = 1;
+                    drawState.current.animating = false;
+                } else if (drawState.current.targetScore !== score) {
+                    drawState.current.startScore = drawState.current.score;
+                    drawState.current.targetScore = score;
+                    drawState.current.progress = 0;
+                    drawState.current.animating = true;
+                }
+            }, [score, isResetting]);
+
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                let animationFrameId;
+                
+                // 動畫相關常數
+                const DURATION = 700; // 繩子移動時間 ms
+                const BOUNCE_SPEED = 0.003; // 跳躍速度
+                
+                let lastTime = performance.now();
+
+                const render = (time) => {
+                    const dt = time - lastTime;
+                    lastTime = time;
+
+                    // 1. 更新狀態
+                    const state = drawState.current;
+                    
+                    // 角色跳躍相位更新
+                    state.bouncePhase += dt * BOUNCE_SPEED;
+
+                    // 分數過渡動畫
+                    if (state.animating) {
+                        state.progress += dt / DURATION;
+                        if (state.progress >= 1) {
+                            state.progress = 1;
+                            state.animating = false;
+                            state.score = state.targetScore;
+                        } else {
+                            // easeInOutQuad
+                            const t = state.progress;
+                            const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+                            state.score = state.startScore + (state.targetScore - state.startScore) * ease;
+                        }
+                    }
+
+                    // 2. 清理畫布
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    const centerY = canvas.height - 30; // 繩子基礎高度
+                    const centerX = canvas.width / 2;
+
+                    // 3. 繪製背景元素
+                    // 地板線
+                    ctx.fillStyle = 'rgba(146, 64, 14, 0.2)'; // amber-800/20
+                    ctx.fillRect(0, canvas.height - 16, canvas.width, 8);
+
+                    // 中心標記線 (紅線)
+                    ctx.fillStyle = 'rgba(248, 113, 113, 0.5)'; // red-400/50
+                    ctx.fillRect(centerX - 1, 0, 2, canvas.height - 16);
+                    // 中心標記底座
+                    ctx.fillStyle = 'rgb(252, 165, 165)'; // red-300
+                    ctx.fillRect(centerX - 4, canvas.height - 40, 8, 24);
+
+                    // 4. 計算整體偏移量
+                    const offsetPixels = (state.score * (bearOffset / goalDifference));
+                    const currentCenterX = centerX + offsetPixels;
+
+                    // 5. 繪製繩子
+                    const ropeLength = canvas.width * 2; // 畫長一點避免穿幫
+                    ctx.beginPath();
+                    ctx.lineCap = "round";
+                    ctx.lineWidth = 12;
+                    ctx.strokeStyle = '#b45309'; // amber-700
+                    ctx.moveTo(currentCenterX - ropeLength/2, centerY);
+                    ctx.lineTo(currentCenterX + ropeLength/2, centerY);
+                    ctx.stroke();
+
+                    // 繩子結 (紅點)
+                    ctx.beginPath();
+                    ctx.arc(currentCenterX, centerY, 16, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ef4444'; // red-500
+                    ctx.fill();
+                    ctx.lineWidth = 4;
+                    ctx.strokeStyle = '#ffffff'; // white
+                    ctx.stroke();
+
+                    // 6. 繪製角色 (文字繪製)
+                    ctx.font = '60px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    // 計算跳躍的 Y 軸偏移
+                    // Math.sin(phase) 範圍是 -1 到 1，我們只要上半部跳躍，取絕對值並調整幅度
+                    const bounceY = Math.abs(Math.sin(state.bouncePhase)) * -15;
+
+                    // 繪製左邊恐龍 🦖
+                    ctx.save();
+                    ctx.translate(currentCenterX - bearOffset, centerY + bounceY);
+                    // 不需翻轉，恐龍原本就面左，背對中心
+                    ctx.fillText('🦖', 0, 0);
+                    ctx.restore();
+
+                    // 繪製右邊殭屍 🧟
+                    ctx.save();
+                    ctx.translate(currentCenterX + bearOffset, centerY + bounceY);
+                    // 殭屍面左，需要翻轉才能面右背對中心
+                    ctx.scale(-1, 1);
+                    ctx.fillText('🧟', 0, 0);
+                    ctx.restore();
+
+                    animationFrameId = window.requestAnimationFrame(render);
+                };
+                
+                // 啟動動畫迴圈
+                render(performance.now());
+
+                // 清理函數
+                return () => {
+                    window.cancelAnimationFrame(animationFrameId);
+                };
+            }, [goalDifference, bearOffset]); // 依賴項只放不變的常數，變數靠 ref 追蹤
+
+            return (
+                <canvas 
+                    ref={canvasRef} 
+                    width={1000} 
+                    height={160} 
+                    className="w-full h-40 object-cover"
+                />
+            );
+        };
+
         // --- 數字鍵盤元件 ---
         const MiniKeypad = ({ onNumClick, color }) => {
             const btnColorClass = color === 'blue' 
@@ -135,13 +288,18 @@
         const TugOfWarMath = () => {
           // 遊戲常數
           const GOAL_DIFFERENCE = 5; // 淨勝 5 題獲勝
-          const BEAR_OFFSET = 160; // 大象距離中心的像素距離 (絕對距離)
+          const BEAR_OFFSET = 200; // 為了在 Canvas 有更好的比例，微調距離
           const DELAY_MS = 500; // 答對後停留豪秒數
           const GAME_TIME = 120; // 2分鐘 = 120秒
           
           // 狀態管理
           const [gameState, setGameState] = useState('menu'); // 'menu' | 'playing'
-          const [selectedModes, setSelectedModes] = useState([MODES.ADD_1_1.id]); // 預設選中一種
+          
+          // 將原本單一的 selectedModes 拆分為左右兩邊
+          const [leftModes, setLeftModes] = useState([MODES.ADD_1_1.id]);
+          const [rightModes, setRightModes] = useState([MODES.ADD_1_1.id]);
+          const [leftReady, setLeftReady] = useState(false);
+          const [rightReady, setRightReady] = useState(false);
           
           const [score, setScore] = useState(0); 
           const [winner, setWinner] = useState(null); // 'left' | 'right' | 'draw' | null
@@ -162,6 +320,17 @@
           // Timer Ref
           const leftTimerRef = useRef(null);
           const rightTimerRef = useRef(null);
+
+          // 監聽是否雙方都準備好，自動開始遊戲
+          useEffect(() => {
+              if (leftReady && rightReady && gameState === 'menu') {
+                  const timer = setTimeout(() => {
+                      setGameState('playing');
+                      resetGame();
+                  }, 500); // 延遲0.5秒讓玩家看到"已準備"狀態
+                  return () => clearTimeout(timer);
+              }
+          }, [leftReady, rightReady, gameState]);
 
           // 計時器 Effect
           useEffect(() => {
@@ -202,11 +371,12 @@
             return `${m}:${s < 10 ? '0' : ''}${s}`;
           };
 
-          // --- 題目生成邏輯 ---
-          const generateProblem = () => {
-            if (selectedModes.length === 0) return { n1: 0, n2: 0, ans: 0, operator: '+' }; 
+          // --- 題目生成邏輯 (加入 side 參數，根據各自的選擇出題) ---
+          const generateProblem = (side) => {
+            const modes = side === 'left' ? leftModes : rightModes;
+            if (!modes || modes.length === 0) return { n1: 0, n2: 0, ans: 0, operator: '+' }; 
 
-            const modeId = selectedModes[Math.floor(Math.random() * selectedModes.length)];
+            const modeId = modes[Math.floor(Math.random() * modes.length)];
             
             let n1, n2, operator, ans;
 
@@ -268,19 +438,12 @@
             };
           };
 
-          // 遊戲開始/重置
-          const startGame = () => {
-              if (selectedModes.length === 0) {
-                  alert("請至少選擇一種題目類型！");
-                  return;
-              }
-              setGameState('playing');
-              resetGame();
-          };
-
+          // 回到選單
           const returnToMenu = () => {
               setGameState('menu');
               setWinner(null);
+              setLeftReady(false);
+              setRightReady(false);
           };
 
           const resetGame = () => {
@@ -293,8 +456,8 @@
             setWinner(null);
             setTimeLeft(GAME_TIME);
             setIsTimerRunning(false); 
-            setLeftProblem(generateProblem());
-            setRightProblem(generateProblem());
+            setLeftProblem(generateProblem('left'));
+            setRightProblem(generateProblem('right'));
             setLeftFocus(null);
             setRightFocus(null);
 
@@ -303,9 +466,22 @@
             }, 100); 
           };
 
-          // 處理 Checkbox 變更
-          const toggleMode = (modeId) => {
-              setSelectedModes(prev => {
+          // 處理 Checkbox 變更 (分為左右獨立控制)
+          const toggleLeftMode = (modeId) => {
+              if (leftReady) return; // 如果已準備就不能再改
+              setLeftModes(prev => {
+                  if (prev.includes(modeId)) {
+                      if (prev.length === 1) return prev; 
+                      return prev.filter(id => id !== modeId);
+                  } else {
+                      return [...prev, modeId];
+                  }
+              });
+          };
+
+          const toggleRightMode = (modeId) => {
+              if (rightReady) return; // 如果已準備就不能再改
+              setRightModes(prev => {
                   if (prev.includes(modeId)) {
                       if (prev.length === 1) return prev; 
                       return prev.filter(id => id !== modeId);
@@ -391,12 +567,12 @@
               if (side === 'right') {
                 if (rightTimerRef.current) clearTimeout(rightTimerRef.current);
                 rightTimerRef.current = setTimeout(() => {
-                  setRightProblem(generateProblem());
+                  setRightProblem(generateProblem('right'));
                 }, DELAY_MS);
               } else {
                 if (leftTimerRef.current) clearTimeout(leftTimerRef.current);
                 leftTimerRef.current = setTimeout(() => {
-                  setLeftProblem(generateProblem());
+                  setLeftProblem(generateProblem('left'));
                 }, DELAY_MS);
               }
             }
@@ -404,40 +580,74 @@
 
           // --- 渲染部分 ---
 
-          // 1. 選單畫面
+          // 1. 選單畫面 (改為左右雙方各自選擇)
           if (gameState === 'menu') {
               return (
-                <div className="min-h-screen bg-amber-50 font-sans flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full border-4 border-amber-200">
-                        <h1 className="text-3xl font-bold text-gray-700 text-center mb-2 flex items-center justify-center gap-2">
-                            <span>🦖</span> 數學拔河大賽 <span>🧟</span>
-                        </h1>
-                        <p className="text-center text-gray-500 mb-8">請選擇要練習的題目類型</p>
+                <div className="min-h-screen bg-amber-50 font-sans flex flex-col items-center justify-center p-4 md:p-8">
+                    <h1 className="text-3xl md:text-4xl font-bold text-gray-700 text-center mb-4 flex items-center justify-center gap-3">
+                        <span>🦖</span> 數學拔河大賽 <span>🧟</span>
+                    </h1>
+                    <p className="text-center text-gray-500 mb-8 text-lg">請各自選擇要練習的題型，並按下準備好！</p>
+                    
+                    <div className="flex flex-col md:flex-row gap-6 w-full max-w-5xl">
                         
-                        {/* 修改為 2欄(手機) / 3欄(電腦) 佈局，使版面縮短 */}
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-                            {Object.values(MODES).map((mode) => (
-                                <label key={mode.id} className="flex items-center p-4 rounded-xl border-2 border-gray-100 hover:border-amber-300 hover:bg-amber-50 cursor-pointer transition-all">
-                                    <input 
-                                        type="checkbox" 
-                                        className="w-5 h-5 accent-amber-500 mr-3 flex-shrink-0"
-                                        checked={selectedModes.includes(mode.id)}
-                                        onChange={() => toggleMode(mode.id)}
-                                    />
-                                    <span className="text-base text-gray-700 font-medium whitespace-nowrap">{mode.label}</span>
-                                </label>
-                            ))}
+                        {/* 左邊玩家設定 (恐龍) */}
+                        <div className="flex-1 bg-white rounded-3xl shadow-xl p-6 border-4 border-blue-200 flex flex-col">
+                            <h2 className="text-2xl font-bold text-blue-500 mb-6 text-center">左邊恐龍隊 🦖</h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                                {Object.values(MODES).map((mode) => (
+                                    <label key={`left-${mode.id}`} className={`flex items-center p-3 rounded-xl border-2 transition-all ${leftReady ? 'opacity-60 cursor-not-allowed border-gray-100 bg-gray-50' : 'cursor-pointer border-gray-100 hover:border-blue-300 hover:bg-blue-50'}`}>
+                                        <input 
+                                            type="checkbox" 
+                                            className="w-5 h-5 accent-blue-500 mr-3 flex-shrink-0"
+                                            checked={leftModes.includes(mode.id)}
+                                            onChange={() => toggleLeftMode(mode.id)}
+                                            disabled={leftReady}
+                                        />
+                                        <span className="text-sm md:text-base text-gray-700 font-medium whitespace-nowrap">{mode.label}</span>
+                                    </label>
+                                ))}
+                            </div>
+                            <div className="mt-auto pt-4">
+                                <button 
+                                    onClick={() => setLeftReady(!leftReady)}
+                                    className={`w-full py-4 rounded-xl font-bold text-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2
+                                        ${leftReady ? 'bg-green-500 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}
+                                    `}
+                                >
+                                    {leftReady ? '✅ 已準備' : '準備好'}
+                                </button>
+                            </div>
                         </div>
 
-                        <button 
-                            onClick={startGame}
-                            disabled={selectedModes.length === 0}
-                            className={`w-full py-4 rounded-xl text-white font-bold text-xl shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95
-                                ${selectedModes.length > 0 ? 'bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600' : 'bg-gray-300 cursor-not-allowed'}
-                            `}
-                        >
-                            <Play className="w-6 h-6 fill-current" /> 開始比賽
-                        </button>
+                        {/* 右邊玩家設定 (殭屍) */}
+                        <div className="flex-1 bg-white rounded-3xl shadow-xl p-6 border-4 border-pink-200 flex flex-col">
+                            <h2 className="text-2xl font-bold text-pink-500 mb-6 text-center">右邊殭屍隊 🧟</h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                                {Object.values(MODES).map((mode) => (
+                                    <label key={`right-${mode.id}`} className={`flex items-center p-3 rounded-xl border-2 transition-all ${rightReady ? 'opacity-60 cursor-not-allowed border-gray-100 bg-gray-50' : 'cursor-pointer border-gray-100 hover:border-pink-300 hover:bg-pink-50'}`}>
+                                        <input 
+                                            type="checkbox" 
+                                            className="w-5 h-5 accent-pink-500 mr-3 flex-shrink-0"
+                                            checked={rightModes.includes(mode.id)}
+                                            onChange={() => toggleRightMode(mode.id)}
+                                            disabled={rightReady}
+                                        />
+                                        <span className="text-sm md:text-base text-gray-700 font-medium whitespace-nowrap">{mode.label}</span>
+                                    </label>
+                                ))}
+                            </div>
+                            <div className="mt-auto pt-4">
+                                <button 
+                                    onClick={() => setRightReady(!rightReady)}
+                                    className={`w-full py-4 rounded-xl font-bold text-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2
+                                        ${rightReady ? 'bg-green-500 text-white' : 'bg-pink-500 hover:bg-pink-600 text-white'}
+                                    `}
+                                >
+                                    {rightReady ? '✅ 已準備' : '準備好'}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
               );
@@ -494,52 +704,17 @@
                 </div>
               </div>
 
-              {/* 獨立的拔河動畫區 */}
-              <div className="h-40 relative w-full bg-sky-100/30 border-b-4 border-amber-200/50 overflow-hidden shrink-0 z-10">
-                  <div className="w-full h-2 bg-amber-800/20 absolute bottom-4 left-0"></div>
-                  <div className="absolute top-0 bottom-4 left-1/2 w-0.5 bg-red-400/50 transform -translate-x-1/2 z-0"></div>
-                  <div className="absolute bottom-4 left-1/2 w-2 h-6 bg-red-300 transform -translate-x-1/2 z-0"></div>
-                  
-                  {/* 繩子與大力士容器 */}
-                  <div 
-                    className={`absolute bottom-8 left-1/2 w-0 h-24 ${isResetting ? '' : 'transition-all duration-700 ease-in-out'}`}
-                    style={{ 
-                      transform: `translateX(calc(-50% + ${(score * (BEAR_OFFSET / GOAL_DIFFERENCE))}px))` 
-                    }} 
-                  >
-                    <div className="absolute top-1/2 left-[-400px] right-[-400px] h-3 bg-amber-700 rounded-full shadow-sm w-[800px]"></div>
-                    <div className="absolute top-1/2 left-1/2 w-8 h-8 bg-red-500 rounded-full border-4 border-white transform -translate-x-1/2 -translate-y-1/2 shadow-md z-10"></div>
-
-                    {/* 左邊恐龍 (背對中心: 默認向左，不需翻轉) */}
-                    <div 
-                      className="absolute top-1/2 flex items-center justify-center text-6xl filter drop-shadow-lg animate-bounce-slow"
-                      style={{ 
-                        width: '80px', 
-                        height: '80px',
-                        left: '50%', 
-                        marginLeft: `-${BEAR_OFFSET}px`, 
-                        transform: 'translate(-50%, -50%) scaleX(1)', 
-                        '--scale-x': '1'
-                      }}
-                    >
-                      🦖
-                    </div>
-
-                    {/* 右邊殭屍 (背對中心: 需翻轉向右) */}
-                    <div 
-                      className="absolute top-1/2 flex items-center justify-center text-6xl filter drop-shadow-lg animate-bounce-slow"
-                      style={{ 
-                        width: '80px', 
-                        height: '80px',
-                        left: '50%', 
-                        marginLeft: `${BEAR_OFFSET}px`, 
-                        transform: 'translate(-50%, -50%) scaleX(-1)', 
-                        '--scale-x': '-1'
-                      }}
-                    >
-                      🧟
-                    </div>
-                  </div>
+              {/* 使用 Canvas 取代原本的 HTML 動畫 */}
+              <div className="h-40 w-full bg-sky-100/30 border-b-4 border-amber-200/50 shrink-0 z-10 flex justify-center overflow-hidden">
+                 {/* 由於 Canvas 設定為固定寬度 1000px，我們在外部包一個置中的 div */}
+                 <div className="max-w-[1000px] w-full relative h-full">
+                     <CanvasTugOfWar 
+                         score={score} 
+                         isResetting={isResetting} 
+                         goalDifference={GOAL_DIFFERENCE} 
+                         bearOffset={BEAR_OFFSET} 
+                     />
+                 </div>
               </div>
 
               {/* 主要遊戲區 */}
