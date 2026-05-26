@@ -159,9 +159,11 @@
 3. 訪談對象：判斷老師主要是跟誰進行訪談對話（例如：學生本人、家長、某老師）。如果無特別提及，預設為「學生本人」。
 4. 輔導內容要點：針對學生訪談的原因，例如突發狀況事件經過以及行為表現問題進行紀錄。
 5. 聯絡事項：老師事後的通知對象（如家長、學務處等）以及後續的處理方式。
-【重要潤飾規則】：
-- 必須自動潤飾語句和語氣，使其專業、客觀、通順。
-- 必須將負面且具有貶低性的語詞轉換成中性或正向說法。例如：將「偷竊」、「小偷」轉換為「沒有經過他人同意就拿取物品」；將「打人」轉換為「發生肢體衝突」等。
+【重要潤飾規則（依據學校訂定教師輔導與管教學生辦法）】：
+- 必須自動潤飾語句和語氣，使其專業、客觀、通順，避免情緒性字眼。
+- 絕對不能出現「體罰」或「違法管教」的紀錄（依附表一：如打手心、半蹲、交互蹲跳、罰站過久、沒收物品、公然侮辱等）。若語音中提及，請將其自動轉化為符合規定的「正向管教措施」（依附表二：例如以同理心溝通、引導學生思考行為後果、探究原因、給予正向建議與抉擇權等）。
+- 必須將負面且具有貶低性的語詞轉換成中性或正向說法。例如：嚴禁使用「偷竊」、「小偷」字眼，必須明確轉換為「未經同意拿取他人物品」；將「打人」轉換為「發生肢體衝突」；將「說謊」轉換為「陳述與事實不符」等。
+- 嚴禁使用「罰站」字眼，必須修飾為「站立反省」，且紀錄中的站立反省時間「每次不能超過40分鐘或一節課」。若原始語音內容超過此時間，請自動調整修改為符合規定的時間內。
 原始逐字稿內容：
 "${rawText}"`;
 
@@ -331,7 +333,7 @@
               </div>
               <textarea
                 className="flex-grow w-full border border-gray-200 rounded-xl p-4 focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none text-gray-700 leading-relaxed"
-                placeholder="建議直接打字輸入...&#10;&#10;【請包含以下兩部分】&#10;1. 輔導內容要點 (事發經過、行為表現)&#10;2. 聯絡事項 (通知對象、後續處理)&#10;&#10;例如：「今天下午學生姓名跟同學發生爭執，未經同意拿取別人的文具。我跟她談過後... 已經聯絡家長說明情況，並請家長協助留意。」&#10;&#10;※ 系統會自動潤飾負面詞彙（如將「偷竊」轉換為「未經同意拿取物品」）。"
+                placeholder="建議直接打字輸入...&#10;&#10;【請包含以下兩部分】&#10;1. 輔導內容要點 (事發經過、行為表現)&#10;2. 聯絡事項 (通知對象、後續處理)&#10;&#10;例如：「今天下午學生姓名跟同學發生爭執，未經同意拿取別人的文具。我跟她談過後... 已經聯絡家長說明情況，並請家長協助留意。」&#10;&#10;※ 系統會依據管教辦法自動潤飾，排除體罰紀錄並轉換負面詞彙（如將「偷竊」轉換為「未經同意拿取他人物品」，「罰站」轉換為「站立反省」且不超過40分鐘）。"
                 rows="10" value={rawText} onChange={(e) => setRawText(e.target.value)}
               />
               <div className="mt-4 flex justify-center">
@@ -435,7 +437,16 @@
                         本機下載版必須填入 API Key 才能連線至 AI。<br/>
                         <span className="text-blue-700 font-medium">※ 此金鑰僅會保存在您當前使用的瀏覽器中，非常安全，且輸入一次後便會永久記住！</span>
                       </p>
-                      <input type="password" placeholder="請貼上您的 Gemini API Key..." value={geminiApiKey} onChange={(e) => { setGeminiApiKey(e.target.value); localStorage.setItem('geminiApiKey', e.target.value); }} className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 font-mono text-sm bg-white" />
+                      <div className="flex space-x-2">
+                        <input type="password" placeholder="請貼上您的 Gemini API Key..." value={geminiApiKey} onChange={(e) => { setGeminiApiKey(e.target.value); localStorage.setItem('geminiApiKey', e.target.value); }} className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 font-mono text-sm bg-white" />
+                        <button 
+                          onClick={() => { setGeminiApiKey(''); localStorage.removeItem('geminiApiKey'); }}
+                          className="flex-shrink-0 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-2 rounded-lg font-bold transition-colors whitespace-nowrap"
+                          title="清空金鑰"
+                        >
+                          清空
+                        </button>
+                      </div>
                     </div>
                     <div className="bg-emerald-50/50 p-5 rounded-xl border border-emerald-100">
                       <h4 className="font-bold text-gray-800 mb-2 flex items-center text-lg">
@@ -445,7 +456,16 @@
                       <p className="text-sm text-gray-600 mb-4 leading-relaxed">
                         請將您在 Apps Script 部署後獲得的「網頁應用程式網址」貼在此處。
                       </p>
-                      <input type="text" placeholder="https://script.google.com/macros/s/.../exec" value={appsScriptUrl} onChange={(e) => { setAppsScriptUrl(e.target.value); localStorage.setItem('appsScriptUrl', e.target.value); }} className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-emerald-500 font-mono text-sm bg-white" />
+                      <div className="flex space-x-2">
+                        <input type="text" placeholder="https://script.google.com/macros/s/.../exec" value={appsScriptUrl} onChange={(e) => { setAppsScriptUrl(e.target.value); localStorage.setItem('appsScriptUrl', e.target.value); }} className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-emerald-500 font-mono text-sm bg-white" />
+                        <button 
+                          onClick={() => { setAppsScriptUrl(''); localStorage.removeItem('appsScriptUrl'); }}
+                          className="flex-shrink-0 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-2 rounded-lg font-bold transition-colors whitespace-nowrap"
+                          title="清空網址"
+                        >
+                          清空
+                        </button>
+                      </div>
                     </div>
                   </div>
                   <div className="mt-8 flex justify-end">
