@@ -123,6 +123,7 @@
             display: flex;
             gap: 40px;
             justify-content: center;
+            flex-wrap: wrap;
         }
 
         .number-box-wrapper {
@@ -194,11 +195,11 @@
             transform: scale(1.05);
         }
 
-        /* --- 數字鍵盤 (改為側邊浮動面板) --- */
+        /* --- 數字鍵盤 (側邊浮動面板，不遮擋畫面) --- */
         #numpad-modal {
             position: fixed;
             top: 50%;
-            right: 20px; /* 強制固定在畫面最右側 */
+            right: 20px; /* 靠右對齊 */
             transform: translateY(-50%);
             z-index: 1000;
         }
@@ -210,7 +211,7 @@
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 10px;
-            box-shadow: -10px 10px 40px rgba(0,0,0,0.9); /* 加上向左的深色陰影，增強層次感 */
+            box-shadow: -10px 10px 40px rgba(0,0,0,0.9); /* 立體浮動感 */
         }
 
         .numpad-btn {
@@ -238,15 +239,16 @@
             grid-column: span 2;
         }
 
-        /* --- 第二頁：儀表板 --- */
+        /* --- 第二頁：儀表板 (全自動響應式調整) --- */
         #dashboard-page {
             height: 100vh; /* 投影畫面鎖定高度 */
+            width: 100vw;
             overflow: hidden; /* 投影畫面防捲動 */
-            padding: 2vh;
+            padding: 2vmin;
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            grid-template-rows: 4.5fr 4fr 1fr; 
-            gap: 2vh;
+            grid-template-rows: 4.5fr 4fr 1.2fr; /* 稍微加高底部進度條空間 */
+            gap: 2vmin;
             position: relative;
         }
 
@@ -273,18 +275,18 @@
         }
 
         .panel {
-            padding: 2vh;
+            padding: 2vmin;
             display: flex;
             flex-direction: column;
             background-color: rgba(0, 0, 0, 0.15);
         }
 
         .panel-title {
-            font-size: 2rem;
+            font-size: clamp(1.5rem, 3.5vmin, 3.5rem);
             color: #ffd700;
             border-bottom: 2px solid rgba(255, 215, 0, 0.5);
-            padding-bottom: 0.5vh;
-            margin-bottom: 1.5vh;
+            padding-bottom: 0.5vmin;
+            margin-bottom: 1.5vmin;
             text-align: center;
         }
 
@@ -300,8 +302,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 2.5rem;
-            padding: 10px 20px;
+            font-size: clamp(1.5rem, 4vmin, 4rem);
+            padding: 1vmin 2vmin;
             border-radius: 8px;
             transition: all 0.3s;
         }
@@ -323,7 +325,7 @@
             align-items: center;
         }
         .clock-display {
-            font-size: 6vw;
+            font-size: clamp(4rem, 10vmin, 15rem);
             font-weight: 900;
             font-family: monospace;
             text-align: center;
@@ -331,9 +333,9 @@
             line-height: 1;
         }
         .date-display {
-            font-size: 2vw;
+            font-size: clamp(1.2rem, 3vmin, 4rem);
             text-align: center;
-            margin-top: 10px;
+            margin-top: 2vmin;
             color: #bbb;
         }
 
@@ -349,7 +351,7 @@
         .stat-row {
             display: flex;
             justify-content: space-between;
-            font-size: 2.5rem;
+            font-size: clamp(1.5rem, 4.5vmin, 5rem);
         }
         .stat-row.absent {
             color: #ff6b6b;
@@ -368,8 +370,8 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            font-size: 3.5rem;
-            padding: 0 20px;
+            font-size: clamp(2rem, 5vmin, 6rem);
+            padding: 0 2vmin;
             line-height: 1.4;
             color: #8be9fd; 
             animation: fadeInOut 20s infinite;
@@ -380,52 +382,70 @@
             95%, 100% { opacity: 0; transform: scale(0.95); }
         }
 
-        /* E區: 考試進度條 */
+        /* E區: 考試進度條與烏龜 */
         .area-e { 
             grid-column: span 5; 
             flex-direction: row;
             align-items: center;
-            gap: 20px;
-            padding: 1vh 2vh;
+            gap: 2vmin;
+            padding: 1vmin 2vmin;
         }
         .progress-label {
-            font-size: 2rem;
+            font-size: clamp(1.5rem, 3vmin, 3.5rem);
             white-space: nowrap;
         }
         .progress-bar-container {
             flex-grow: 1;
-            height: 4vh;
+            height: 5vmin;
             background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
+            border-radius: 25px;
             border: 2px solid rgba(255, 255, 255, 0.3);
-            overflow: hidden;
             position: relative;
         }
         .progress-bar-fill {
             height: 100%;
             width: 0%;
             background-color: #50fa7b; 
+            border-radius: 20px;
             transition: width 1s linear;
         }
+        
+        /* 可愛烏龜動畫設定 */
+        .turtle {
+            position: absolute;
+            top: 50%;
+            left: 0%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(2.5rem, 5vmin, 6rem);
+            transition: left 1s linear;
+            z-index: 10;
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+            animation: turtleCrawl 1s infinite alternate ease-in-out;
+        }
+        @keyframes turtleCrawl {
+            0% { transform: translate(-50%, -50%) rotate(-15deg); }
+            100% { transform: translate(-50%, -50%) rotate(15deg); }
+        }
+
         .progress-text {
             position: absolute;
             width: 100%;
             text-align: center;
             top: 50%;
             transform: translateY(-50%);
-            font-size: 1.5rem;
+            font-size: clamp(1.2rem, 2.5vmin, 3rem);
             font-weight: bold;
-            color: #333; 
-            text-shadow: none;
-            mix-blend-mode: overlay; 
+            color: #ffffff; 
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.8);
+            z-index: 5;
+            pointer-events: none;
         }
         .progress-status {
-            font-size: 2rem;
-            min-width: 150px;
+            font-size: clamp(1.5rem, 3vmin, 3.5rem);
+            min-width: 15vw;
             text-align: right;
             color: #ffd700;
         }
-
     </style>
 </head>
 <body>
@@ -552,6 +572,7 @@
             <div class="progress-label">考試進度</div>
             <div class="progress-bar-container">
                 <div class="progress-bar-fill" id="progress-fill"></div>
+                <div class="turtle" id="progress-turtle">🐢</div>
                 <div class="progress-text" id="progress-text">準備中...</div>
             </div>
             <div class="progress-status" id="progress-status">等待考試</div>
@@ -562,7 +583,7 @@
     <!-- ==================== JavaScript 邏輯 ==================== -->
     <script>
         // =========================================================================
-        // 【重要設定區】請將下方引號內的文字，替換為您的 Google Apps Script 網址
+        // 【重要設定區】您的 Google Apps Script 網址
         // =========================================================================
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzbn6r3G6nUweVwA3RfNlxyxSU1mR0PWpXQNGoNhqvs9R9zHfG8kcx6mP4thMuHGt-w/exec";
 
@@ -646,7 +667,6 @@
             const validActual = attendance.actual >= 1 && attendance.actual <= 40;
             const validAbsent = attendance.expected >= attendance.actual;
 
-            // 只要有任何一項不符合，就停用按鈕阻擋上傳
             btn.disabled = !hasSubject || !validClass || !validExpected || !validActual || !validAbsent;
         }
 
@@ -669,7 +689,6 @@
             document.getElementById('box-grade').classList.remove('active');
             document.getElementById('box-classNum').classList.remove('active');
             
-            // 防呆限制
             if (classInfo.grade > 6) {
                 alert("年級範圍只能設定 1~6，請重新輸入。");
                 classInfo.grade = 0;
@@ -892,6 +911,7 @@
             });
 
             const fill = document.getElementById('progress-fill');
+            const turtle = document.getElementById('progress-turtle');
             const text = document.getElementById('progress-text');
             const status = document.getElementById('progress-status');
 
@@ -906,6 +926,9 @@
                 percent = Math.min(100, Math.max(0, percent));
                 
                 fill.style.width = `${percent}%`;
+                turtle.style.left = `${percent}%`; 
+                turtle.style.display = 'block'; 
+                
                 fill.style.backgroundColor = percent > 80 ? '#ff5555' : '#50fa7b'; 
                 
                 const remainMins = Math.ceil(totalMins - passedMins);
@@ -915,7 +938,10 @@
 
             } else {
                 fill.style.width = '0%';
+                turtle.style.left = '0%';
+                
                 if (nextExamIndex !== -1) {
+                    turtle.style.display = 'none'; 
                     const nextStartMins = timeToMins(schedule[nextExamIndex].start);
                     const waitMins = Math.ceil(nextStartMins - currentMins);
                     if (nextExamIndex === 0) {
@@ -930,11 +956,14 @@
                     if (schedule.length > 0 && currentMins > timeToMins(schedule[schedule.length-1].end)) {
                         text.innerText = "今日考程已全部結束";
                         fill.style.width = '100%';
+                        turtle.style.left = '100%';
+                        turtle.style.display = 'block'; 
                         fill.style.backgroundColor = 'rgba(255,255,255,0.2)';
                         status.innerText = "考試結束";
                     } else {
                         text.innerText = "等待中...";
                         status.innerText = "--";
+                        turtle.style.display = 'none';
                     }
                 }
             }
