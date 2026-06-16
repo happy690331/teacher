@@ -505,45 +505,41 @@
             const spans = Array.from(textLayer.querySelectorAll('span'));
             if (spans.length === 0) return;
 
-            // 尋找上半部 (前 30%) 的標題文字
-            const topSpans = spans.filter(span => {
-                const top = parseFloat(span.style.top) || span.offsetTop;
-                return top < pageHeight * 0.3;
-            });
-
             let isVertical = false;
-            if (topSpans.length > 0) {
-                let maxSpan = null;
-                let maxSize = 0;
-                topSpans.forEach(span => {
-                    // 嘗試取得字體大小，若無則用高度代替
-                    const fontSize = parseFloat(span.style.fontSize) || span.offsetHeight;
-                    const width = span.offsetWidth;
-                    const score = fontSize * width; // 面積做為顯眼程度
-                    if (score > maxSize) {
-                        maxSize = score;
-                        maxSpan = span;
+
+            // 判斷是否為「橫式」考卷 (寬度大於高度)
+            if (pageWidth > pageHeight) {
+                let maxFontSize = 0;
+                let titleCenterX = 0;
+
+                spans.forEach(span => {
+                    // 嘗試取得字體大小，PDF.js 通常會寫在 style.fontSize
+                    let fontSize = parseFloat(span.style.fontSize);
+                    if (isNaN(fontSize)) fontSize = span.offsetHeight;
+                    
+                    // 尋找全頁面中最大的字體 (通常是考卷大標題)
+                    if (fontSize > maxFontSize) {
+                        maxFontSize = fontSize;
+                        let left = parseFloat(span.style.left);
+                        if (isNaN(left)) left = span.offsetLeft;
+                        titleCenterX = left + (span.offsetWidth / 2);
                     }
                 });
 
-                if (maxSpan) {
-                    const left = parseFloat(maxSpan.style.left) || maxSpan.offsetLeft;
-                    const center = left + (maxSpan.offsetWidth / 2);
-                    
-                    // 如果最大標題的中心點在頁面的右半部 (大於 60% 寬度處)
-                    // 代表這是橫式標題但在右邊的國語考卷，自動切換為直排由右至左
-                    if (center > pageWidth * 0.6) {
-                        isVertical = true;
-                    }
+                // 如果最大標題的中心點落在頁面的「右半部」
+                // 代表這是橫式且標題在右方的考卷 (如國語)，自動切換為直排由右至左
+                if (titleCenterX > pageWidth * 0.5) {
+                    isVertical = true;
                 }
             }
 
             const directionSelect = document.getElementById('reading-direction');
             if (isVertical) {
                 directionSelect.value = 'vertical';
-                console.log("自動偵測到右方大標題，已切換為：直排(右至左)");
+                console.log("自動偵測：橫式考卷且大標題在右方，已切換為 直排(右至左)");
             } else {
                 directionSelect.value = 'horizontal';
+                console.log("自動偵測：維持預設 橫排(左至右)");
             }
         }
 
@@ -671,18 +667,28 @@
                 
                 if (direction === 'vertical') {
                     // 【直式排版】：從右到左，從上到下
-                    // 容錯值：最少 12px，避免標點符號寬度過小導致誤判為不同行
-                    const threshold = Math.max(12, Math.min(rectA.width, rectB.width) / 2);
-                    if (Math.abs(rectA.left - rectB.left) > threshold) {
-                        return rectB.left - rectA.left; // X座標大的 (越右邊) 排越前面
+                    // 為了精準處理標點符號與文字的微小偏移，改用「中心點X座標」判定
+                    const centerX_A = rectA.left + (rectA.width / 2);
+                    const centerX_B = rectB.left + (rectB.width / 2);
+                    
+                    // 動態容錯值：以字體寬度的 0.8 倍為基準，最少 12px
+                    const threshold = Math.max(12, Math.min(rectA.width, rectB.width) * 0.8);
+                    
+                    if (Math.abs(centerX_A - centerX_B) > threshold) {
+                        return centerX_B - centerX_A; // X座標大的 (越右邊) 排越前面
                     }
                     return rectA.top - rectB.top; // 同一行時，Y座標小的 (越上面) 排越前面
                 } else {
                     // 【橫式排版】：從上到下，從左到右
-                    // 容錯值：最少 12px，避免標點符號高度過小導致誤判為不同行
-                    const threshold = Math.max(12, Math.min(rectA.height, rectB.height) / 2);
-                    if (Math.abs(rectA.top - rectB.top) > threshold) {
-                        return rectA.top - rectB.top; // Y座標小的 (越上面) 排越前面
+                    // 改用「中心點Y座標」判定
+                    const centerY_A = rectA.top + (rectA.height / 2);
+                    const centerY_B = rectB.top + (rectB.height / 2);
+                    
+                    // 動態容錯值：以字體高度的 0.6 倍為基準，最少 12px
+                    const threshold = Math.max(12, Math.min(rectA.height, rectB.height) * 0.6);
+                    
+                    if (Math.abs(centerY_A - centerY_B) > threshold) {
+                        return centerY_A - centerY_B; // Y座標小的 (越上面) 排越前面
                     }
                     return rectA.left - rectB.left; // 同一行時，X座標小的 (越左邊) 排越前面
                 }
