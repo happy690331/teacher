@@ -136,11 +136,10 @@
                         <select id="github-pdf-select" class="w-full max-w-[250px] p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-sm text-gray-700 cursor-pointer">
                             <option value="">載入題庫中...</option>
                         </select>
-                        <!-- 來源提示已隱藏 -->
                     </div>
                 </div>
 
-                <!-- 方式三：雲端硬碟 (改為下拉選單) -->
+                <!-- 方式三：雲端硬碟 (密碼框+下拉選單) -->
                 <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 hover:shadow-md transition flex flex-col items-center justify-center">
                     <h2 class="text-lg font-bold text-gray-700 mb-4 text-center">方式三：從雲端硬碟載入</h2>
                     <div class="w-full flex flex-col items-center justify-center gap-3">
@@ -175,7 +174,7 @@
             <span class="text-sm text-gray-500 hidden xl:block">點擊畫面上的紅框範圍即可朗讀</span>
         </div>
         <div class="flex items-center gap-2 md:gap-4">
-            <!-- 排版切換 (新增：支援直書/橫書) -->
+            <!-- 排版切換 (支援直書/橫書) -->
             <div class="flex items-center gap-1 md:gap-2 mr-1">
                 <span class="text-sm font-bold text-gray-700 hidden lg:block">排版:</span>
                 <select id="reading-direction" class="w-24 p-1 border border-gray-300 rounded text-sm text-gray-700 outline-none cursor-pointer">
@@ -200,7 +199,7 @@
             
             <!-- 播放控制 -->
             <button id="pause-btn" class="px-3 py-2 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-bold rounded-md shadow transition disabled:opacity-50" disabled>
-                暫停/繼續
+                暫停
             </button>
             <button id="cancel-read-btn" class="px-3 py-2 bg-red-500 hover:bg-red-600 text-white font-bold rounded-md shadow transition disabled:opacity-50" disabled>
                 取消報讀
@@ -230,7 +229,6 @@
         const CMAP_PACKED = true;
 
         // ================= 設定區 =================
-        // 將 API Key 改為由畫面動態輸入，確保分享程式碼時的安全
         const GDRIVE_FOLDER_ID = '1u5VANtBOPraiVsnKOvln9XME43UWtW-T'; // 您的雲端資料夾ID
         // ==========================================
 
@@ -245,15 +243,16 @@
         let textChunks = [];    
         let chunkIndex = 0;     
         let chunkTimeout = null;
+        let currentSessionId = 0; // 【核心修正】：給每次發音任務唯一的身份證，防止互相干擾
 
         // DOM 元素
         const body = document.body;
         const fileInput = document.getElementById('pdf-upload');
         const fileNameDisplay = document.getElementById('file-name-display');
         const githubPdfSelect = document.getElementById('github-pdf-select');
-        const gdriveApiKeyInput = document.getElementById('gdrive-api-key'); // 新增：API金鑰輸入框
-        const loadGdriveBtn = document.getElementById('load-gdrive-btn'); // 新增：載入雲端按鈕
-        const gdrivePdfSelect = document.getElementById('gdrive-pdf-select'); // 改為下拉選單
+        const gdriveApiKeyInput = document.getElementById('gdrive-api-key'); 
+        const loadGdriveBtn = document.getElementById('load-gdrive-btn'); 
+        const gdrivePdfSelect = document.getElementById('gdrive-pdf-select'); 
         const startBtn = document.getElementById('start-btn');
         const pdfPagesWrapper = document.getElementById('pdf-pages-wrapper');
         const loadingIndicator = document.getElementById('loading-indicator');
@@ -286,7 +285,7 @@
             }
         }
 
-        // 載入 Google Drive 題庫清單 (加入 apiKey 參數)
+        // 載入 Google Drive 題庫清單
         async function loadGoogleDrivePdfs(apiKey) {
             if (!apiKey) {
                 gdrivePdfSelect.innerHTML = '<option value="">請先輸入上方金鑰並載入</option>';
@@ -296,7 +295,6 @@
             try {
                 gdrivePdfSelect.innerHTML = '<option value="">載入雲端題庫中...</option>';
                 gdrivePdfSelect.disabled = true;
-                // 透過 Drive API 取得該資料夾內的 pdf 檔案清單
                 const url = `https://www.googleapis.com/drive/v3/files?q='${GDRIVE_FOLDER_ID}'+in+parents+and+mimeType='application/pdf'&key=${apiKey}&fields=files(id,name)`;
                 const response = await fetch(url);
                 if (!response.ok) throw new Error('無法讀取雲端硬碟');
@@ -309,29 +307,27 @@
                     option.textContent = file.name;
                     gdrivePdfSelect.appendChild(option);
                 });
-                gdrivePdfSelect.disabled = false; // 載入成功後啟用下拉選單
+                gdrivePdfSelect.disabled = false; 
             } catch (error) {
                 console.error('雲端硬碟載入失敗:', error);
                 gdrivePdfSelect.innerHTML = '<option value="">載入失敗，請確認 API 金鑰是否正確</option>';
                 gdrivePdfSelect.disabled = true;
-                localStorage.removeItem('gdrive_api_key'); // 若金鑰無效則清除暫存
+                localStorage.removeItem('gdrive_api_key'); 
             }
         }
 
         loadGitHubPdfs();
         
-        // 頁面載入時，檢查是否曾經輸入過金鑰
         const savedApiKey = localStorage.getItem('gdrive_api_key');
         if (savedApiKey) {
             gdriveApiKeyInput.value = savedApiKey;
             loadGoogleDrivePdfs(savedApiKey);
         }
 
-        // 監聽載入雲端題庫按鈕
         loadGdriveBtn.addEventListener('click', () => {
             const key = gdriveApiKeyInput.value.trim();
             if (key) {
-                localStorage.setItem('gdrive_api_key', key); // 記住金鑰，下次不用重貼
+                localStorage.setItem('gdrive_api_key', key); 
                 loadGoogleDrivePdfs(key);
             } else {
                 alert('請先輸入 API 金鑰');
@@ -344,7 +340,6 @@
             switchMode('page1');
         });
 
-        // 監聽本機檔案選擇
         fileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file && file.type === 'application/pdf') {
@@ -352,7 +347,6 @@
                 fileNameDisplay.textContent = file.name;
                 fileNameDisplay.classList.add('text-blue-600');
                 
-                // 清除其他方式的選擇
                 githubPdfSelect.value = "";
                 gdrivePdfSelect.value = "";
                 startBtn.disabled = false;
@@ -362,14 +356,12 @@
             }
         });
 
-        // 監聽線上題庫選擇
         githubPdfSelect.addEventListener('change', function(e) {
             const url = e.target.value;
             if (url) {
                 const fileName = e.target.options[e.target.selectedIndex].text;
                 pdfSource = { type: 'url', url: url, name: fileName };
                 
-                // 清除其他方式的選擇
                 fileInput.value = "";
                 fileNameDisplay.textContent = "選擇 PDF 檔案";
                 fileNameDisplay.classList.remove('text-blue-600');
@@ -383,19 +375,16 @@
             }
         });
 
-        // 監聽雲端硬碟下拉選單
         gdrivePdfSelect.addEventListener('change', function(e) {
             const fileId = e.target.value;
             if (fileId) {
                 const fileName = e.target.options[e.target.selectedIndex].text;
                 
-                // 使用 proxy 繞過 Google Drive 下載的 CORS 限制
                 const directUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
                 const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(directUrl)}`;
                 
                 pdfSource = { type: 'url', url: proxyUrl, name: fileName };
                 
-                // 清除其他方式的選擇
                 fileInput.value = "";
                 fileNameDisplay.textContent = "選擇 PDF 檔案";
                 fileNameDisplay.classList.remove('text-blue-600');
@@ -410,7 +399,6 @@
             }
         });
 
-        // 開始辨識
         startBtn.addEventListener('click', async () => {
             if (!pdfSource) return;
             switchMode('page2');
@@ -459,7 +447,6 @@
             stopSpeaking(true);
         }
 
-        // 渲染單頁 PDF
         async function renderPage(pageNum) {
             const page = await pdfDocument.getPage(pageNum);
             const scale = 1.5; 
@@ -492,7 +479,6 @@
 
             pdfPagesWrapper.appendChild(pageDiv);
 
-            // 【新增】：在第一頁渲染時，自動偵測考卷排版方向
             if (pageNum === 1) {
                 autoSetReadingDirection(textLayerDiv, viewport.width, viewport.height);
             }
@@ -500,24 +486,20 @@
             detectRedBoxesFromCanvas(canvas, interactionLayer);
         }
 
-        // ==================== 自動偵測排版方向 ====================
         function autoSetReadingDirection(textLayer, pageWidth, pageHeight) {
             const spans = Array.from(textLayer.querySelectorAll('span'));
             if (spans.length === 0) return;
 
             let isVertical = false;
 
-            // 判斷是否為「橫式」考卷 (寬度大於高度)
             if (pageWidth > pageHeight) {
                 let maxFontSize = 0;
                 let titleCenterX = 0;
 
                 spans.forEach(span => {
-                    // 嘗試取得字體大小，PDF.js 通常會寫在 style.fontSize
                     let fontSize = parseFloat(span.style.fontSize);
                     if (isNaN(fontSize)) fontSize = span.offsetHeight;
                     
-                    // 尋找全頁面中最大的字體 (通常是考卷大標題)
                     if (fontSize > maxFontSize) {
                         maxFontSize = fontSize;
                         let left = parseFloat(span.style.left);
@@ -526,9 +508,6 @@
                     }
                 });
 
-                // 如果最大標題的中心點落在頁面的「極右側」(大於寬度的 75%)
-                // 才判定為橫式且標題在右方的國語考卷，自動切換為直排由右至左
-                // (將原本的 0.5 提高到 0.75，避免一般置中標題的考卷被誤判)
                 if (titleCenterX > pageWidth * 0.75) {
                     isVertical = true;
                 }
@@ -645,6 +624,7 @@
             return box;
         }
 
+        // ==================== 【核心修正：分行/分欄排序演算法】 ====================
         function extractTextFromBoxCoords(box, textLayer) {
             const boxRect = box.getBoundingClientRect();
             const spans = Array.from(textLayer.querySelectorAll('span'));
@@ -652,57 +632,83 @@
             const insideSpans = spans.filter(span => {
                 const spanRect = span.getBoundingClientRect();
                 
-                const spanCenterX = spanRect.left + (spanRect.width / 2);
-                const spanCenterY = spanRect.top + (spanRect.height / 2);
+                // 【終極修正：只要沾到紅框邊就抓】確保不論排版如何都不會漏字
+                const overlapW = Math.max(0, Math.min(spanRect.right, boxRect.right) - Math.max(spanRect.left, boxRect.left));
+                const overlapH = Math.max(0, Math.min(spanRect.bottom, boxRect.bottom) - Math.max(spanRect.top, boxRect.top));
 
-                return spanCenterX >= boxRect.left && spanCenterX <= boxRect.right &&
-                       spanCenterY >= boxRect.top && spanCenterY <= boxRect.bottom;
+                return overlapW > 0 && overlapH > 0; // 改為大於 0，確保最敏銳的抓取
             });
 
-            // 取得目前的排版方向設定
             const direction = document.getElementById('reading-direction').value;
+            let sortedSpans = [];
 
-            insideSpans.sort((a, b) => {
-                const rectA = a.getBoundingClientRect();
-                const rectB = b.getBoundingClientRect();
-                
-                if (direction === 'vertical') {
-                    // 【直式排版】：從右到左，從上到下
-                    // 為了精準處理標點符號與文字的微小偏移，改用「中心點X座標」判定
-                    const centerX_A = rectA.left + (rectA.width / 2);
-                    const centerX_B = rectB.left + (rectB.width / 2);
+            if (direction === 'vertical') {
+                // 【直式排版】：由右至左分欄，同欄由上而下
+                let columns = [];
+                insideSpans.forEach(span => {
+                    const rect = span.getBoundingClientRect();
+                    const centerX = rect.left + (rect.width / 2);
+                    const centerY = rect.top + (rect.height / 2);
                     
-                    // 動態容錯值：以字體寬度的 0.8 倍為基準，最少 12px
-                    const threshold = Math.max(12, Math.min(rectA.width, rectB.width) * 0.8);
-                    
-                    if (Math.abs(centerX_A - centerX_B) > threshold) {
-                        return centerX_B - centerX_A; // X座標大的 (越右邊) 排越前面
+                    let added = false;
+                    for (let col of columns) {
+                        const threshold = Math.max(10, Math.min(rect.width, col.width) * 0.6);
+                        if (Math.abs(col.centerX - centerX) <= threshold) {
+                            col.spans.push({span, rect, centerX, centerY});
+                            added = true;
+                            break;
+                        }
                     }
-                    return rectA.top - rectB.top; // 同一行時，Y座標小的 (越上面) 排越前面
-                } else {
-                    // 【橫式排版】：從上到下，從左到右
-                    // 改用「中心點Y座標」判定
-                    const centerY_A = rectA.top + (rectA.height / 2);
-                    const centerY_B = rectB.top + (rectB.height / 2);
-                    
-                    // 動態容錯值：以字體高度的 0.6 倍為基準，最少 12px
-                    const threshold = Math.max(12, Math.min(rectA.height, rectB.height) * 0.6);
-                    
-                    if (Math.abs(centerY_A - centerY_B) > threshold) {
-                        return centerY_A - centerY_B; // Y座標小的 (越上面) 排越前面
+                    if (!added) {
+                        columns.push({ centerX, width: rect.width, spans: [{span, rect, centerX, centerY}] });
                     }
-                    return rectA.left - rectB.left; // 同一行時，X座標小的 (越左邊) 排越前面
-                }
-            });
+                });
 
-            return insideSpans.map(s => s.textContent).join('');
+                columns.sort((a, b) => b.centerX - a.centerX);
+                columns.forEach(col => {
+                    col.spans.sort((a, b) => a.centerY - b.centerY);
+                    sortedSpans.push(...col.spans.map(s => s.span));
+                });
+
+            } else {
+                // 【橫式排版】：由上至下分行，同行由左至右
+                let lines = [];
+                insideSpans.forEach(span => {
+                    const rect = span.getBoundingClientRect();
+                    const centerX = rect.left + (rect.width / 2);
+                    const centerY = rect.top + (rect.height / 2);
+                    
+                    let added = false;
+                    for (let line of lines) {
+                        const threshold = Math.max(10, Math.min(rect.height, line.height) * 0.6);
+                        if (Math.abs(line.centerY - centerY) <= threshold) {
+                            line.spans.push({span, rect, centerX, centerY});
+                            added = true;
+                            break;
+                        }
+                    }
+                    if (!added) {
+                        lines.push({ centerY, height: rect.height, spans: [{span, rect, centerX, centerY}] });
+                    }
+                });
+
+                lines.sort((a, b) => a.centerY - b.centerY);
+                lines.forEach(line => {
+                    line.spans.sort((a, b) => a.centerX - b.centerX);
+                    sortedSpans.push(...line.spans.map(s => s.span));
+                });
+            }
+
+            return sortedSpans.map(s => s.textContent).join('');
         }
 
         rateSlider.addEventListener('input', function() {
             rateDisplay.textContent = this.value;
         });
 
+        // 【核心修正：讓舊語音的殘留訊號徹底失效】
         function stopSpeaking(clearHighlight = true) {
+            currentSessionId++; // 發配新的身份證，阻擋所有過期幽靈事件
             synth.cancel();
             clearTimeout(chunkTimeout); 
             isReading = false;
@@ -727,33 +733,24 @@
             activeBox = boxElement;
             activeBox.classList.add('active-read');
             
-            // 【核心修正】：改用不含符號的 @@ 作為標記，保護英文字母與括號轉換
             const cleanText = text
-                // 獨立的 v 或 V 唸打勾
+                .replace(/(\d)([.,:])(?=\d)/g, "$1{{$2}}")
                 .replace(/ˇ|\b[Vv]\b/g, "打勾")
-                // 【新增】：遇到 (A)、（B）等括號包住的英文字母，轉為「選項A」並停頓
                 .replace(/[(（]([a-zA-Z\uFF21-\uFF3A\uFF41-\uFF5A])[)）]/g, "選項$1@@500@@")
-                // 擴增圓圈數字的支援範圍，轉為「選項一」並停頓
-                .replace(/||||①|②|③|④|○1|○2|○3|○4|➀|➁|➂|➃|❶|❷|❸|❹/g, match => {
-                    const map = {
-                        '':'選項一','':'選項二','':'選項三','':'選項四', 
-                        '①':'選項一','②':'選項二','③':'選項三','④':'選項四',
-                        '○1':'選項一','○2':'選項二','○3':'選項三','○4':'選項四',
-                        '➀':'選項一','➁':'選項二','➂':'選項三','➃':'選項四',
-                        '❶':'選項一','❷':'選項二','❸':'選項三','❹':'選項四'
-                    };
-                    return map[match] + "@@500@@";
-                })
-                // 將所有中英文標點符號一律消除不念，替換為安全停頓標記 @@500@@
-                .replace(/[.,:;?!()[\]{}"'<>~^\-/_=\\|，。、：；？！（）「」『』《》〈〉【】〔〕－——…]+/g, "@@500@@")
-                // 確保所有英文字母 (含全形) 保留，並在後面加上停頓
+                .replace(/[(（]\s*[1１]\s*[)）]/g, "選項一@@500@@")
+                .replace(/[(（]\s*[2２]\s*[)）]/g, "選項二@@500@@")
+                .replace(/[(（]\s*[3３]\s*[)）]/g, "選項三@@500@@")
+                .replace(/[(（]\s*[4４]\s*[)）]/g, "選項四@@500@@")
+                .replace(/(?:○|〇|◯|⭕)\s*[1１]|①|➀|❶|/g, "選項一@@500@@")
+                .replace(/(?:○|〇|◯|⭕)\s*[2２]|②|➁|❷|/g, "選項二@@500@@")
+                .replace(/(?:○|〇|◯|⭕)\s*[3３]|③|➂|❸|/g, "選項三@@500@@")
+                .replace(/(?:○|〇|◯|⭕)\s*[4４]|④|➃|❹|/g, "選項四@@500@@")
+                .replace(/[.,:;?!()[\]{}"'~^_\\|，。、：；？！（）「」『』《》〈〉【】〔〕——…]+/g, "@@500@@")
+                .replace(/\{\{([.,:])\}\}/g, "$1")
                 .replace(/([a-zA-Z\uFF21-\uFF3A\uFF41-\uFF5A]+)/g, "$1@@500@@")
-                // 原本的 □ 停頓 1 秒
                 .replace(/□+/g, "@@1000@@")
-                // 防呆機制：合併連續的停頓，避免停太久
                 .replace(/(@@500@@)+/g, "@@500@@");
 
-            // 改良式分段：利用 @@ 進行精準分割，完全不會吃掉字母
             const parts = cleanText.split(/(@@\d+@@)/);
             
             textChunks = parts.filter(p => p.trim() !== ''); 
@@ -762,10 +759,20 @@
             isPaused = false;
             updateBtnStates();
 
-            playNextChunk();
+            currentSessionId++; // 設定本次報讀的新身份證
+            const sessionId = currentSessionId;
+            
+            // 【核心修正：50毫秒深呼吸】，確保 cancel() 已徹底清空舊狀態
+            setTimeout(() => {
+                if (sessionId === currentSessionId) {
+                    playNextChunk(sessionId);
+                }
+            }, 50);
         }
 
-        function playNextChunk() {
+        // 加入 sessionId 判斷，防禦殘留事件干擾
+        function playNextChunk(sessionId) {
+            if (sessionId !== currentSessionId) return; // 幽靈事件防護盾
             if (!isReading || isPaused) return;
 
             if (chunkIndex >= textChunks.length) {
@@ -777,16 +784,15 @@
             const chunk = textChunks[chunkIndex].trim();
             if (!chunk) {
                 chunkIndex++;
-                playNextChunk();
+                playNextChunk(sessionId);
                 return;
             }
 
-            // 檢查這一段是否為我們剛剛插入的停頓標記
             const pauseMatch = chunk.match(/^@@(\d+)@@$/);
             if (pauseMatch) {
                 const delay = parseInt(pauseMatch[1], 10);
                 chunkIndex++;
-                chunkTimeout = setTimeout(playNextChunk, delay);
+                chunkTimeout = setTimeout(() => playNextChunk(sessionId), delay);
                 return;
             }
 
@@ -803,18 +809,23 @@
                 if (twVoice) utterance.voice = twVoice;
             }
 
-            utterance.onstart = () => { isReading = true; isPaused = false; updateBtnStates(); };
+            utterance.onstart = () => { 
+                if (sessionId !== currentSessionId) return; // 幽靈事件防護盾
+                isReading = true; 
+                isPaused = false; 
+                updateBtnStates(); 
+            };
             
             utterance.onend = () => { 
-                if (!isReading) return;
+                if (sessionId !== currentSessionId || !isReading) return; // 幽靈事件防護盾
                 chunkIndex++;
-                playNextChunk();
+                playNextChunk(sessionId);
             }; 
             
             utterance.onerror = () => { 
-                if (!isReading) return;
+                if (sessionId !== currentSessionId || !isReading) return; // 幽靈事件防護盾
                 chunkIndex++;
-                playNextChunk();
+                playNextChunk(sessionId);
             }; 
 
             synth.speak(utterance);
@@ -825,7 +836,7 @@
                 if (isPaused) {
                     isPaused = false;
                     if (!synth.speaking && !synth.pending) {
-                        playNextChunk();
+                        playNextChunk(currentSessionId);
                     } else {
                         synth.resume();
                     }
@@ -844,9 +855,11 @@
             if (isReading || isPaused) {
                 pauseBtn.disabled = false;
                 cancelReadBtn.disabled = false;
+                pauseBtn.textContent = isPaused ? "繼續" : "暫停";
             } else {
                 pauseBtn.disabled = true;
                 cancelReadBtn.disabled = true;
+                pauseBtn.textContent = "暫停";
             }
         }
 
