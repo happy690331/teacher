@@ -325,15 +325,16 @@
             align-items: center;
         }
         .clock-display {
-            font-size: clamp(4rem, 10vmin, 15rem);
+            font-size: clamp(5.5rem, 13vmin, 18rem); /* 時間數字放大 */
             font-weight: 900;
             font-family: monospace;
             text-align: center;
             text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
             line-height: 1;
+            letter-spacing: 2px;
         }
         .date-display {
-            font-size: clamp(1.2rem, 3vmin, 4rem);
+            font-size: clamp(1.5rem, 3.5vmin, 4.5rem); /* 日期也稍微放大搭配 */
             text-align: center;
             margin-top: 2vmin;
             color: #bbb;
@@ -351,11 +352,18 @@
         .stat-row {
             display: flex;
             justify-content: space-between;
+            align-items: baseline; /* 讓不同大小的字體能切齊底線 */
             font-size: clamp(1.5rem, 4.5vmin, 5rem);
         }
         .stat-row.absent {
             color: #ff6b6b;
             font-weight: bold;
+        }
+        /* 新增：將人數統計的數字放大近一倍 */
+        .stat-number {
+            font-size: 1.8em; 
+            font-weight: 900;
+            margin-right: 8px;
         }
 
         /* D區: 考生提醒 */
@@ -370,7 +378,8 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            font-size: clamp(2rem, 5vmin, 6rem);
+            font-size: clamp(3rem, 8vmin, 9rem); /* 提醒字體再度放大並加粗 */
+            font-weight: bold;
             padding: 0 2vmin;
             line-height: 1.4;
             color: #8be9fd; 
@@ -494,6 +503,14 @@
                 </div>
             </div>
 
+            <!-- 新增：動物圖案選擇 -->
+            <div class="setup-section">
+                <h2>4. 選擇進度條圖案 (可愛動物)</h2>
+                <div class="subjects-grid" id="animals-container" style="justify-content: center;">
+                    <!-- JavaScript 動態產生動物按鈕 -->
+                </div>
+            </div>
+
             <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 20px;">
                 <button class="start-btn chalk-border" id="btn-start" disabled onclick="submitToSheetAndStart()">開始提醒畫面/上傳考生人數</button>
                 <button class="stats-btn chalk-border" onclick="window.open('https://docs.google.com/spreadsheets/d/1ipGh3LuITJYRZzC6BDPqTVA1SG7uWUleBo3Lg8l8OIY/preview', '_blank')">📊 目前人數統計</button>
@@ -546,15 +563,15 @@
             <div class="attendance-stats">
                 <div class="stat-row">
                     <span>應到：</span>
-                    <span id="display-expected">0</span> 人
+                    <div><span id="display-expected" class="stat-number">0</span>人</div>
                 </div>
                 <div class="stat-row">
                     <span>實到：</span>
-                    <span id="display-actual">0</span> 人
+                    <div><span id="display-actual" class="stat-number">0</span>人</div>
                 </div>
                 <div class="stat-row absent">
                     <span>缺考：</span>
-                    <span id="display-absent">0</span> 人
+                    <div><span id="display-absent" class="stat-number">0</span>人</div>
                 </div>
             </div>
         </div>
@@ -603,6 +620,8 @@
             "有問題請舉手",
             "不要看別人，不要唱歌和製造聲音"
         ];
+        // 新增 10 種動物陣列
+        const ANIMALS = ["🐢", "🐰", "🐶", "🐱", "🐻", "🐼", "🦊", "🐸", "🐷", "🐧"];
 
         // --- 狀態變數 ---
         let selectedSubjects = [];
@@ -610,6 +629,7 @@
         let attendance = { expected: 0, actual: 0 };
         let activeNumpadTarget = null;
         let dashboardIntervals = [];
+        let selectedAnimal = "🐢"; // 預設動物
 
         // --- 初始化設定畫面 ---
         function initSetup() {
@@ -621,7 +641,28 @@
                 btn.onclick = () => toggleSubject(subject, btn);
                 container.appendChild(btn);
             });
+
+            // 初始化動物選單
+            const animalContainer = document.getElementById('animals-container');
+            ANIMALS.forEach(animal => {
+                const btn = document.createElement('button');
+                btn.className = 'subject-btn chalk-border';
+                btn.style.fontSize = '2.5rem';
+                btn.style.padding = '5px 15px';
+                btn.innerText = animal;
+                if(animal === selectedAnimal) btn.classList.add('selected');
+                btn.onclick = () => selectAnimal(animal, btn);
+                animalContainer.appendChild(btn);
+            });
+
             updateStartButtonState();
+        }
+
+        // --- 動物選擇邏輯 ---
+        function selectAnimal(animal, btnElement) {
+            selectedAnimal = animal;
+            document.querySelectorAll('#animals-container .subject-btn').forEach(b => b.classList.remove('selected'));
+            btnElement.classList.add('selected');
         }
 
         // --- 科目選擇邏輯 ---
@@ -689,13 +730,14 @@
             document.getElementById('box-grade').classList.remove('active');
             document.getElementById('box-classNum').classList.remove('active');
             
-            if (classInfo.grade > 6) {
-                alert("年級範圍只能設定 1~6，請重新輸入。");
+            // 範圍放寬至 年級1-10、班級1-99
+            if (classInfo.grade > 10) {
+                alert("年級範圍只能設定 1~10，請重新輸入。");
                 classInfo.grade = 0;
                 document.getElementById('box-grade').innerText = 0;
             }
-            if (classInfo.classNum > 11) {
-                alert("班級範圍只能設定 1~11，請重新輸入。");
+            if (classInfo.classNum > 99) {
+                alert("班級範圍只能設定 1~99，請重新輸入。");
                 classInfo.classNum = 0;
                 document.getElementById('box-classNum').innerText = 0;
             }
@@ -845,6 +887,9 @@
             document.getElementById('display-actual').innerText = attendance.actual;
             document.getElementById('display-absent').innerText = Math.max(0, attendance.expected - attendance.actual);
 
+            // 更新選定的動物
+            document.getElementById('progress-turtle').innerText = selectedAnimal;
+
             const scheduleData = selectedSubjects.map((subj, index) => ({
                 subject: subj,
                 start: EXAM_TIMES[index].start,
@@ -892,23 +937,31 @@
             const scheduleContainer = document.getElementById('display-schedule');
             scheduleContainer.innerHTML = ''; 
             
-            schedule.forEach((s, index) => {
-                const div = document.createElement('div');
-                div.className = 'schedule-item';
-                div.innerHTML = `<span>第 ${index + 1} 節 &nbsp; ${s.start} - ${s.end}</span> <span>${s.subject}</span>`;
-                
-                const endMins = timeToMins(s.end);
-                if (index === activeExamIndex) {
-                    div.classList.add('active');
-                } else if (currentMins > endMins) {
-                    div.classList.add('past');
-                } else if (activeExamIndex === -1 && index === nextExamIndex) {
-                    div.style.borderLeft = "4px solid #ffd700";
-                    div.style.paddingLeft = "16px";
-                }
-                
-                scheduleContainer.appendChild(div);
-            });
+            // 左上角 A 區：改為只顯示當下/下一節科目並巨大化
+            const singleDiv = document.createElement('div');
+            singleDiv.style.display = 'flex';
+            singleDiv.style.flexDirection = 'column';
+            singleDiv.style.alignItems = 'center';
+            singleDiv.style.justifyContent = 'center';
+            singleDiv.style.height = '100%';
+            singleDiv.style.width = '100%';
+
+            if (activeExamIndex !== -1) {
+                const s = schedule[activeExamIndex];
+                singleDiv.innerHTML = `
+                    <div style="font-size: clamp(2rem, 4.5vmin, 5rem); color: #ccc;">第 ${activeExamIndex + 1} 節 &nbsp; ${s.start} - ${s.end}</div>
+                    <div style="font-size: clamp(5rem, 12vmin, 15rem); color: #ffd700; font-weight: bold; margin-top: 1vmin; text-shadow: 2px 2px 10px rgba(255,215,0,0.4); line-height: 1;">${s.subject}</div>
+                `;
+            } else if (nextExamIndex !== -1) {
+                const s = schedule[nextExamIndex];
+                singleDiv.innerHTML = `
+                    <div style="font-size: clamp(2rem, 4.5vmin, 5rem); color: #ccc;">下一節 即將開始</div>
+                    <div style="font-size: clamp(4rem, 10vmin, 12rem); color: #8be9fd; font-weight: bold; margin-top: 1vmin; line-height: 1;">${s.subject} <span style="font-size: 0.5em; color: #ccc;">(${s.start})</span></div>
+                `;
+            } else {
+                singleDiv.innerHTML = `<div style="font-size: clamp(3rem, 8vmin, 10rem); color: rgba(255,255,255,0.5);">今日考程已結束</div>`;
+            }
+            scheduleContainer.appendChild(singleDiv);
 
             const fill = document.getElementById('progress-fill');
             const turtle = document.getElementById('progress-turtle');
