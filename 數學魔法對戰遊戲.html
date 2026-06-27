@@ -12,6 +12,15 @@
     <!-- 引入 Babel 用於解析 JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
+    <!-- 配置 Babel 強制使用 Classic Runtime 以避免 jsx-runtime 模組錯誤 -->
+    <script>
+        Babel.registerPreset("react-classic", {
+            presets: [
+                [Babel.availablePresets["react"], { "runtime": "classic" }]
+            ]
+        });
+    </script>
+
     <style>
         /* 基礎動畫 */
         .animate-bounce-slow {
@@ -94,11 +103,11 @@
 <body>
     <div id="root"></div>
 
-    <script type="text/babel">
+    <!-- 將 preset 設定為我們自訂的 react-classic -->
+    <script type="text/babel" data-presets="react-classic">
         const { useState, useEffect, useRef } = React;
 
         // --- 簡易音效合成器 (Web Audio API) ---
-        // 利用瀏覽器原生功能發聲，避免外部資源載入失敗
         let audioCtx = null;
         const initAudio = () => {
             if (!audioCtx) {
@@ -120,7 +129,6 @@
             const now = audioCtx.currentTime;
             
             if (type === 'shoot') {
-                // 發射魔法的聲音 (高頻下降)
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(1200, now);
                 osc.frequency.exponentialRampToValueAtTime(300, now + 0.3);
@@ -129,7 +137,6 @@
                 osc.start(now);
                 osc.stop(now + 0.3);
             } else if (type === 'hit') {
-                // 擊中的聲音 (低頻爆破)
                 osc.type = 'square';
                 osc.frequency.setValueAtTime(150, now);
                 osc.frequency.exponentialRampToValueAtTime(40, now + 0.2);
@@ -204,7 +211,7 @@
             </svg>
         );
 
-        // --- 數字鍵盤元件 (改為正常文檔流，不再覆蓋畫面) ---
+        // --- 數字鍵盤元件 ---
         const MiniKeypad = ({ onNumClick, color }) => {
             const btnColorClass = color === 'blue' 
                 ? 'bg-blue-50 text-blue-700 hover:bg-blue-200 border-b-4 border-blue-300 active:border-b-0 active:translate-y-1' 
@@ -357,7 +364,7 @@
           };
 
           const startGame = () => {
-              initAudio(); // 初始化音效引擎
+              initAudio(); 
               setGameState('playing');
               resetGame();
           };
@@ -411,7 +418,7 @@
           };
 
           const handleLeftNumClick = (num) => {
-            initAudio(); // 確保使用者互動後音效可用
+            initAudio(); 
             if (!leftFocus || winner || leftProblem.isCorrect) return;
             const newProb = { ...leftProblem };
             if (leftFocus.digit === 'ten') newProb.inputTen = num;
@@ -422,7 +429,7 @@
           };
 
           const handleRightNumClick = (num) => {
-            initAudio(); // 確保使用者互動後音效可用
+            initAudio(); 
             if (!rightFocus || winner || rightProblem.isCorrect) return;
             const newProb = { ...rightProblem };
             if (rightFocus.digit === 'ten') newProb.inputTen = num;
@@ -449,15 +456,14 @@
               setLeftProblem(prev => ({ ...prev, isCorrect: true }));
               setLeftFocus(null); 
               
-              // 觸發攻擊動畫與音效
               setLeftAttacking(true);
               playSound('shoot');
               
               setTimeout(() => {
                   setLeftAttacking(false);
-                  setRightHit(true); // 右方被擊中
+                  setRightHit(true); 
                   playSound('hit');
-                  setTimeout(() => setRightHit(false), 400); // 擊中特效持續時間
+                  setTimeout(() => setRightHit(false), 400); 
                   
                   const newHp = rightHp - 1;
                   setRightHp(newHp);
@@ -466,19 +472,18 @@
                       setIsTimerRunning(false);
                       isGameOver = true;
                   }
-              }, 500); // 魔法飛行時間
+              }, 500); 
               
             } else {
               setRightProblem(prev => ({ ...prev, isCorrect: true }));
               setRightFocus(null); 
               
-              // 觸發攻擊動畫與音效
               setRightAttacking(true);
               playSound('shoot');
 
               setTimeout(() => {
                   setRightAttacking(false);
-                  setLeftHit(true); // 左方被擊中
+                  setLeftHit(true); 
                   playSound('hit');
                   setTimeout(() => setLeftHit(false), 400);
 
@@ -489,10 +494,9 @@
                       setIsTimerRunning(false);
                       isGameOver = true;
                   }
-              }, 500); // 魔法飛行時間
+              }, 500); 
             }
 
-            // 準備下一題
             if (!isGameOver) {
               if (side === 'left') {
                 if (leftTimerRef.current) clearTimeout(leftTimerRef.current);
@@ -508,7 +512,6 @@
             }
           };
 
-          // 繪製血量條組件 (改為水平排列)
           const HealthBar = ({ hp, maxHp }) => (
               <div className="flex gap-1 md:gap-1.5 filter drop-shadow-md">
                   {Array.from({ length: maxHp }).map((_, idx) => (
@@ -518,8 +521,6 @@
                   ))}
               </div>
           );
-
-          // --- 渲染部分 ---
 
           // 1. 選單畫面
           if (gameState === 'menu') {
@@ -660,7 +661,7 @@
                 </div>
               </div>
 
-              {/* 魔法對戰動畫區 (高度縮減以顯示下方內容) */}
+              {/* 魔法對戰動畫區 */}
               <div className="h-32 md:h-40 relative w-full bg-slate-900 border-b-4 border-slate-700 overflow-hidden shrink-0 z-10 flex items-center justify-center">
                   
                   {/* 星空背景點綴 */}
@@ -671,7 +672,7 @@
                       <div className="absolute top-6 left-1/2 w-1 h-1 bg-white rounded-full animate-ping" style={{animationDelay: '1.5s'}}></div>
                   </div>
 
-                  {/* 雙方角色與血量 (改為左右排列，互不遮擋) */}
+                  {/* 雙方角色與血量 */}
                   <div className="relative w-full max-w-4xl mx-auto h-full flex items-center justify-between px-6 md:px-12">
                       
                       {/* 左方星光法師 */}
@@ -681,32 +682,28 @@
                                   🧙
                               </div>
                           </div>
-                          {/* 血量在右邊 */}
                           <div className="flex flex-col items-start gap-1">
                               <HealthBar hp={leftHp} maxHp={MAX_HP} />
                           </div>
                           
-                          {/* 被擊中的爆破效果 */}
                           {leftHit && <div className="hit-effect bg-purple-400 left-8"></div>}
                       </div>
 
-                      {/* 右方幻影法師 (鏡像反轉，血量在左邊) */}
+                      {/* 右方幻影法師 */}
                       <div className="relative z-10 flex flex-row-reverse items-center gap-2 md:gap-4">
                           <div className={rightHit ? 'animate-shake' : ''}>
                               <div className={`text-6xl md:text-7xl filter drop-shadow-[0_0_15px_rgba(192,38,211,0.6)] ${rightAttacking ? 'scale-110 rotate-12' : (rightHit ? '' : 'animate-bounce-slow')} transition-transform duration-200 hue-rotate-[260deg]`} style={{ transform: 'scaleX(-1)' }}>
                                   🧙
                               </div>
                           </div>
-                          {/* 血量在左邊 */}
                           <div className="flex flex-col items-end gap-1">
                               <HealthBar hp={rightHp} maxHp={MAX_HP} />
                           </div>
                           
-                          {/* 被擊中的爆破效果 */}
                           {rightHit && <div className="hit-effect bg-blue-400 right-8"></div>}
                       </div>
 
-                      {/* 魔法球動畫容器 */}
+                      {/* 魔法球 */}
                       {leftAttacking && (
                           <div className="absolute top-1/2 w-8 h-8 md:w-10 md:h-10 magic-ball-right -translate-y-1/2 z-20"></div>
                       )}
@@ -717,7 +714,7 @@
                   </div>
               </div>
 
-              {/* 主要遊戲區 (版面向上，使用 Flex 讓鍵盤佔據真實空間) */}
+              {/* 主要遊戲區 */}
               <div className="flex-1 flex flex-row items-stretch bg-slate-100 relative">
                 
                 {/* 左邊玩家區塊 */}
@@ -748,7 +745,6 @@
                       />
                     </div>
 
-                    {/* 鍵盤放置於固定高度的容器中，確保不會切到 */}
                     <div className="h-[210px] w-full flex justify-center overflow-visible">
                         {leftFocus && <MiniKeypad onNumClick={handleLeftNumClick} color="blue" />}
                     </div>
@@ -786,7 +782,6 @@
                       />
                     </div>
 
-                    {/* 鍵盤放置於固定高度的容器中，確保不會切到 */}
                     <div className="h-[210px] w-full flex justify-center overflow-visible">
                         {rightFocus && <MiniKeypad onNumClick={handleRightNumClick} color="purple" />}
                     </div>
@@ -843,7 +838,6 @@
           );
         };
 
-        // 輔助組件：輸入方塊
         const AnswerBox = ({ val, onClick, active, color, isCorrect }) => {
           let baseClass = "w-14 h-16 md:w-16 md:h-20 border-4 rounded-xl flex items-center justify-center text-2xl md:text-3xl font-bold cursor-pointer transition-all shadow-sm";
           
@@ -866,7 +860,6 @@
           );
         };
 
-        // 渲染 App
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<MagicBattleMath />);
     </script>
