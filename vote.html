@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>課堂投票</title>
+  <meta name="description" content="課堂即時投票工具，學生掃 QR Code 即可投票，即時顯示結果" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f1117;
+      --card: #1a1d2e;
+      --border: rgba(255,255,255,0.08);
+      --text: #f0f0f5;
+      --muted: #8a8fa8;
+      --a: #6c63ff;
+      --b: #f7605a;
+      --c: #2ed8a0;
+      --d: #f5a623;
+      --glow-a: rgba(108,99,255,0.35);
+      --glow-b: rgba(247,96,90,0.35);
+      --glow-c: rgba(46,216,160,0.35);
+      --glow-d: rgba(245,166,35,0.35);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Noto Sans TC', sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 24px 16px 40px;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      max-width: 560px;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(108,99,255,0.15);
+      border: 1px solid rgba(108,99,255,0.4);
+      border-radius: 99px;
+      padding: 6px 14px;
+      font-size: 12px;
+      color: #a09cff;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #6c63ff;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100%{opacity:1;transform:scale(1)}
+      50%{opacity:0.4;transform:scale(0.8)}
+    }
+
+    h1 {
+      font-size: clamp(20px, 5vw, 28px);
+      font-weight: 900;
+      line-height: 1.3;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    .vote-count-badge {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .vote-count-badge span {
+      color: #a09cff;
+      font-weight: 700;
+    }
+
+    /* ── Card ── */
+    .card {
+      width: 100%;
+      max-width: 560px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px 24px;
+      margin-bottom: 16px;
+    }
+
+    /* ── Options ── */
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .opt-btn {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: rgba(255,255,255,0.04);
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 16px 18px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      text-align: left;
+      overflow: hidden;
+      width: 100%;
+    }
+    .opt-btn:active { transform: scale(0.97); }
+    .opt-btn.disabled { cursor: default; }
+    .opt-btn:not(.disabled):hover {
+      background: rgba(255,255,255,0.08);
+      transform: translateY(-2px);
+    }
+
+    .opt-btn[data-key="A"]:not(.disabled):hover,
+    .opt-btn[data-key="A"].selected { border-color: var(--a); box-shadow: 0 0 20px var(--glow-a); }
+    .opt-btn[data-key="B"]:not(.disabled):hover,
+    .opt-btn[data-key="B"].selected { border-color: var(--b); box-shadow: 0 0 20px var(--glow-b); }
+    .opt-btn[data-key="C"]:not(.disabled):hover,
+    .opt-btn[data-key="C"].selected { border-color: var(--c); box-shadow: 0 0 20px var(--glow-c); }
+    .opt-btn[data-key="D"]:not(.disabled):hover,
+    .opt-btn[data-key="D"].selected { border-color: var(--d); box-shadow: 0 0 20px var(--glow-d); }
+
+    /* progress bar fill */
+    .bar-fill {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      border-radius: 12px;
+      opacity: 0;
+      transition: width 0.5s ease, opacity 0.3s;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .voted .bar-fill { opacity: 1; }
+    .opt-btn[data-key="A"] .bar-fill { background: linear-gradient(90deg, var(--glow-a), transparent); }
+    .opt-btn[data-key="B"] .bar-fill { background: linear-gradient(90deg, var(--glow-b), transparent); }
+    .opt-btn[data-key="C"] .bar-fill { background: linear-gradient(90deg, var(--glow-c), transparent); }
+    .opt-btn[data-key="D"] .bar-fill { background: linear-gradient(90deg, var(--glow-d), transparent); }
+
+    .opt-label {
+      position: relative;
+      z-index: 1;
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 15px;
+      flex-shrink: 0;
+      transition: background 0.25s;
+    }
+    .opt-btn[data-key="A"] .opt-label { background: rgba(108,99,255,0.2); color: #a09cff; }
+    .opt-btn[data-key="B"] .opt-label { background: rgba(247,96,90,0.2);  color: #f79a97; }
+    .opt-btn[data-key="C"] .opt-label { background: rgba(46,216,160,0.2); color: #7de8cb; }
+    .opt-btn[data-key="D"] .opt-label { background: rgba(245,166,35,0.2); color: #f7cb74; }
+
+    .opt-btn.selected .opt-label {
+      background: currentColor;
+      color: #fff;
+    }
+    .opt-btn[data-key="A"].selected .opt-label { background: var(--a); }
+    .opt-btn[data-key="B"].selected .opt-label { background: var(--b); }
+    .opt-btn[data-key="C"].selected .opt-label { background: var(--c); }
+    .opt-btn[data-key="D"].selected .opt-label { background: var(--d); }
+
+    .opt-text {
+      position: relative; z-index: 1;
+      flex: 1;
+      font-size: 15px;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    .opt-pct {
+      position: relative; z-index: 1;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      opacity: 0;
+      transition: opacity 0.3s;
+      min-width: 36px;
+      text-align: right;
+    }
+    .voted .opt-pct { opacity: 1; }
+
+    /* ── Voted Banner ── */
+    .voted-banner {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: rgba(46,216,160,0.12);
+      border: 1px solid rgba(46,216,160,0.35);
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--c);
+      margin-top: 16px;
+      animation: fadeIn 0.4s ease;
+    }
+    .voted-banner.show { display: flex; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+    /* ── Live indicator ── */
+    .live-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+    .live-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--c);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    /* ── Loading ── */
+    #loading {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 12px;
+      z-index: 99;
+      transition: opacity 0.4s;
+    }
+    #loading.hidden { opacity: 0; pointer-events: none; }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(108,99,255,0.2);
+      border-top-color: var(--a);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error message ── */
+    #error-msg {
+      display: none;
+      background: rgba(247,96,90,0.12);
+      border: 1px solid rgba(247,96,90,0.35);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #f79a97;
+      width: 100%; max-width: 560px;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="loading">
+  <div class="spinner"></div>
+  <div style="color:var(--muted);font-size:13px;">連接中…</div>
+</div>
+
+<!-- Error -->
+<div id="error-msg"></div>
+
+<!-- Header -->
+<header>
+  <div class="logo-badge"><div class="dot"></div>即時投票</div>
+  <h1 id="question-title">題目載入中…</h1>
+  <p class="vote-count-badge">目前共 <span id="total-count">0</span> 票</p>
+</header>
+
+<!-- Options Card -->
+<div class="card">
+  <div class="options" id="options-container"></div>
+  <div class="voted-banner" id="voted-banner">✅ 已投票！結果即時更新中</div>
+</div>
+
+<div class="live-row">
+  <div class="live-dot"></div>
+  <span>Firebase 即時同步</span>
+</div>
+
+<!-- ═══ Firebase SDK ═══ -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp }
+    from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+  // ══════════════════════════════════════
+  // 🔧 老師可以在這裡修改題目和選項
+  const QUESTION = "你最喜歡哪種學習方式？";
+  const OPTIONS = [
+    { key: "A", text: "看影片自學" },
+    { key: "B", text: "老師課堂講解" },
+    { key: "C", text: "小組討論" },
+    { key: "D", text: "自己動手實作" },
+  ];
+  const COLLECTION = "votes_q1"; // 每次新題目換一個名稱，就能清空投票
+  // ══════════════════════════════════════
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBplFuvGnNIRBPcV1_1ZU4rNb3QS99LnQ8",
+    authDomain: "aigame-67162.firebaseapp.com",
+    projectId: "aigame-67162",
+    storageBucket: "aigame-67162.firebasestorage.app",
+    messagingSenderId: "579369820612",
+    appId: "1:579369820612:web:3c5c96d00dffb772ed0491"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  // ── State ──
+  const STORAGE_KEY = `voted_${COLLECTION}`;
+  let hasVoted     = !!sessionStorage.getItem(STORAGE_KEY);
+  let myChoice     = sessionStorage.getItem(STORAGE_KEY) || null;
+  let counts       = {};
+  OPTIONS.forEach(o => counts[o.key] = 0);
+
+  // ── Render question ──
+  document.getElementById("question-title").textContent = QUESTION;
+
+  // ── Render options ──
+  const container = document.getElementById("options-container");
+  OPTIONS.forEach(opt => {
+    const btn = document.createElement("button");
+    btn.className = "opt-btn" + (hasVoted ? " disabled" : "") + (myChoice === opt.key ? " selected" : "");
+    btn.id = `opt-${opt.key}`;
+    btn.setAttribute("data-key", opt.key);
+    btn.setAttribute("aria-label", `選項 ${opt.key}：${opt.text}`);
+    btn.innerHTML = `
+      <div class="bar-fill" id="bar-${opt.key}" style="width:0%"></div>
+      <div class="opt-label">${opt.key}</div>
+      <div class="opt-text">${opt.text}</div>
+      <div class="opt-pct" id="pct-${opt.key}">0%</div>
+    `;
+    if (!hasVoted) {
+      btn.addEventListener("click", () => castVote(opt.key));
+    }
+    container.appendChild(btn);
+  });
+
+  if (hasVoted) {
+    document.getElementById("voted-banner").classList.add("show");
+    container.classList.add("voted");
+  }
+
+  // ── Cast vote ──
+  async function castVote(key) {
+    if (hasVoted) return;
+    hasVoted = true;
+    myChoice = key;
+    sessionStorage.setItem(STORAGE_KEY, key);
+
+    // UI 立即反應
+    document.querySelectorAll(".opt-btn").forEach(b => {
+      b.classList.add("disabled");
+      b.removeEventListener("click", () => {});
+    });
+    document.getElementById(`opt-${key}`).classList.add("selected");
+    document.getElementById("voted-banner").classList.add("show");
+    container.classList.add("voted");
+
+    try {
+      await addDoc(collection(db, COLLECTION), {
+        choice: key,
+        ts: serverTimestamp()
+      });
+    } catch(e) {
+      showError("投票失敗，請重試：" + e.message);
+    }
+  }
+
+  // ── Real-time listener ──
+  const q = query(collection(db, COLLECTION));
+  onSnapshot(q, (snap) => {
+    OPTIONS.forEach(o => counts[o.key] = 0);
+    snap.forEach(doc => {
+      const c = doc.data().choice;
+      if (counts[c] !== undefined) counts[c]++;
+    });
+
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    document.getElementById("total-count").textContent = total;
+
+    OPTIONS.forEach(opt => {
+      const pct = total > 0 ? Math.round(counts[opt.key] / total * 100) : 0;
+      document.getElementById(`pct-${opt.key}`).textContent = pct + "%";
+      document.getElementById(`bar-${opt.key}`).style.width = pct + "%";
+    });
+
+    // Hide loading
+    document.getElementById("loading").classList.add("hidden");
+  }, (err) => {
+    showError("連接失敗：" + err.message);
+    document.getElementById("loading").classList.add("hidden");
+  });
+
+  function showError(msg) {
+    const el = document.getElementById("error-msg");
+    el.textContent = "⚠️ " + msg;
+    el.style.display = "block";
+  }
+</script>
+</body>
+</html>
