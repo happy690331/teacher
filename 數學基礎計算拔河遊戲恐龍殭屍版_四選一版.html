@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>數學拔河大賽｜四選一版</title>
+    <!-- 引入 Tailwind CSS 用於樣式設計 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 React 和 ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- 引入 Babel 用於解析 JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        /* 自定義動畫樣式 */
+        .animate-bounce-slow {
+          animation: bounce 2s infinite;
+        }
+        /* 修正 Bounce 動畫，確保 transform 疊加正確 */
+        @keyframes bounce {
+          0%, 100% {
+            transform: translate(-50%, -50%) scaleX(var(--scale-x, 1)) translateY(0);
+            animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+          }
+          50% {
+            transform: translate(-50%, -50%) scaleX(var(--scale-x, 1)) translateY(-15%);
+            animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+          }
+        }
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.2s ease-out forwards;
+        }
+        @keyframes pop-in {
+          0% { transform: scale(0.8); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop-in {
+          animation: pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- 常數定義 ---
+        const MODES = {
+            ADD_1_1: { id: 'add_1_1', label: '一位數 + 一位數' },
+            ADD_2_1: { id: 'add_2_1', label: '二位數 + 一位數' },
+            SUB_1_1: { id: 'sub_1_1', label: '一位數 - 一位數' },
+            SUB_2_1: { id: 'sub_2_1', label: '二位數 - 一位數' },
+            MUL_9_9: { id: 'mul_9_9', label: '九九乘法' },
+            DIV_2_1: { id: 'div_2_1', label: '二位數 ÷ 一位數' },
+        };
+
+        // --- 圖示元件 ---
+        const Trophy = (props) => (
+            <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                <path d="M4 22h16" />
+                <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 21" />
+                <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 21" />
+                <path d="M12 2a7 7 0 0 0-7 7v1h14v-1a7 7 0 0 0-7-7z" />
+            </svg>
+        );
+
+        const RefreshCcw = (props) => (
+            <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                <path d="M16 16h5v5" />
+            </svg>
+        );
+
+        const Play = (props) => (
+            <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+        );
+
+        const Pause = (props) => (
+            <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+            </svg>
+        );
+
+        const TimerIcon = (props) => (
+            <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+        );
+
+        const HomeIcon = (props) => (
+            <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+        );
+
+        // --- Canvas 拔河動畫元件 ---
+        const CanvasTugOfWar = ({ score, isResetting, goalDifference, bearOffset }) => {
+            const canvasRef = useRef(null);
+            // 用 ref 儲存當前繪製狀態，避免依賴閉包問題
+            const drawState = useRef({
+                score: score,
+                isResetting: isResetting,
+                progress: 0, // 動畫進度 0~1
+                targetScore: score,
+                startScore: score,
+                animating: false,
+                bouncePhase: 0 // 角色跳躍的相位
+            });
+
+            // 當分數改變時，觸發動畫
+            useEffect(() => {
+                if (isResetting) {
+                    drawState.current.score = 0;
+                    drawState.current.targetScore = 0;
+                    drawState.current.startScore = 0;
+                    drawState.current.progress = 1;
+                    drawState.current.animating = false;
+                } else if (drawState.current.targetScore !== score) {
+                    drawState.current.startScore = drawState.current.score;
+                    drawState.current.targetScore = score;
+                    drawState.current.progress = 0;
+                    drawState.current.animating = true;
+                }
+            }, [score, isResetting]);
+
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                let animationFrameId;
+                
+                // 動畫相關常數
+                const DURATION = 700; // 繩子移動時間 ms
+                const BOUNCE_SPEED = 0.003; // 跳躍速度
+                
+                let lastTime = performance.now();
+
+                const render = (time) => {
+                    const dt = time - lastTime;
+                    lastTime = time;
+
+                    // 1. 更新狀態
+                    const state = drawState.current;
+                    
+                    // 角色跳躍相位更新
+                    state.bouncePhase += dt * BOUNCE_SPEED;
+
+                    // 分數過渡動畫
+                    if (state.animating) {
+                        state.progress += dt / DURATION;
+                        if (state.progress >= 1) {
+                            state.progress = 1;
+                            state.animating = false;
+                            state.score = state.targetScore;
+                        } else {
+                            // easeInOutQuad
+                            const t = state.progress;
+                            const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+                            state.score = state.startScore + (state.targetScore - state.startScore) * ease;
+                        }
+                    }
+
+                    // 2. 清理畫布
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    const centerY = canvas.height - 30; // 繩子基礎高度
+                    const centerX = canvas.width / 2;
+
+                    // 3. 繪製背景元素
+                    // 地板線
+                    ctx.fillStyle = 'rgba(146, 64, 14, 0.2)'; // amber-800/20
+                    ctx.fillRect(0, canvas.height - 16, canvas.width, 8);
+
+                    // 中心標記線 (紅線)
+                    ctx.fillStyle = 'rgba(248, 113, 113, 0.5)'; // red-400/50
+                    ctx.fillRect(centerX - 1, 0, 2, canvas.height - 16);
+                    // 中心標記底座
+                    ctx.fillStyle = 'rgb(252, 165, 165)'; // red-300
+                    ctx.fillRect(centerX - 4, canvas.height - 40, 8, 24);
+
+                    // 4. 計算整體偏移量
+                    const offsetPixels = (state.score * (bearOffset / goalDifference));
+                    const currentCenterX = centerX + offsetPixels;
+
+                    // 5. 繪製繩子
+                    const ropeLength = canvas.width * 2; // 畫長一點避免穿幫
+                    ctx.beginPath();
+                    ctx.lineCap = "round";
+                    ctx.lineWidth = 12;
+                    ctx.strokeStyle = '#b45309'; // amber-700
+                    ctx.moveTo(currentCenterX - ropeLength/2, centerY);
+                    ctx.lineTo(currentCenterX + ropeLength/2, centerY);
+                    ctx.stroke();
+
+                    // 繩子結 (紅點)
+                    ctx.beginPath();
+                    ctx.arc(currentCenterX, centerY, 16, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ef4444'; // red-500
+                    ctx.fill();
+                    ctx.lineWidth = 4;
+                    ctx.strokeStyle = '#ffffff'; // white
+                    ctx.stroke();
+
+                    // 6. 繪製角色 (文字繪製)
+                    ctx.font = '60px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    // 計算跳躍的 Y 軸偏移
+                    // Math.sin(phase) 範圍是 -1 到 1，我們只要上半部跳躍，取絕對值並調整幅度
+                    const bounceY = Math.abs(Math.sin(state.bouncePhase)) * -15;
+
+                    // 繪製左邊恐龍 🦖
+                    ctx.save();
+                    ctx.translate(currentCenterX - bearOffset, centerY + bounceY);
+                    // 不需翻轉，恐龍原本就面左，背對中心
+                    ctx.fillText('🦖', 0, 0);
+                    ctx.restore();
+
+                    // 繪製右邊殭屍 🧟
+                    ctx.save();
+                    ctx.translate(currentCenterX + bearOffset, centerY + bounceY);
+                    // 殭屍面左，需要翻轉才能面右背對中心
+                    ctx.scale(-1, 1);
+                    ctx.fillText('🧟', 0, 0);
+                    ctx.restore();
+
+                    animationFrameId = window.requestAnimationFrame(render);
+                };
+                
+                // 啟動動畫迴圈
+                render(performance.now());
+
+                // 清理函數
+                return () => {
+                    window.cancelAnimationFrame(animationFrameId);
+                };
+            }, [goalDifference, bearOffset]); // 依賴項只放不變的常數，變數靠 ref 追蹤
+
+            return (
+                <canvas 
+                    ref={canvasRef} 
+                    width={1000} 
+                    height={160} 
+                    className="w-full h-40 object-cover"
+                />
+            );
+        };
+
+        // --- 數字鍵盤元件 ---
+        const MiniKeypad = ({ onNumClick, color }) => {
+            const btnColorClass = color === 'blue' 
+                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-b-4 border-blue-300 active:border-b-0 active:translate-y-1' 
+                : 'bg-pink-100 text-pink-700 hover:bg-pink-200 border-b-4 border-pink-300 active:border-b-0 active:translate-y-1';
+
+            return (
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-4 z-30 bg-white p-3 rounded-xl shadow-2xl border border-gray-100 w-64 animate-fade-in">
+                    <div className="grid grid-cols-5 gap-2">
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((num) => (
+                            <button
+                                key={num}
+                                onClick={(e) => { e.stopPropagation(); onNumClick(num); }}
+                                className={`h-10 text-xl font-bold rounded-lg shadow-sm transition-all ${btnColorClass}`}
+                            >
+                                {num}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const shuffle = (values) => [...values].sort(() => Math.random() - 0.5);
+        const createAnswerOptions = (answer) => {
+            const options = new Set([answer]);
+            const offsets = shuffle([1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6, 8, -8, 10, -10]);
+            offsets.forEach((offset) => {
+                if (options.size < 4 && answer + offset >= 0) options.add(answer + offset);
+            });
+            while (options.size < 4) {
+                const candidate = Math.floor(Math.random() * Math.max(12, answer + 12));
+                if (candidate !== answer) options.add(candidate);
+            }
+            return shuffle([...options]);
+        };
+
+        // --- 主程式元件 ---
+        const TugOfWarMath = () => {
+          // 遊戲常數
+          const GOAL_DIFFERENCE = 5; // 淨勝 5 題獲勝
+          const BEAR_OFFSET = 200; // 為了在 Canvas 有更好的比例，微調距離
+          const DELAY_MS = 500; // 答對後停留豪秒數
+          const GAME_TIME = 120; // 2分鐘 = 120秒
+          
+          // 狀態管理
+          const [gameState, setGameState] = useState('menu'); // 'menu' | 'playing'
+          
+          // 將原本單一的 selectedModes 拆分為左右兩邊
+          const [leftModes, setLeftModes] = useState([MODES.ADD_1_1.id]);
+          const [rightModes, setRightModes] = useState([MODES.ADD_1_1.id]);
+          const [leftReady, setLeftReady] = useState(false);
+          const [rightReady, setRightReady] = useState(false);
+          
+          const [score, setScore] = useState(0); 
+          const [winner, setWinner] = useState(null); // 'left' | 'right' | 'draw' | null
+          const [isResetting, setIsResetting] = useState(false); 
+          
+          // 計時器狀態
+          const [timeLeft, setTimeLeft] = useState(GAME_TIME);
+          const [isTimerRunning, setIsTimerRunning] = useState(false);
+
+          // 題目狀態：每題提供四個答案選項
+          const [leftProblem, setLeftProblem] = useState({ n1: 0, n2: 0, ans: 0, operator: '+', options: [], selectedAnswer: null, isCorrect: false });
+          const [rightProblem, setRightProblem] = useState({ n1: 0, n2: 0, ans: 0, operator: '+', options: [], selectedAnswer: null, isCorrect: false });
+
+          // Timer Ref
+          const leftTimerRef = useRef(null);
+          const rightTimerRef = useRef(null);
+
+          // 監聽是否雙方都準備好，自動開始遊戲
+          useEffect(() => {
+              if (leftReady && rightReady && gameState === 'menu') {
+                  const timer = setTimeout(() => {
+                      setGameState('playing');
+                      resetGame();
+                  }, 500); // 延遲0.5秒讓玩家看到"已準備"狀態
+                  return () => clearTimeout(timer);
+              }
+          }, [leftReady, rightReady, gameState]);
+
+          // 計時器 Effect
+          useEffect(() => {
+            let interval = null;
+            if (gameState === 'playing' && isTimerRunning && timeLeft > 0 && !winner) {
+                interval = setInterval(() => {
+                    setTimeLeft((prev) => prev - 1);
+                }, 1000);
+            } else if (timeLeft === 0 && isTimerRunning) {
+                // 時間到
+                setIsTimerRunning(false);
+                handleTimeUp();
+            }
+            return () => clearInterval(interval);
+          }, [isTimerRunning, timeLeft, winner, gameState]);
+
+          // 時間到處理邏輯
+          const handleTimeUp = () => {
+            if (score > 0) {
+                setWinner('right');
+            } else if (score < 0) {
+                setWinner('left');
+            } else {
+                setWinner('draw');
+            }
+          };
+
+          const toggleTimer = () => {
+            if (winner) return;
+            setIsTimerRunning(!isTimerRunning);
+          };
+
+          const formatTime = (seconds) => {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${m}:${s < 10 ? '0' : ''}${s}`;
+          };
+
+          // --- 題目生成邏輯 (加入 side 參數，根據各自的選擇出題) ---
+          const generateProblem = (side) => {
+            const modes = side === 'left' ? leftModes : rightModes;
+            if (!modes || modes.length === 0) return { n1: 0, n2: 0, ans: 0, operator: '+' }; 
+
+            const modeId = modes[Math.floor(Math.random() * modes.length)];
+            
+            let n1, n2, operator, ans;
+
+            switch (modeId) {
+                case MODES.ADD_1_1.id:
+                    n1 = Math.floor(Math.random() * 9) + 1; // 1~9
+                    n2 = Math.floor(Math.random() * 9) + 1; // 1~9
+                    operator = '+';
+                    ans = n1 + n2;
+                    break;
+                case MODES.ADD_2_1.id:
+                    n1 = Math.floor(Math.random() * 90) + 10; // 10~99
+                    n2 = Math.floor(Math.random() * 9) + 1;   // 1~9
+                    operator = '+';
+                    ans = n1 + n2;
+                    break;
+                case MODES.SUB_1_1.id:
+                    n1 = Math.floor(Math.random() * 9) + 1; // 1~9
+                    let subN2 = Math.floor(Math.random() * 9) + 1;
+                    if (subN2 > n1) { n2 = n1; n1 = subN2; } else { n2 = subN2; }
+                    operator = '-';
+                    ans = n1 - n2;
+                    break;
+                case MODES.SUB_2_1.id:
+                    n1 = Math.floor(Math.random() * 90) + 10; // 10~99
+                    n2 = Math.floor(Math.random() * 9) + 1;   // 1~9
+                    operator = '-';
+                    ans = n1 - n2;
+                    break;
+                case MODES.MUL_9_9.id:
+                    n1 = Math.floor(Math.random() * 9) + 1; // 1~9
+                    n2 = Math.floor(Math.random() * 9) + 1; // 1~9
+                    operator = '×';
+                    ans = n1 * n2;
+                    break;
+                case MODES.DIV_2_1.id:
+                    let divisor = Math.floor(Math.random() * 8) + 2; // 2~9
+                    let minQ = Math.ceil(10 / divisor);
+                    let maxQ = Math.floor(99 / divisor);
+                    let quotient = Math.floor(Math.random() * (maxQ - minQ + 1)) + minQ;
+                    
+                    n2 = divisor;
+                    n1 = quotient * divisor; // 被除數
+                    operator = '÷';
+                    ans = quotient;
+                    break;
+                default:
+                    n1 = 1; n2 = 1; operator = '+'; ans = 2;
+            }
+
+            return {
+              n1,
+              n2,
+              ans,
+              operator,
+              options: createAnswerOptions(ans),
+              selectedAnswer: null,
+              isCorrect: false
+            };
+          };
+
+          // 回到選單
+          const returnToMenu = () => {
+              setGameState('menu');
+              setWinner(null);
+              setLeftReady(false);
+              setRightReady(false);
+          };
+
+          const resetGame = () => {
+            setIsResetting(true);
+
+            if (leftTimerRef.current) clearTimeout(leftTimerRef.current);
+            if (rightTimerRef.current) clearTimeout(rightTimerRef.current);
+
+            setScore(0);
+            setWinner(null);
+            setTimeLeft(GAME_TIME);
+            setIsTimerRunning(false); 
+            setLeftProblem(generateProblem('left'));
+            setRightProblem(generateProblem('right'));
+
+            setTimeout(() => {
+              setIsResetting(false);
+            }, 100); 
+          };
+
+          // 處理 Checkbox 變更 (分為左右獨立控制)
+          const toggleLeftMode = (modeId) => {
+              if (leftReady) return; // 如果已準備就不能再改
+              setLeftModes(prev => {
+                  if (prev.includes(modeId)) {
+                      if (prev.length === 1) return prev; 
+                      return prev.filter(id => id !== modeId);
+                  } else {
+                      return [...prev, modeId];
+                  }
+              });
+          };
+
+          const toggleRightMode = (modeId) => {
+              if (rightReady) return; // 如果已準備就不能再改
+              setRightModes(prev => {
+                  if (prev.includes(modeId)) {
+                      if (prev.length === 1) return prev; 
+                      return prev.filter(id => id !== modeId);
+                  } else {
+                      return [...prev, modeId];
+                  }
+              });
+          };
+
+          const handleBackgroundClick = () => {};
+
+          const handleChoiceAnswer = (side, choice, problem) => {
+            if (winner || problem.isCorrect) return;
+            const setProblem = side === 'left' ? setLeftProblem : setRightProblem;
+            setProblem(prev => ({ ...prev, selectedAnswer: choice }));
+            if (choice === problem.ans) {
+              handleCorrectAnswer(side);
+              return;
+            }
+            setTimeout(() => {
+              setProblem(prev => prev.selectedAnswer === choice ? { ...prev, selectedAnswer: null } : prev);
+            }, 700);
+          };
+
+          const handleCorrectAnswer = (side) => {
+            let newScore = score;
+            let isGameOver = false;
+
+            if (side === 'right') {
+              newScore += 1;
+            } else {
+              newScore -= 1;
+            }
+            setScore(newScore);
+
+            if (newScore >= GOAL_DIFFERENCE) {
+              setWinner('right');
+              setIsTimerRunning(false); 
+              isGameOver = true;
+            } else if (newScore <= -GOAL_DIFFERENCE) {
+              setWinner('left');
+              setIsTimerRunning(false); 
+              isGameOver = true;
+            }
+
+            if (side === 'right') {
+              setRightProblem(prev => ({ ...prev, isCorrect: true }));
+            } else {
+              setLeftProblem(prev => ({ ...prev, isCorrect: true }));
+            }
+
+            if (!isGameOver) {
+              if (side === 'right') {
+                if (rightTimerRef.current) clearTimeout(rightTimerRef.current);
+                rightTimerRef.current = setTimeout(() => {
+                  setRightProblem(generateProblem('right'));
+                }, DELAY_MS);
+              } else {
+                if (leftTimerRef.current) clearTimeout(leftTimerRef.current);
+                leftTimerRef.current = setTimeout(() => {
+                  setLeftProblem(generateProblem('left'));
+                }, DELAY_MS);
+              }
+            }
+          };
+
+          // --- 渲染部分 ---
+
+          // 1. 選單畫面 (改為左右雙方各自選擇)
+          if (gameState === 'menu') {
+              return (
+                <div className="min-h-screen bg-amber-50 font-sans flex flex-col items-center justify-center p-4 md:p-8">
+                    <h1 className="text-3xl md:text-4xl font-bold text-gray-700 text-center mb-4 flex items-center justify-center gap-3">
+                        <span>🦖</span> 數學拔河大賽 <span>🧟</span>
+                    </h1>
+                    <p className="text-center text-gray-500 mb-8 text-lg">請各自選擇要練習的題型，並按下準備好！</p>
+                    
+                    <div className="flex flex-col md:flex-row gap-6 w-full max-w-5xl">
+                        
+                        {/* 左邊玩家設定 (恐龍) */}
+                        <div className="flex-1 bg-white rounded-3xl shadow-xl p-6 border-4 border-blue-200 flex flex-col">
+                            <h2 className="text-2xl font-bold text-blue-500 mb-6 text-center">左邊恐龍隊 🦖</h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                                {Object.values(MODES).map((mode) => (
+                                    <label key={`left-${mode.id}`} className={`flex items-center p-3 rounded-xl border-2 transition-all ${leftReady ? 'opacity-60 cursor-not-allowed border-gray-100 bg-gray-50' : 'cursor-pointer border-gray-100 hover:border-blue-300 hover:bg-blue-50'}`}>
+                                        <input 
+                                            type="checkbox" 
+                                            className="w-5 h-5 accent-blue-500 mr-3 flex-shrink-0"
+                                            checked={leftModes.includes(mode.id)}
+                                            onChange={() => toggleLeftMode(mode.id)}
+                                            disabled={leftReady}
+                                        />
+                                        <span className="text-sm md:text-base text-gray-700 font-medium whitespace-nowrap">{mode.label}</span>
+                                    </label>
+                                ))}
+                            </div>
+                            <div className="mt-auto pt-4">
+                                <button 
+                                    onClick={() => setLeftReady(!leftReady)}
+                                    className={`w-full py-4 rounded-xl font-bold text-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2
+                                        ${leftReady ? 'bg-green-500 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}
+                                    `}
+                                >
+                                    {leftReady ? '✅ 已準備' : '準備好'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* 右邊玩家設定 (殭屍) */}
+                        <div className="flex-1 bg-white rounded-3xl shadow-xl p-6 border-4 border-pink-200 flex flex-col">
+                            <h2 className="text-2xl font-bold text-pink-500 mb-6 text-center">右邊殭屍隊 🧟</h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                                {Object.values(MODES).map((mode) => (
+                                    <label key={`right-${mode.id}`} className={`flex items-center p-3 rounded-xl border-2 transition-all ${rightReady ? 'opacity-60 cursor-not-allowed border-gray-100 bg-gray-50' : 'cursor-pointer border-gray-100 hover:border-pink-300 hover:bg-pink-50'}`}>
+                                        <input 
+                                            type="checkbox" 
+                                            className="w-5 h-5 accent-pink-500 mr-3 flex-shrink-0"
+                                            checked={rightModes.includes(mode.id)}
+                                            onChange={() => toggleRightMode(mode.id)}
+                                            disabled={rightReady}
+                                        />
+                                        <span className="text-sm md:text-base text-gray-700 font-medium whitespace-nowrap">{mode.label}</span>
+                                    </label>
+                                ))}
+                            </div>
+                            <div className="mt-auto pt-4">
+                                <button 
+                                    onClick={() => setRightReady(!rightReady)}
+                                    className={`w-full py-4 rounded-xl font-bold text-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2
+                                        ${rightReady ? 'bg-green-500 text-white' : 'bg-pink-500 hover:bg-pink-600 text-white'}
+                                    `}
+                                >
+                                    {rightReady ? '✅ 已準備' : '準備好'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+              );
+          }
+
+          // 2. 遊戲畫面
+          return (
+            <div 
+                className="min-h-screen bg-amber-50 font-sans select-none flex flex-col overflow-y-auto pb-40"
+                onClick={handleBackgroundClick} 
+            >
+              
+              {/* 標題列 (Flex 排版) */}
+              <div className="bg-white shadow-sm p-3 relative z-20 shrink-0 flex items-center justify-between">
+                
+                {/* 左側：計時器區域 */}
+                <div className="flex-1 flex justify-start pl-2 md:pl-4">
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); toggleTimer(); }}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 shadow-sm transition-all hover:shadow-md
+                            ${isTimerRunning 
+                                ? 'bg-orange-50 border-orange-200 text-orange-600' 
+                                : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-white'
+                            }
+                            ${winner ? 'opacity-50 cursor-not-allowed' : ''}
+                        `}
+                        disabled={!!winner}
+                    >
+                        {isTimerRunning ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                        <div className="flex items-center gap-1 font-mono text-xl font-bold">
+                            <TimerIcon className="w-5 h-5" />
+                            <span>{formatTime(timeLeft)}</span>
+                        </div>
+                    </button>
+                </div>
+
+                {/* 中間：標題 */}
+                <div className="text-center">
+                    <h1 className="text-xl md:text-2xl font-bold text-gray-700 flex items-center justify-center gap-2">
+                    <span>🦖</span> 數學拔河大賽 <span>🧟</span>
+                    </h1>
+                    <div className="text-xs md:text-sm text-gray-500 mt-1">誰先領先 {GOAL_DIFFERENCE} 題就獲勝！</div>
+                </div>
+
+                {/* 右側：回首頁按鈕 */}
+                <div className="flex-1 flex justify-end pr-2 md:pr-4">
+                     <button 
+                        onClick={returnToMenu}
+                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="回到選單"
+                     >
+                        <HomeIcon className="w-6 h-6" />
+                     </button>
+                </div>
+              </div>
+
+              {/* 使用 Canvas 取代原本的 HTML 動畫 */}
+              <div className="h-40 w-full bg-sky-100/30 border-b-4 border-amber-200/50 shrink-0 z-10 flex justify-center overflow-hidden">
+                 {/* 由於 Canvas 設定為固定寬度 1000px，我們在外部包一個置中的 div */}
+                 <div className="max-w-[1000px] w-full relative h-full">
+                     <CanvasTugOfWar 
+                         score={score} 
+                         isResetting={isResetting} 
+                         goalDifference={GOAL_DIFFERENCE} 
+                         bearOffset={BEAR_OFFSET} 
+                     />
+                 </div>
+              </div>
+
+              {/* 主要遊戲區 */}
+              <div className="flex-1 flex flex-row relative items-stretch">
+                
+                {/* 左邊玩家區塊 */}
+                <div className={`flex-1 p-4 flex flex-col items-center justify-start pt-10 transition-colors duration-300 ${winner === 'left' ? 'bg-blue-100' : 'bg-blue-50'}`}>
+                  <div className={`relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm border-4 transition-all duration-300 ${leftProblem.isCorrect ? 'border-green-400 ring-4 ring-green-200' : 'border-blue-200'}`}>
+                    <h2 className="text-xl font-bold text-blue-500 mb-6 text-center">左邊恐龍隊</h2>
+                    <div className="flex items-center justify-center gap-2 text-4xl md:text-5xl font-bold text-gray-700 mb-8">
+                      <span>{leftProblem.n1}</span>
+                      <span>{leftProblem.operator}</span>
+                      <span>{leftProblem.n2}</span>
+                      <span>=</span>
+                    </div>
+                    
+                    <ChoiceGrid
+                      problem={leftProblem}
+                      color="blue"
+                      onChoice={(choice) => handleChoiceAnswer('left', choice, leftProblem)}
+                    />
+                  </div>
+                </div>
+
+                {/* 分隔線 */}
+                <div className="w-1 bg-gray-200 z-0"></div>
+
+                {/* 右邊玩家區塊 */}
+                <div className={`flex-1 p-4 flex flex-col items-center justify-start pt-10 transition-colors duration-300 ${winner === 'right' ? 'bg-pink-100' : 'bg-pink-50'}`}>
+                  <div className={`relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm border-4 transition-all duration-300 ${rightProblem.isCorrect ? 'border-green-400 ring-4 ring-green-200' : 'border-pink-200 relative z-10'}`}>
+                    <h2 className="text-xl font-bold text-pink-500 mb-6 text-center">右邊殭屍隊</h2>
+                    <div className="flex items-center justify-center gap-2 text-4xl md:text-5xl font-bold text-gray-700 mb-8">
+                      <span>{rightProblem.n1}</span>
+                      <span>{rightProblem.operator}</span>
+                      <span>{rightProblem.n2}</span>
+                      <span>=</span>
+                    </div>
+                    
+                    <ChoiceGrid
+                      problem={rightProblem}
+                      color="pink"
+                      onChoice={(choice) => handleChoiceAnswer('right', choice, rightProblem)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 獲勝畫面 */}
+              {winner && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in">
+                  <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl transform scale-100 animate-pop-in">
+                    
+                    {winner === 'draw' ? (
+                        <>
+                            <div className="text-6xl mb-4 animate-bounce">🤝</div>
+                            <h2 className="text-4xl font-black mb-2 text-gray-600">時間到！平手！</h2>
+                            <p className="text-gray-600 mb-8 text-lg">雙方勢均力敵，再來一場分勝負吧！</p>
+                        </>
+                    ) : (
+                        <>
+                            <div className="text-6xl mb-4 animate-bounce">{winner === 'left' ? '🦖' : '🧟'}</div>
+                            <h2 className={`text-4xl font-black mb-2 ${winner === 'left' ? 'text-blue-500' : 'text-pink-500'}`}>
+                            {winner === 'left' ? '左邊恐龍' : '右邊殭屍'} 獲勝！
+                            </h2>
+                            {timeLeft === 0 && <p className="text-xl text-gray-500 font-bold mb-2">(時間到判定)</p>}
+                            <div className="flex justify-center mb-6">
+                            <Trophy className="w-16 h-16 text-yellow-400" />
+                            </div>
+                            <p className="text-gray-600 mb-8 text-lg">
+                                {timeLeft > 0 ? `太厲害了！剩餘時間 ${formatTime(timeLeft)}` : '時間結束，恭喜獲勝隊伍！'}
+                            </p>
+                        </>
+                    )}
+                    
+                    <div className="flex flex-col gap-3">
+                        <button 
+                        onClick={resetGame}
+                        className="w-full py-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold rounded-xl shadow-lg text-xl hover:from-yellow-500 hover:to-orange-600 transition-all flex items-center justify-center gap-2"
+                        >
+                        <RefreshCcw className="w-6 h-6" /> 再玩一次
+                        </button>
+
+                        <button 
+                        onClick={returnToMenu}
+                        className="w-full py-3 bg-white border-2 border-gray-200 text-gray-600 font-bold rounded-xl shadow-sm text-lg hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
+                        >
+                        <HomeIcon className="w-5 h-5" /> 回到選單
+                        </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        };
+
+        const ChoiceGrid = ({ problem, onChoice, color }) => {
+          const normalClass = color === 'blue'
+            ? 'border-blue-300 bg-white text-blue-700 hover:bg-blue-50'
+            : 'border-pink-300 bg-white text-pink-700 hover:bg-pink-50';
+          return (
+            <div className="grid grid-cols-2 gap-3 w-full" aria-label="答案四選一">
+              {problem.options.map((option) => {
+                const isSelected = problem.selectedAnswer === option;
+                const isWrong = isSelected && !problem.isCorrect;
+                const isCorrect = problem.isCorrect && option === problem.ans;
+                const stateClass = isCorrect
+                  ? 'border-green-500 bg-green-100 text-green-700 ring-4 ring-green-200'
+                  : isWrong
+                    ? 'border-red-500 bg-red-100 text-red-700 ring-4 ring-red-200'
+                    : normalClass;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    disabled={problem.isCorrect}
+                    onClick={(event) => { event.stopPropagation(); onChoice(option); }}
+                    className={`min-h-16 rounded-xl border-4 text-3xl font-bold shadow-sm transition-all active:translate-y-1 disabled:cursor-default ${stateClass}`}
+                  >
+                    {option}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        };
+
+        // 渲染 App
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<TugOfWarMath />);
+    </script>
+</body>
+</html>
