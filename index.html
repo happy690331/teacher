@@ -337,7 +337,7 @@
             '國語': ['國語'],
             '數學': ['數學'],
             '學習策略': ['策略', '學習', '記憶', '筆記', '專注', '心智圖', '複習', '看板'],
-            '考試報讀': ['考試'],
+            '考試報讀': ['考試', 'exam'],
             '學生輔導': ['輔導'],
             '程式': ['程式', '編程', '代碼', 'coding', 'scratch', 'python', '迴圈', '產生器'],
             '其他': []
@@ -371,9 +371,14 @@
             categoryList.forEach(cat => {
                 const li = document.createElement('li');
                 const btn = document.createElement('button');
-                btn.textContent = cat;
-                
-                const baseClasses = "mc-btn w-full text-left px-4 py-3 text-xl font-medium focus:outline-none block";
+                const label = document.createElement('span');
+                label.textContent = cat;
+                const count = document.createElement('span');
+                count.textContent = getCategoryCount(cat);
+                count.className = 'inline-flex min-w-8 h-8 items-center justify-center rounded-full bg-gray-700 px-2 text-base font-bold text-white';
+                btn.append(label, count);
+
+                const baseClasses = "mc-btn w-full text-left px-4 py-3 text-xl font-medium focus:outline-none flex items-center justify-between gap-2";
                 if (currentCategory === cat) {
                     btn.className = `${baseClasses} active`;
                 } else {
@@ -390,6 +395,11 @@
                 li.appendChild(btn);
                 container.appendChild(li);
             });
+        }
+
+        function getCategoryCount(category) {
+            if (category === '全部') return allFiles.length;
+            return allFiles.filter(item => item.category === category).length;
         }
 
         // --- 透過 GitHub API 獲取資料 ---
@@ -422,7 +432,9 @@
                                 category: getCategoryForName(displayName)
                             };
                         });
-                    
+
+                    renderCategories();
+
                     filterAndRender();
                 }
             } catch (error) {
