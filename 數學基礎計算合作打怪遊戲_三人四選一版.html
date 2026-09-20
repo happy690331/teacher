@@ -165,6 +165,7 @@
             const drawState = useRef({
                 monsterHp: monsterHp,
                 targetHp: monsterHp,
+                hpAnimationStart: monsterHp,
                 hpProgress: 1,
                 bouncePhase: 0,
                 monsterHitTimer: 0, 
@@ -181,12 +182,14 @@
                 if (isResetting) {
                     drawState.current.monsterHp = maxHp;
                     drawState.current.targetHp = maxHp;
+                    drawState.current.hpAnimationStart = maxHp;
                     drawState.current.hpProgress = 1;
                     drawState.current.projectiles = [];
                     drawState.current.monsterHitTimer = 0;
                     drawState.current.defeatTimer = 0;
                 } else {
                     if (drawState.current.targetHp !== monsterHp) {
+                        drawState.current.hpAnimationStart = drawState.current.monsterHp;
                         drawState.current.targetHp = monsterHp;
                         drawState.current.hpProgress = 0;
                     }
@@ -231,8 +234,7 @@
                             state.hpProgress = 1;
                             state.monsterHp = state.targetHp;
                         } else {
-                            const startHp = state.targetHp + 1; 
-                            state.monsterHp = startHp - (1 * state.hpProgress);
+                            state.monsterHp = state.hpAnimationStart + (state.targetHp - state.hpAnimationStart) * state.hpProgress;
                         }
                     }
 
@@ -273,7 +275,7 @@
                     // 繪製血量條 (HP Bar)
                     const hpBarWidth = 200;
                     const hpBarHeight = 16;
-                    const hpRatio = Math.max(0, state.monsterHp / maxHp);
+                    const hpRatio = Math.min(1, Math.max(0, state.monsterHp / maxHp));
                     
                     ctx.fillStyle = '#f3f4f6';
                     ctx.fillRect(centerX - hpBarWidth/2, 20, hpBarWidth, hpBarHeight);
@@ -424,6 +426,7 @@
           const MAX_HP = 10; 
           const DELAY_MS = 500; 
           const GAME_TIME = 120; 
+          const MONSTER_ATTACK_INTERVAL = 10;
           
           const [gameState, setGameState] = useState('menu'); 
           
@@ -471,7 +474,7 @@
             let interval = null;
             if (gameState === 'playing' && isTimerRunning && timeLeft > 0 && !winner && !isDefeating) {
                 
-                if (timeLeft < GAME_TIME && timeLeft % 20 === 0) {
+                if (timeLeft < GAME_TIME && timeLeft % MONSTER_ATTACK_INTERVAL === 0) {
                     setIsMonsterAttacking(true);
                     setTimeout(() => {
                         setIsMonsterAttacking(false);
@@ -635,13 +638,14 @@
           const handleBackgroundClick = () => {};
 
           const handleChoiceAnswer = (side, choice, problem) => {
-            if (winner || isDefeating || problem.isCorrect) return;
+            if (winner || isDefeating || problem.isCorrect || problem.selectedAnswer === choice) return;
             const setProblem = side === 'left' ? setLeftProblem : (side === 'center' ? setCenterProblem : setRightProblem);
             setProblem(prev => ({ ...prev, selectedAnswer: choice }));
             if (choice === problem.ans) {
               handleCorrectAnswer(side);
               return;
             }
+            setMonsterHp(prev => prev + 1);
             setTimeout(() => {
               setProblem(prev => prev.selectedAnswer === choice ? { ...prev, selectedAnswer: null } : prev);
             }, 700);
@@ -694,7 +698,7 @@
                     <h1 className="text-3xl md:text-4xl font-bold text-gray-700 text-center mb-4 flex items-center justify-center gap-3">
                         <span>⚔️</span> 合作打怪數學大賽 <span>🛡️</span>
                     </h1>
-                    <p className="text-center text-gray-500 mb-8 text-lg">請各自選擇要練習的題型，共同擊敗中間的怪物！</p>
+                    <p className="text-center text-gray-500 mb-8 text-lg">請各自選擇題型，一起擊敗怪物！怪物每 10 秒攻擊一次，答錯會增加 1 滴血。</p>
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5 w-full max-w-7xl">
                         <div className="team-card flex-1 bg-gradient-to-br from-sky-50 to-blue-100 rounded-3xl shadow-xl p-5 border-4 border-blue-300 flex flex-col">
