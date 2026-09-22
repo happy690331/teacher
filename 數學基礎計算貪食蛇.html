@@ -471,7 +471,7 @@ function genQuestion(type) {
   let a, b, op, ans;
   switch (type) {
     case 'add1': a = r(1, 9);  b = r(1, 9);  op = '+'; ans = a + b; break;
-    case 'add2': a = r(10, 99); b = r(1, 9); op = '+'; ans = a + b; break;
+    case 'add2': b = r(1, 9); a = r(10, 99 - b); op = '+'; ans = a + b; break;
     case 'sub1': a = r(2, 9);  b = r(1, a); op = '−'; ans = a - b; break;
     case 'sub2': a = r(11, 99); b = r(1, 9); op = '−'; ans = a - b; break;
     case 'mul':  a = r(1, 9);  b = r(1, 9); op = '×'; ans = a * b; break;

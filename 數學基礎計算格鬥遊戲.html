@@ -234,7 +234,7 @@ const MathGen = {
                 break;
             }
             case "add_2_1": {
-                let a = this.rand(10, 99), b = this.rand(1, 9);
+                let b = this.rand(1, 9), a = this.rand(10, 99 - b);
                 ans = a + b; q = `${a} + ${b} = ?`;
                 wrong = [ans+1, ans-1, ans+10];
                 break;
@@ -280,12 +280,12 @@ const MathGen = {
         // 確保選項不重複且不為負數
         let optionsSet = new Set([ans.toString()]);
         for(let w of wrong) {
-            if(optionsSet.size < 4 && w.toString() !== ans.toString() && w >= 0) {
+            if(optionsSet.size < 4 && w.toString() !== ans.toString() && w >= 0 && w <= 99) {
                 optionsSet.add(w.toString());
             }
         }
         while(optionsSet.size < 4) {
-            optionsSet.add(this.rand(0, 100).toString());
+            optionsSet.add(this.rand(0, 99).toString());
         }
 
         return { question: q, options: this.shuffle(Array.from(optionsSet)), correct: ans.toString() };

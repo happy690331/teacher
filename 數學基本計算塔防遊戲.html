@@ -490,7 +490,7 @@
             let n1, n2, correct;
             switch(mode) {
                 case 'add_1': n1 = Math.floor(Math.random() * 9) + 1; n2 = Math.floor(Math.random() * 9) + 1; correct = n1 + n2; quizQuestion.innerText = `${n1} + ${n2} = ?`; break;
-                case 'add_2': n1 = Math.floor(Math.random() * 80) + 11; n2 = Math.floor(Math.random() * 9) + 1; if ((n1 % 10) + n2 < 10) { n1 = Math.floor(n1/10)*10 + (10 - n2 + Math.floor(Math.random()*n2)); } correct = n1 + n2; quizQuestion.innerText = `${n1} + ${n2} = ?`; break;
+                case 'add_2': n2 = Math.floor(Math.random() * 9) + 1; n1 = Math.floor(Math.random() * 8) + 1; n1 = n1 * 10 + Math.floor(Math.random() * n2) + (10 - n2); correct = n1 + n2; quizQuestion.innerText = `${n1} + ${n2} = ?`; break;
                 case 'sub_1': n1 = Math.floor(Math.random() * 9) + 1; n2 = Math.floor(Math.random() * n1) + 1; correct = n1 - n2; quizQuestion.innerText = `${n1} - ${n2} = ?`; break;
                 case 'sub_2': n1 = Math.floor(Math.random() * 80) + 11; n2 = (n1 % 10) + Math.floor(Math.random() * 5) + 1; if (n2 > 9) n2 = 9; if (n1 % 10 >= n2) { n1 = Math.floor(n1/10)*10 + (n2 - 1); } correct = n1 - n2; quizQuestion.innerText = `${n1} - ${n2} = ?`; break;
                 case 'mul': n1 = Math.floor(Math.random() * 9) + 1; n2 = Math.floor(Math.random() * 9) + 1; correct = n1 * n2; quizQuestion.innerText = `${n1} × ${n2} = ?`; break;
@@ -501,7 +501,7 @@
             while(choices.length < 4) {
                 let offset = Math.floor(Math.random() * 10) + 1;
                 let r = Math.random() > 0.5 ? correct + offset : correct - offset;
-                if(r >= 0 && !choices.includes(r)) choices.push(r);
+                if(r >= 0 && r <= 99 && !choices.includes(r)) choices.push(r);
             }
             choices.sort(() => Math.random() - 0.5);
 

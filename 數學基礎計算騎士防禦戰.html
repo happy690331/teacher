@@ -456,7 +456,8 @@
             case 'add1':
                 q = `${Math.floor(Math.random()*9)+1} + ${Math.floor(Math.random()*9)+1}`; a = eval(q); break;
             case 'add2':
-                q = `${Math.floor(Math.random()*90)+10} + ${Math.floor(Math.random()*9)+1}`; a = eval(q); break;
+                const addend = Math.floor(Math.random()*9)+1, augend = Math.floor(Math.random()*(90-addend))+10;
+                q = `${augend} + ${addend}`; a = augend + addend; break;
             case 'sub2':
                 const a3 = Math.floor(Math.random()*90)+10, b3 = Math.floor(Math.random()*9)+1;
                 q = `${a3} - ${b3}`; a = a3 - b3; break;

@@ -233,7 +233,7 @@ var selTypes = new Set(), gD = 'easy';
 var DIFF_INFO = {
   easy:   {icon:'🌱',label:'簡單',desc:'個位數 ○ 個位數（1–9）',          c:'#fbbf24',bg:'rgba(245,158,11,0.08)',  bd:'rgba(245,158,11,0.2)'},
   medium: {icon:'🔥',label:'中等',desc:'十位數 ○ 個位數（10–99 和 1–9）',  c:'#fb923c',bg:'rgba(251,146,60,0.08)',  bd:'rgba(251,146,60,0.2)'},
-  hard:   {icon:'⚡',label:'困難',desc:'百位數 ○ 個位數（100–999 和 1–9）', c:'#c084fc',bg:'rgba(192,132,252,0.08)',bd:'rgba(192,132,252,0.2)'}
+  hard:   {icon:'⚡',label:'困難',desc:'高位數與進退位運算（答案 0–99）', c:'#c084fc',bg:'rgba(192,132,252,0.08)',bd:'rgba(192,132,252,0.2)'}
 };
 function togT(el) {
   var t = el.dataset.t, ck = document.getElementById('ck_'+t);
@@ -668,19 +668,19 @@ function loop(ts) {
 function rnd(lo,hi){ return lo+Math.floor(Math.random()*(hi-lo+1)); }
 function genQ() {
   var t=mTypes[Math.floor(Math.random()*mTypes.length)];
-  var bigLo=mD==='easy'?1:mD==='medium'?10:100;
-  var bigHi=mD==='easy'?9:mD==='medium'?99:999;
+  var bigLo=mD==='easy'?1:mD==='medium'?10:50;
+  var bigHi=mD==='easy'?9:99;
   var BADGE={addition:'加法練習 ➕',subtraction:'減法練習 ➖',multiplication:'乘法練習 ✖️',division:'除法練習 ➗'};
   var q,ans;
-  if (t==='addition')       { var a=rnd(bigLo,bigHi),b=rnd(1,9); q=a+' + '+b+' = ?'; ans=a+b; }
+  if (t==='addition')       { var b=rnd(1,9),maxA=Math.min(bigHi,99-b),minA=Math.min(bigLo,maxA),a=rnd(minA,maxA); q=a+' + '+b+' = ?'; ans=a+b; }
   else if (t==='subtraction') { var a=rnd(bigLo,bigHi),b=rnd(1,Math.min(9,a)); q=a+' − '+b+' = ?'; ans=a-b; }
-  else if (t==='multiplication') { var a=rnd(bigLo,bigHi),b=rnd(1,9); q=a+' × '+b+' = ?'; ans=a*b; }
+  else if (t==='multiplication') { var b=rnd(1,9),maxA=Math.min(bigHi,Math.floor(99/b)),minA=Math.min(bigLo,maxA),a=rnd(minA,maxA); q=a+' × '+b+' = ?'; ans=a*b; }
   else { var q2=rnd(bigLo,bigHi),d=rnd(1,9); q=(q2*d)+' ÷ '+d+' = ?'; ans=q2; }
   var spread=mD==='easy'?3:mD==='medium'?10:35;
   var opts={}; opts[ans]=1;
   for (var tries=0; Object.keys(opts).length<4&&tries<400; tries++){
     var delta=1+Math.floor(Math.random()*spread);
-    var v=Math.random()<0.5?ans+delta:Math.max(1,ans-delta);
+    var v=Math.random()<0.5?Math.min(99,ans+delta):Math.max(1,ans-delta);
     if (v!==ans) opts[v]=1;
   }
   return {q:q,ans:ans,opts:Object.keys(opts).map(Number).sort(function(){return Math.random()-.5;}),badge:BADGE[t]};

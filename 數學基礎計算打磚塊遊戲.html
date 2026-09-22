@@ -559,7 +559,7 @@
                     text=`${num1} + ${num2} = ?`; answer=num1+num2; 
                     break;
                 case 'add_2_1': 
-                    num1=getRandomInt(10,99); num2=getRandomInt(1,9); 
+                    num2=getRandomInt(1,9); num1=getRandomInt(10,99-num2);
                     text=`${num1} + ${num2} = ?`; answer=num1+num2; 
                     break;
                 case 'sub_1_1': 
@@ -598,7 +598,7 @@
             while(s.size < 4) {
                 let off = Math.floor(Math.random()*10)-5 || 1;
                 let w = ans + off;
-                if(w >= 0 && w !== ans) s.add(w);
+                if(w >= 0 && w <= 99 && w !== ans) s.add(w);
             }
             return Array.from(s).sort(()=>Math.random()-0.5);
         }

@@ -537,7 +537,7 @@
                 () => {
                     let b = Math.floor(Math.random() * 20) + 1;
                     let c = Math.floor(Math.random() * b) + 1; 
-                    let a = Math.floor(Math.random() * (100 - (b - c))) + 1;
+                    let a = Math.floor(Math.random() * (99 - (b - c))) + 1;
                     return { expr: `${a} + (${b} - ${c})`, result: a + (b - c) };
                 },
                 // 1: A - (B + C)
@@ -550,7 +550,7 @@
                 // 2: A × (B + C)
                 () => {
                     let a = Math.floor(Math.random() * 9) + 2; 
-                    let maxSum = Math.floor(100 / a);
+                    let maxSum = Math.floor(99 / a);
                     if (maxSum < 2) maxSum = 2;
                     let b = Math.floor(Math.random() * (maxSum - 1)) + 1;
                     let c = Math.floor(Math.random() * (maxSum - b)) + 1;
@@ -559,7 +559,7 @@
                 // 3: A × (B - C)
                 () => {
                     let a = Math.floor(Math.random() * 9) + 2; 
-                    let maxDiff = Math.floor(100 / a);
+                    let maxDiff = Math.floor(99 / a);
                     if (maxDiff < 1) maxDiff = 1;
                     let b = Math.floor(Math.random() * 20) + maxDiff;
                     let c = b - (Math.floor(Math.random() * maxDiff) + 1);
@@ -569,7 +569,7 @@
                 // 4: (A + B) × C
                 () => {
                     let c = Math.floor(Math.random() * 9) + 2; 
-                    let maxSum = Math.floor(100 / c);
+                    let maxSum = Math.floor(99 / c);
                     if (maxSum < 2) maxSum = 2;
                     let a = Math.floor(Math.random() * (maxSum - 1)) + 1;
                     let b = Math.floor(Math.random() * (maxSum - a)) + 1;
@@ -578,7 +578,7 @@
                 // 5: (A - B) × C
                 () => {
                     let c = Math.floor(Math.random() * 9) + 2; 
-                    let maxDiff = Math.floor(100 / c);
+                    let maxDiff = Math.floor(99 / c);
                     if (maxDiff < 1) maxDiff = 1;
                     let a = Math.floor(Math.random() * 20) + maxDiff;
                     let b = a - (Math.floor(Math.random() * maxDiff) + 1);
@@ -642,7 +642,7 @@
             while(choices.length < 4) {
                 let offset = Math.floor(Math.random() * 10) + 1;
                 let r = Math.random() > 0.5 ? correct + offset : correct - offset;
-                if(r >= 0 && !choices.includes(r)) choices.push(r);
+                if(r >= 0 && r <= 99 && !choices.includes(r)) choices.push(r);
             }
             choices.sort(() => Math.random() - 0.5);
             quizOptions.innerHTML = "";

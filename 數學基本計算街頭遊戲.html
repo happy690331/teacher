@@ -385,7 +385,7 @@ const MathGen = {
     let q='',ans=0,wrong=[];
     switch(t){
       case 'add_1_1':{ let a=this.rand(1,9),b=this.rand(1,9); ans=a+b; q=`${a} + ${b} = ?`; wrong=[ans+1,ans-1,ans+2]; break;}
-      case 'add_2_1':{ let a=this.rand(10,99),b=this.rand(1,9); ans=a+b; q=`${a} + ${b} = ?`; wrong=[ans+1,ans-1,ans+10]; break;}
+      case 'add_2_1':{ let b=this.rand(1,9),a=this.rand(10,99-b); ans=a+b; q=`${a} + ${b} = ?`; wrong=[ans+1,ans-1,ans+10]; break;}
       case 'sub_1_1':{ let a=this.rand(2,9),b=this.rand(1,a); ans=a-b; q=`${a} - ${b} = ?`; wrong=[ans+1,Math.abs(ans-1),ans+2]; break;}
       case 'sub_2_1':{ let a=this.rand(11,99),b=this.rand(1,9); ans=a-b; q=`${a} - ${b} = ?`; wrong=[ans+1,ans-1,ans-10]; break;}
       case 'sub_2_2':{ let a=this.rand(20,99),b=this.rand(10,a-1); ans=a-b; q=`${a} - ${b} = ?`; wrong=[ans+1,ans-1,ans+10]; break;}
@@ -393,7 +393,7 @@ const MathGen = {
       case 'div_2_1':{ let b=this.rand(2,9); let mn=Math.ceil(10/b),mx=Math.floor(99/b); ans=this.rand(mn,mx); let a=b*ans; q=`${a} ÷ ${b} = ?`; wrong=[ans+1,Math.abs(ans-1),ans+2]; break;}
     }
     const s=new Set([ans.toString()]);
-    for(const w of wrong){ if(s.size<4&&w>=0&&w.toString()!==ans.toString()) s.add(w.toString()); }
+    for(const w of wrong){ if(s.size<4&&w>=0&&w<=99&&w.toString()!==ans.toString()) s.add(w.toString()); }
     while(s.size<4) s.add(this.rand(1,99).toString());
     this.totalQ++;
     return { question:q, options:this.shuffle(Array.from(s)), correct:ans.toString() };

@@ -385,10 +385,10 @@
             const options = new Set([answer]);
             const offsets = shuffle([1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6, 8, -8, 10, -10]);
             offsets.forEach((offset) => {
-                if (options.size < 4 && answer + offset >= 0) options.add(answer + offset);
+                if (options.size < 4 && answer + offset >= 0 && answer + offset <= 99) options.add(answer + offset);
             });
             while (options.size < 4) {
-                const candidate = Math.floor(Math.random() * Math.max(12, answer + 12));
+                const candidate = Math.floor(Math.random() * Math.min(100, Math.max(12, answer + 12)));
                 if (candidate !== answer) options.add(candidate);
             }
             return shuffle([...options]);
@@ -494,6 +494,7 @@
                 case MODES.ADD_2_1.id:
                     n1 = Math.floor(Math.random() * 90) + 10;
                     n2 = Math.floor(Math.random() * 9) + 1;
+                    n1 = Math.min(n1, 99 - n2);
                     operator = '+';
                     ans = n1 + n2;
                     break;
