@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>合作打怪數學大賽｜三人四選一版</title>
+    <title>合作打怪數學大賽｜四人四選一版</title>
     <!-- 引入 Tailwind CSS 用於樣式設計 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入 React 和 ReactDOM -->
@@ -159,7 +159,7 @@
         );
 
         // --- Canvas 合作打怪動畫元件 ---
-        const CanvasMonsterCoop = ({ monsterHp, maxHp, isResetting, leftAttack, centerAttack, rightAttack, isMonsterAttacking }) => {
+        const CanvasMonsterCoop = ({ monsterHp, maxHp, isResetting, leftAttack, centerAttack, rightAttack, fourthAttack, isMonsterAttacking }) => {
             const canvasRef = useRef(null);
             
             const drawState = useRef({
@@ -198,21 +198,27 @@
 
             useEffect(() => {
                 if (leftAttack > 0) {
-                    drawState.current.projectiles.push({ x: 200, y: 120, targetX: 500, targetY: 100, speed: 15, active: true, emoji: '⚡' });
+                    drawState.current.projectiles.push({ x: 120, y: 120, targetX: 500, targetY: 100, speed: 15, active: true, emoji: '⚡' });
                 }
             }, [leftAttack]);
 
             useEffect(() => {
                 if (rightAttack > 0) {
-                    drawState.current.projectiles.push({ x: 800, y: 120, targetX: 500, targetY: 100, speed: 15, active: true, emoji: '🔥' });
+                    drawState.current.projectiles.push({ x: 620, y: 120, targetX: 500, targetY: 100, speed: 15, active: true, emoji: '🌿' });
                 }
             }, [rightAttack]);
 
             useEffect(() => {
                 if (centerAttack > 0) {
-                    drawState.current.projectiles.push({ x: 500, y: 145, targetX: 500, targetY: 100, speed: 12, active: true, emoji: '✨' });
+                    drawState.current.projectiles.push({ x: 380, y: 145, targetX: 500, targetY: 100, speed: 12, active: true, emoji: '✨' });
                 }
             }, [centerAttack]);
+
+            useEffect(() => {
+                if (fourthAttack > 0) {
+                    drawState.current.projectiles.push({ x: 880, y: 120, targetX: 500, targetY: 100, speed: 15, active: true, emoji: '🔥' });
+                }
+            }, [fourthAttack]);
 
             useEffect(() => {
                 const canvas = canvasRef.current;
@@ -301,20 +307,26 @@
 
                     // 繪製左邊武士（劍 🗡️） 
                     ctx.save();
-                    ctx.translate(200, centerY + bounceY);
+                    ctx.translate(120, centerY + bounceY);
                     ctx.fillText('🗡️', 0, 0);
                     ctx.restore();
 
-                    // 繪製右邊騎士 🛡️
+                    // 繪製第二位玩家（星光法師 ✨）
                     ctx.save();
-                    ctx.translate(800, centerY + (Math.abs(Math.cos(state.bouncePhase)) * -10));
-                    ctx.fillText('🛡️', 0, 0);
+                    ctx.translate(380, centerY + 8 + (Math.abs(Math.sin(state.bouncePhase * 1.2)) * -5));
+                    ctx.fillText('✨', 0, 0);
                     ctx.restore();
 
-                    // 繪製中央玩家（星光法師 ✨）
+                    // 繪製第三位玩家（森林守護者 🌿）
                     ctx.save();
-                    ctx.translate(500, centerY + 8 + (Math.abs(Math.sin(state.bouncePhase * 1.2)) * -5));
-                    ctx.fillText('✨', 0, 0);
+                    ctx.translate(620, centerY + (Math.abs(Math.cos(state.bouncePhase)) * -10));
+                    ctx.fillText('🌿', 0, 0);
+                    ctx.restore();
+
+                    // 繪製第四位玩家（火焰騎士 🔥）
+                    ctx.save();
+                    ctx.translate(880, centerY + 4 + (Math.abs(Math.sin(state.bouncePhase * 0.9)) * -8));
+                    ctx.fillText('🔥', 0, 0);
                     ctx.restore();
 
                     // 繪製中央怪物 👹
@@ -433,9 +445,11 @@
           const [leftModes, setLeftModes] = useState([MODES.ADD_1_1.id]);
           const [centerModes, setCenterModes] = useState([MODES.ADD_1_1.id]);
           const [rightModes, setRightModes] = useState([MODES.ADD_1_1.id]);
+          const [fourthModes, setFourthModes] = useState([MODES.ADD_1_1.id]);
           const [leftReady, setLeftReady] = useState(false);
           const [centerReady, setCenterReady] = useState(false);
           const [rightReady, setRightReady] = useState(false);
+          const [fourthReady, setFourthReady] = useState(false);
           
           const [monsterHp, setMonsterHp] = useState(MAX_HP); 
           const [winner, setWinner] = useState(null); 
@@ -447,6 +461,7 @@
           const [leftAttack, setLeftAttack] = useState(0);
           const [centerAttack, setCenterAttack] = useState(0);
           const [rightAttack, setRightAttack] = useState(0);
+          const [fourthAttack, setFourthAttack] = useState(0);
 
           const [timeLeft, setTimeLeft] = useState(GAME_TIME);
           const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -455,20 +470,22 @@
           const [leftProblem, setLeftProblem] = useState({ n1: 0, n2: 0, ans: 0, operator: '+', options: [], selectedAnswer: null, isCorrect: false });
           const [centerProblem, setCenterProblem] = useState({ n1: 0, n2: 0, ans: 0, operator: '+', options: [], selectedAnswer: null, isCorrect: false });
           const [rightProblem, setRightProblem] = useState({ n1: 0, n2: 0, ans: 0, operator: '+', options: [], selectedAnswer: null, isCorrect: false });
+          const [fourthProblem, setFourthProblem] = useState({ n1: 0, n2: 0, ans: 0, operator: '+', options: [], selectedAnswer: null, isCorrect: false });
 
           const leftTimerRef = useRef(null);
           const centerTimerRef = useRef(null);
           const rightTimerRef = useRef(null);
+          const fourthTimerRef = useRef(null);
 
           useEffect(() => {
-              if (leftReady && centerReady && rightReady && gameState === 'menu') {
+              if (leftReady && centerReady && rightReady && fourthReady && gameState === 'menu') {
                   const timer = setTimeout(() => {
                       setGameState('playing');
                       resetGame();
                   }, 500); 
                   return () => clearTimeout(timer);
               }
-          }, [leftReady, centerReady, rightReady, gameState]);
+          }, [leftReady, centerReady, rightReady, fourthReady, gameState]);
 
           useEffect(() => {
             let interval = null;
@@ -511,7 +528,9 @@
           };
 
           const generateProblem = (side) => {
-            const modes = side === 'left' ? leftModes : (side === 'center' ? centerModes : rightModes);
+            const modes = side === 'left'
+              ? leftModes
+              : (side === 'center' ? centerModes : (side === 'right' ? rightModes : fourthModes));
             if (!modes || modes.length === 0) return { n1: 0, n2: 0, ans: 0, operator: '+' }; 
 
             const modeId = modes[Math.floor(Math.random() * modes.length)];
@@ -581,6 +600,7 @@
               setLeftReady(false);
               setCenterReady(false);
               setRightReady(false);
+              setFourthReady(false);
           };
 
           const resetGame = () => {
@@ -589,11 +609,13 @@
             if (leftTimerRef.current) clearTimeout(leftTimerRef.current);
             if (centerTimerRef.current) clearTimeout(centerTimerRef.current);
             if (rightTimerRef.current) clearTimeout(rightTimerRef.current);
+            if (fourthTimerRef.current) clearTimeout(fourthTimerRef.current);
 
             setMonsterHp(MAX_HP);
             setLeftAttack(0);
             setCenterAttack(0);
             setRightAttack(0);
+            setFourthAttack(0);
             setWinner(null);
             setIsDefeating(false);
             setIsMonsterAttacking(false);
@@ -602,6 +624,7 @@
             setLeftProblem(generateProblem('left'));
             setCenterProblem(generateProblem('center'));
             setRightProblem(generateProblem('right'));
+            setFourthProblem(generateProblem('fourth'));
 
             setTimeout(() => setIsResetting(false), 100); 
           };
@@ -636,11 +659,23 @@
               });
           };
 
+          const toggleFourthMode = (modeId) => {
+              if (fourthReady) return;
+              setFourthModes(prev => {
+                  if (prev.includes(modeId)) {
+                      if (prev.length === 1) return prev;
+                      return prev.filter(id => id !== modeId);
+                  } else return [...prev, modeId];
+              });
+          };
+
           const handleBackgroundClick = () => {};
 
           const handleChoiceAnswer = (side, choice, problem) => {
             if (winner || isDefeating || problem.isCorrect || problem.selectedAnswer === choice) return;
-            const setProblem = side === 'left' ? setLeftProblem : (side === 'center' ? setCenterProblem : setRightProblem);
+            const setProblem = side === 'left'
+              ? setLeftProblem
+              : (side === 'center' ? setCenterProblem : (side === 'right' ? setRightProblem : setFourthProblem));
             setProblem(prev => ({ ...prev, selectedAnswer: choice }));
             if (choice === problem.ans) {
               handleCorrectAnswer(side);
@@ -657,7 +692,8 @@
 
             if (side === 'left') setLeftAttack(p => p + 1);
             else if (side === 'center') setCenterAttack(p => p + 1);
-            else setRightAttack(p => p + 1);
+            else if (side === 'right') setRightAttack(p => p + 1);
+            else setFourthAttack(p => p + 1);
 
             setMonsterHp(prev => {
                 const newHp = prev - 1;
@@ -684,11 +720,17 @@
               centerTimerRef.current = setTimeout(() => {
                 setCenterProblem(generateProblem('center'));
               }, DELAY_MS);
-            } else {
+            } else if (side === 'right') {
               setRightProblem(prev => ({ ...prev, isCorrect: true }));
               if (rightTimerRef.current) clearTimeout(rightTimerRef.current);
               rightTimerRef.current = setTimeout(() => {
                 setRightProblem(generateProblem('right'));
+              }, DELAY_MS);
+            } else {
+              setFourthProblem(prev => ({ ...prev, isCorrect: true }));
+              if (fourthTimerRef.current) clearTimeout(fourthTimerRef.current);
+              fourthTimerRef.current = setTimeout(() => {
+                setFourthProblem(generateProblem('fourth'));
               }, DELAY_MS);
             }
           };
@@ -699,9 +741,9 @@
                     <h1 className="text-3xl md:text-4xl font-bold text-gray-700 text-center mb-4 flex items-center justify-center gap-3">
                         <span>⚔️</span> 合作打怪數學大賽 <span>🛡️</span>
                     </h1>
-                    <p className="text-center text-gray-500 mb-8 text-lg">請各自選擇題型，一起擊敗怪物！怪物每 10 秒攻擊一次，答錯會增加 1 滴血。</p>
+                    <p className="text-center text-gray-500 mb-8 text-lg">請四位玩家各自選擇題型，一起擊敗 30 滴血的怪物！怪物每 10 秒攻擊一次，答錯會增加 1 滴血。</p>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 w-full max-w-7xl">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 w-full max-w-7xl">
                         <div className="team-card flex-1 bg-gradient-to-br from-sky-50 to-blue-100 rounded-3xl shadow-xl p-5 border-4 border-blue-300 flex flex-col">
                             <div className="text-center mb-4">
                                 <div className="text-5xl mb-2">⚡</div>
@@ -756,6 +798,25 @@
                             </div>
                             <button onClick={() => setRightReady(!rightReady)} className={`mt-auto w-full py-3 rounded-xl font-bold text-lg shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 ${rightReady ? 'bg-green-500 text-white' : 'bg-emerald-500 hover:bg-emerald-600 text-white'}`}>
                                 {rightReady ? '✅ 已準備' : '準備加入'}
+                            </button>
+                        </div>
+
+                        <div className="team-card flex-1 bg-gradient-to-br from-orange-50 to-amber-100 rounded-3xl shadow-xl p-5 border-4 border-orange-300 flex flex-col">
+                            <div className="text-center mb-4">
+                                <div className="text-5xl mb-2">🔥</div>
+                                <h2 className="text-2xl font-black text-orange-600">火焰騎士</h2>
+                                <p className="text-sm font-bold text-orange-500 mt-1">勇猛攻擊・終結一擊</p>
+                            </div>
+                            <div className="grid grid-cols-1 gap-2 mb-5">
+                                {Object.values(MODES).map((mode) => (
+                                    <label key={`fourth-${mode.id}`} className={`flex items-center p-2.5 rounded-xl border-2 transition-all ${fourthReady ? 'opacity-60 cursor-not-allowed border-orange-100 bg-white/60' : 'cursor-pointer border-orange-100 bg-white/70 hover:border-orange-400 hover:bg-orange-50'}`}>
+                                        <input type="checkbox" className="w-5 h-5 accent-orange-500 mr-3 flex-shrink-0" checked={fourthModes.includes(mode.id)} onChange={() => toggleFourthMode(mode.id)} disabled={fourthReady} />
+                                        <span className="text-sm text-gray-700 font-medium whitespace-nowrap">{mode.label}</span>
+                                    </label>
+                                ))}
+                            </div>
+                            <button onClick={() => setFourthReady(!fourthReady)} className={`mt-auto w-full py-3 rounded-xl font-bold text-lg shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 ${fourthReady ? 'bg-green-500 text-white' : 'bg-orange-500 hover:bg-orange-600 text-white'}`}>
+                                {fourthReady ? '✅ 已準備' : '準備加入'}
                             </button>
                         </div>
                     </div>
@@ -813,15 +874,16 @@
                          monsterHp={monsterHp} 
                          maxHp={MAX_HP}
                          isResetting={isResetting} 
-                         leftAttack={leftAttack}
-                         centerAttack={centerAttack}
-                         rightAttack={rightAttack}
-                         isMonsterAttacking={isMonsterAttacking} 
+                          leftAttack={leftAttack}
+                          centerAttack={centerAttack}
+                          rightAttack={rightAttack}
+                          fourthAttack={fourthAttack}
+                          isMonsterAttacking={isMonsterAttacking} 
                      />
                  </div>
               </div>
 
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 relative items-start bg-slate-100">
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 p-4 relative items-start bg-slate-100">
                 <div className="team-card p-4 flex flex-col items-center bg-gradient-to-br from-sky-50 to-blue-100 rounded-3xl shadow-lg border-4 border-blue-300">
                   <div className="text-center mb-4">
                     <div className="text-4xl">⚡</div>
@@ -855,9 +917,21 @@
                   <div className="flex items-center justify-center gap-2 text-3xl md:text-4xl font-black text-gray-700 mb-5">
                     <span>{rightProblem.n1}</span><span>{rightProblem.operator}</span><span>{rightProblem.n2}</span><span>=</span>
                   </div>
-                  <ChoiceGrid problem={rightProblem} color="emerald" onChoice={(choice) => handleChoiceAnswer('right', choice, rightProblem)} />
-                </div>
-              </div>
+                 <ChoiceGrid problem={rightProblem} color="emerald" onChoice={(choice) => handleChoiceAnswer('right', choice, rightProblem)} />
+                 </div>
+
+                 <div className="team-card p-4 flex flex-col items-center bg-gradient-to-br from-orange-50 to-amber-100 rounded-3xl shadow-lg border-4 border-orange-300">
+                   <div className="text-center mb-4">
+                     <div className="text-4xl">🔥</div>
+                     <h2 className="text-xl font-black text-orange-600">火焰騎士</h2>
+                     <p className="text-xs font-bold text-orange-500">終結一擊</p>
+                   </div>
+                   <div className="flex items-center justify-center gap-2 text-3xl md:text-4xl font-black text-gray-700 mb-5">
+                     <span>{fourthProblem.n1}</span><span>{fourthProblem.operator}</span><span>{fourthProblem.n2}</span><span>=</span>
+                   </div>
+                   <ChoiceGrid problem={fourthProblem} color="orange" onChoice={(choice) => handleChoiceAnswer('fourth', choice, fourthProblem)} />
+                 </div>
+               </div>
 
               {winner && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in" onPointerDown={e => e.stopPropagation()}>
@@ -909,7 +983,9 @@
             ? 'border-blue-300 bg-white text-blue-700 hover:bg-blue-50'
             : color === 'purple'
               ? 'border-purple-300 bg-white text-purple-700 hover:bg-purple-50'
-              : 'border-emerald-300 bg-white text-emerald-700 hover:bg-emerald-50';
+              : color === 'orange'
+                ? 'border-orange-300 bg-white text-orange-700 hover:bg-orange-50'
+                : 'border-emerald-300 bg-white text-emerald-700 hover:bg-emerald-50';
           return (
             <div className="grid grid-cols-2 gap-3 w-full" aria-label="答案四選一">
               {problem.options.map((option) => {
