@@ -737,85 +737,85 @@
 
           if (gameState === 'menu') {
               return (
-                <div className="min-h-screen bg-slate-50 font-sans flex flex-col items-center justify-center p-4 md:p-8">
-                    <h1 className="text-3xl md:text-4xl font-bold text-gray-700 text-center mb-4 flex items-center justify-center gap-3">
+                <div className="h-screen overflow-hidden bg-slate-50 font-sans flex flex-col items-center justify-center p-3 md:p-4 lg:p-6">
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-700 text-center mb-2 flex items-center justify-center gap-2">
                         <span>⚔️</span> 合作打怪數學大賽 <span>🛡️</span>
                     </h1>
-                    <p className="text-center text-gray-500 mb-8 text-lg">請四位玩家各自選擇題型，一起擊敗 30 滴血的怪物！怪物每 10 秒攻擊一次，答錯會增加 1 滴血。</p>
+                    <p className="text-center text-gray-500 mb-4 text-sm md:text-base">請四位玩家各自選擇題型，一起擊敗 30 滴血的怪物！怪物每 10 秒攻擊一次，答錯會增加 1 滴血。</p>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 w-full max-w-7xl">
-                        <div className="team-card flex-1 bg-gradient-to-br from-sky-50 to-blue-100 rounded-3xl shadow-xl p-5 border-4 border-blue-300 flex flex-col">
-                            <div className="text-center mb-4">
-                                <div className="text-5xl mb-2">⚡</div>
-                                <h2 className="text-2xl font-black text-blue-600">雷霆勇士</h2>
-                                <p className="text-sm font-bold text-blue-500 mt-1">快速出擊・破防專家</p>
+                    <div className="grid grid-cols-4 gap-2 md:gap-3 w-full max-w-[1600px] flex-1 min-h-0">
+                        <div className="team-card min-w-0 bg-gradient-to-br from-sky-50 to-blue-100 rounded-2xl shadow-xl p-2 md:p-3 border-4 border-blue-300 flex flex-col overflow-hidden">
+                            <div className="text-center mb-2">
+                                <div className="text-3xl md:text-4xl mb-1">⚡</div>
+                                <h2 className="text-base md:text-xl font-black text-blue-600">雷霆勇士</h2>
+                                <p className="text-[10px] md:text-xs font-bold text-blue-500 mt-1">快速出擊・破防專家</p>
                             </div>
-                            <div className="grid grid-cols-1 gap-2 mb-5">
+                            <div className="grid grid-cols-2 gap-1 md:gap-1.5 mb-3">
                                 {Object.values(MODES).map((mode) => (
-                                    <label key={`left-${mode.id}`} className={`flex items-center p-2.5 rounded-xl border-2 transition-all ${leftReady ? 'opacity-60 cursor-not-allowed border-blue-100 bg-white/60' : 'cursor-pointer border-blue-100 bg-white/70 hover:border-blue-400 hover:bg-blue-50'}`}>
-                                        <input type="checkbox" className="w-5 h-5 accent-blue-500 mr-3 flex-shrink-0" checked={leftModes.includes(mode.id)} onChange={() => toggleLeftMode(mode.id)} disabled={leftReady} />
-                                        <span className="text-sm text-gray-700 font-medium whitespace-nowrap">{mode.label}</span>
+                                    <label key={`left-${mode.id}`} className={`flex items-center min-w-0 p-1.5 md:p-2 rounded-lg border-2 transition-all ${leftReady ? 'opacity-60 cursor-not-allowed border-blue-100 bg-white/60' : 'cursor-pointer border-blue-100 bg-white/70 hover:border-blue-400 hover:bg-blue-50'}`}>
+                                        <input type="checkbox" className="w-4 h-4 accent-blue-500 mr-1.5 flex-shrink-0" checked={leftModes.includes(mode.id)} onChange={() => toggleLeftMode(mode.id)} disabled={leftReady} />
+                                        <span className="text-[10px] md:text-xs text-gray-700 font-medium leading-tight">{mode.label}</span>
                                     </label>
                                 ))}
                             </div>
-                            <button onClick={() => setLeftReady(!leftReady)} className={`mt-auto w-full py-3 rounded-xl font-bold text-lg shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 ${leftReady ? 'bg-green-500 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}>
+                            <button onClick={() => setLeftReady(!leftReady)} className={`mt-auto w-full py-2 md:py-2.5 rounded-xl font-bold text-sm md:text-base shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-1 ${leftReady ? 'bg-green-500 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}>
                                 {leftReady ? '✅ 已準備' : '準備加入'}
                             </button>
                         </div>
 
-                        <div className="team-card flex-1 bg-gradient-to-br from-violet-50 to-purple-100 rounded-3xl shadow-xl p-5 border-4 border-purple-300 flex flex-col">
-                            <div className="text-center mb-4">
-                                <div className="text-5xl mb-2">✨</div>
-                                <h2 className="text-2xl font-black text-purple-600">星光法師</h2>
-                                <p className="text-sm font-bold text-purple-500 mt-1">智慧連擊・魔法支援</p>
+                        <div className="team-card min-w-0 bg-gradient-to-br from-violet-50 to-purple-100 rounded-2xl shadow-xl p-2 md:p-3 border-4 border-purple-300 flex flex-col overflow-hidden">
+                            <div className="text-center mb-2">
+                                <div className="text-3xl md:text-4xl mb-1">✨</div>
+                                <h2 className="text-base md:text-xl font-black text-purple-600">星光法師</h2>
+                                <p className="text-[10px] md:text-xs font-bold text-purple-500 mt-1">智慧連擊・魔法支援</p>
                             </div>
-                            <div className="grid grid-cols-1 gap-2 mb-5">
+                            <div className="grid grid-cols-2 gap-1 md:gap-1.5 mb-3">
                                 {Object.values(MODES).map((mode) => (
-                                    <label key={`center-${mode.id}`} className={`flex items-center p-2.5 rounded-xl border-2 transition-all ${centerReady ? 'opacity-60 cursor-not-allowed border-purple-100 bg-white/60' : 'cursor-pointer border-purple-100 bg-white/70 hover:border-purple-400 hover:bg-purple-50'}`}>
-                                        <input type="checkbox" className="w-5 h-5 accent-purple-500 mr-3 flex-shrink-0" checked={centerModes.includes(mode.id)} onChange={() => toggleCenterMode(mode.id)} disabled={centerReady} />
-                                        <span className="text-sm text-gray-700 font-medium whitespace-nowrap">{mode.label}</span>
+                                    <label key={`center-${mode.id}`} className={`flex items-center min-w-0 p-1.5 md:p-2 rounded-lg border-2 transition-all ${centerReady ? 'opacity-60 cursor-not-allowed border-purple-100 bg-white/60' : 'cursor-pointer border-purple-100 bg-white/70 hover:border-purple-400 hover:bg-purple-50'}`}>
+                                        <input type="checkbox" className="w-4 h-4 accent-purple-500 mr-1.5 flex-shrink-0" checked={centerModes.includes(mode.id)} onChange={() => toggleCenterMode(mode.id)} disabled={centerReady} />
+                                        <span className="text-[10px] md:text-xs text-gray-700 font-medium leading-tight">{mode.label}</span>
                                     </label>
                                 ))}
                             </div>
-                            <button onClick={() => setCenterReady(!centerReady)} className={`mt-auto w-full py-3 rounded-xl font-bold text-lg shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 ${centerReady ? 'bg-green-500 text-white' : 'bg-purple-500 hover:bg-purple-600 text-white'}`}>
+                            <button onClick={() => setCenterReady(!centerReady)} className={`mt-auto w-full py-2 md:py-2.5 rounded-xl font-bold text-sm md:text-base shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-1 ${centerReady ? 'bg-green-500 text-white' : 'bg-purple-500 hover:bg-purple-600 text-white'}`}>
                                 {centerReady ? '✅ 已準備' : '準備加入'}
                             </button>
                         </div>
 
-                        <div className="team-card flex-1 bg-gradient-to-br from-emerald-50 to-green-100 rounded-3xl shadow-xl p-5 border-4 border-emerald-300 flex flex-col">
-                            <div className="text-center mb-4">
-                                <div className="text-5xl mb-2">🌿</div>
-                                <h2 className="text-2xl font-black text-emerald-600">森林守護者</h2>
-                                <p className="text-sm font-bold text-emerald-500 mt-1">精準狩獵・恢復能量</p>
+                        <div className="team-card min-w-0 bg-gradient-to-br from-emerald-50 to-green-100 rounded-2xl shadow-xl p-2 md:p-3 border-4 border-emerald-300 flex flex-col overflow-hidden">
+                            <div className="text-center mb-2">
+                                <div className="text-3xl md:text-4xl mb-1">🌿</div>
+                                <h2 className="text-base md:text-xl font-black text-emerald-600">森林守護者</h2>
+                                <p className="text-[10px] md:text-xs font-bold text-emerald-500 mt-1">精準狩獵・恢復能量</p>
                             </div>
-                            <div className="grid grid-cols-1 gap-2 mb-5">
+                            <div className="grid grid-cols-2 gap-1 md:gap-1.5 mb-3">
                                 {Object.values(MODES).map((mode) => (
-                                    <label key={`right-${mode.id}`} className={`flex items-center p-2.5 rounded-xl border-2 transition-all ${rightReady ? 'opacity-60 cursor-not-allowed border-emerald-100 bg-white/60' : 'cursor-pointer border-emerald-100 bg-white/70 hover:border-emerald-400 hover:bg-emerald-50'}`}>
-                                        <input type="checkbox" className="w-5 h-5 accent-emerald-500 mr-3 flex-shrink-0" checked={rightModes.includes(mode.id)} onChange={() => toggleRightMode(mode.id)} disabled={rightReady} />
-                                        <span className="text-sm text-gray-700 font-medium whitespace-nowrap">{mode.label}</span>
+                                    <label key={`right-${mode.id}`} className={`flex items-center min-w-0 p-1.5 md:p-2 rounded-lg border-2 transition-all ${rightReady ? 'opacity-60 cursor-not-allowed border-emerald-100 bg-white/60' : 'cursor-pointer border-emerald-100 bg-white/70 hover:border-emerald-400 hover:bg-emerald-50'}`}>
+                                        <input type="checkbox" className="w-4 h-4 accent-emerald-500 mr-1.5 flex-shrink-0" checked={rightModes.includes(mode.id)} onChange={() => toggleRightMode(mode.id)} disabled={rightReady} />
+                                        <span className="text-[10px] md:text-xs text-gray-700 font-medium leading-tight">{mode.label}</span>
                                     </label>
                                 ))}
                             </div>
-                            <button onClick={() => setRightReady(!rightReady)} className={`mt-auto w-full py-3 rounded-xl font-bold text-lg shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 ${rightReady ? 'bg-green-500 text-white' : 'bg-emerald-500 hover:bg-emerald-600 text-white'}`}>
+                            <button onClick={() => setRightReady(!rightReady)} className={`mt-auto w-full py-2 md:py-2.5 rounded-xl font-bold text-sm md:text-base shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-1 ${rightReady ? 'bg-green-500 text-white' : 'bg-emerald-500 hover:bg-emerald-600 text-white'}`}>
                                 {rightReady ? '✅ 已準備' : '準備加入'}
                             </button>
                         </div>
 
-                        <div className="team-card flex-1 bg-gradient-to-br from-orange-50 to-amber-100 rounded-3xl shadow-xl p-5 border-4 border-orange-300 flex flex-col">
-                            <div className="text-center mb-4">
-                                <div className="text-5xl mb-2">🔥</div>
-                                <h2 className="text-2xl font-black text-orange-600">火焰騎士</h2>
-                                <p className="text-sm font-bold text-orange-500 mt-1">勇猛攻擊・終結一擊</p>
+                        <div className="team-card min-w-0 bg-gradient-to-br from-orange-50 to-amber-100 rounded-2xl shadow-xl p-2 md:p-3 border-4 border-orange-300 flex flex-col overflow-hidden">
+                            <div className="text-center mb-2">
+                                <div className="text-3xl md:text-4xl mb-1">🔥</div>
+                                <h2 className="text-base md:text-xl font-black text-orange-600">火焰騎士</h2>
+                                <p className="text-[10px] md:text-xs font-bold text-orange-500 mt-1">勇猛攻擊・終結一擊</p>
                             </div>
-                            <div className="grid grid-cols-1 gap-2 mb-5">
+                            <div className="grid grid-cols-2 gap-1 md:gap-1.5 mb-3">
                                 {Object.values(MODES).map((mode) => (
-                                    <label key={`fourth-${mode.id}`} className={`flex items-center p-2.5 rounded-xl border-2 transition-all ${fourthReady ? 'opacity-60 cursor-not-allowed border-orange-100 bg-white/60' : 'cursor-pointer border-orange-100 bg-white/70 hover:border-orange-400 hover:bg-orange-50'}`}>
-                                        <input type="checkbox" className="w-5 h-5 accent-orange-500 mr-3 flex-shrink-0" checked={fourthModes.includes(mode.id)} onChange={() => toggleFourthMode(mode.id)} disabled={fourthReady} />
-                                        <span className="text-sm text-gray-700 font-medium whitespace-nowrap">{mode.label}</span>
+                                    <label key={`fourth-${mode.id}`} className={`flex items-center min-w-0 p-1.5 md:p-2 rounded-lg border-2 transition-all ${fourthReady ? 'opacity-60 cursor-not-allowed border-orange-100 bg-white/60' : 'cursor-pointer border-orange-100 bg-white/70 hover:border-orange-400 hover:bg-orange-50'}`}>
+                                        <input type="checkbox" className="w-4 h-4 accent-orange-500 mr-1.5 flex-shrink-0" checked={fourthModes.includes(mode.id)} onChange={() => toggleFourthMode(mode.id)} disabled={fourthReady} />
+                                        <span className="text-[10px] md:text-xs text-gray-700 font-medium leading-tight">{mode.label}</span>
                                     </label>
                                 ))}
                             </div>
-                            <button onClick={() => setFourthReady(!fourthReady)} className={`mt-auto w-full py-3 rounded-xl font-bold text-lg shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 ${fourthReady ? 'bg-green-500 text-white' : 'bg-orange-500 hover:bg-orange-600 text-white'}`}>
+                            <button onClick={() => setFourthReady(!fourthReady)} className={`mt-auto w-full py-2 md:py-2.5 rounded-xl font-bold text-sm md:text-base shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-1 ${fourthReady ? 'bg-green-500 text-white' : 'bg-orange-500 hover:bg-orange-600 text-white'}`}>
                                 {fourthReady ? '✅ 已準備' : '準備加入'}
                             </button>
                         </div>
