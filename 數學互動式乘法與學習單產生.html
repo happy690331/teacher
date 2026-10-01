@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>數學互動式乘法與學習單產生</title>
+<style>
+:root{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;color:#243449;background:#f8fafc;font-synthesis:none}*{box-sizing:border-box}body{margin:0;padding:24px 16px 40px}button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,a:focus-visible,select:focus-visible{outline:3px solid #2563eb;outline-offset:3px}button:disabled{opacity:.45;cursor:not-allowed}.wrap{max-width:1120px;margin:auto}header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 20px}h1{font-size:26px;margin:4px 0 6px}h2{font-size:18px;margin:0 0 12px}p{line-height:1.65;margin:6px 0}.muted{color:#64748b;font-size:14px}.home{color:#2563eb;text-decoration:none;white-space:nowrap}.panel{background:white;border:1px solid #e2e8f0;border-radius:20px;padding:24px;box-shadow:0 8px 24px #26364a08;margin-bottom:20px}.settings{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}.field label{display:block;font-weight:bold;margin-bottom:8px}select{background:white;border:1px solid #b8c6d8;border-radius:10px;padding:10px;max-width:100%}.button{border:0;border-radius:10px;padding:11px 18px;font-weight:bold;background:#edf2f7;color:#334155}.blue{background:#2563eb;color:white}.green{background:#059669;color:white}.purple{background:#7c3aed;color:white}.red{background:#dc2626;color:white}.practice{display:grid;grid-template-columns:180px minmax(0,1fr) 170px;gap:24px;align-items:start}.helper,.pad{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:14px;padding:16px}.helper h2,.pad h2{font-size:16px}.helper select{width:100%;margin-bottom:10px}.facts{display:grid;gap:4px}.fact{font:18px/1.7 ui-monospace,Consolas,monospace;text-align:center;border-radius:6px}.fact.active{background:#dbeafe;color:#1d4ed8;font-weight:bold}.calculation{min-width:0;text-align:center}.badge{display:inline-block;background:#eff6ff;color:#1d4ed8;padding:6px 12px;border-radius:30px;font-size:13px;font-weight:bold}.board-scroll{overflow-x:auto;padding:12px 0}.board{--cell:44px;display:grid;gap:5px 2px;justify-content:center;margin:auto;width:max-content}.cell{height:48px;width:var(--cell);display:flex;align-items:center;justify-content:center;font:700 29px ui-monospace,Consolas,monospace}.cell.place{height:22px;font:12px sans-serif;color:#64748b}.cell.label{font:12px/1.25 sans-serif;width:62px;color:#64748b;text-align:right;padding-right:5px}.digit-input{width:calc(var(--cell) - 4px);height:44px;border:2px dashed #94a3b8;border-radius:7px;text-align:center;background:white;font:700 27px ui-monospace,Consolas,monospace;color:#1e293b;padding:0;caret-color:#2563eb}.digit-input:focus{outline:3px solid #93c5fd;border-color:#2563eb;background:#eff6ff}.digit-input.correct{background:#dcfce7;border-color:#16a34a}.digit-input.incorrect{background:#fee2e2;border-color:#dc2626}.zero{color:#8291a5;background:#f1f5f9;border-radius:6px;font-size:25px}.rule{grid-column:1 / -1;border-top:3px solid #334155;height:4px}.controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:12px}.feedback{min-height:30px;font-weight:bold;font-size:15px;margin-top:14px}.feedback.error{color:#b91c1c}.feedback.success{color:#15803d}.hint{font-size:14px;text-align:left;padding:12px 14px;background:#eff6ff;border-radius:10px;min-height:68px;margin-top:8px}.pad-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.num{border:1px solid #cbd5e1;background:white;border-radius:8px;padding:10px 0;font-size:22px;font-weight:bold}.erase{grid-column:span 2;font-size:15px}.pad-note{font-size:12px;margin-top:12px;color:#64748b}.worksheet{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px}.worksheet-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.answer-option{display:block;font-size:14px;margin:10px 0}.answer-option input{width:17px;height:17px;vertical-align:middle}.worksheet-message{font-size:14px;color:#b91c1c;width:100%;margin:0}.legend{font-size:12px;color:#64748b;margin-top:4px}details{margin-top:12px;font-size:14px}summary{cursor:pointer;color:#2563eb}footer{text-align:center;font-size:13px;color:#64748b}fieldset{border:0;padding:0;margin:0}legend{font-size:14px;font-weight:bold;margin-bottom:8px}.custom{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.custom input{width:90px;min-width:0;border:1px solid #b8c6d8;border-radius:7px;padding:8px}
+@media(max-width:950px){.practice{grid-template-columns:155px minmax(0,1fr);gap:16px}.pad{grid-column:1 / -1}.pad-grid{grid-template-columns:repeat(11,1fr)}.erase{grid-column:span 1}.pad-note{margin-bottom:0}.board{--cell:40px}.cell{height:44px}.digit-input{height:40px}}
+@media(max-width:620px){body{padding:14px 10px}header{align-items:flex-start}h1{font-size:21px}.home{font-size:13px}.panel{padding:16px;border-radius:16px}.settings{align-items:stretch;flex-direction:column}.practice{grid-template-columns:minmax(0,1fr)}.helper{grid-row:2}.helper select{max-width:240px}.facts{grid-template-columns:repeat(2,1fr)}.fact{font-size:17px}.pad{grid-row:3;grid-column:auto}.pad-grid{grid-template-columns:repeat(6,1fr)}.erase{grid-column:span 2}.board{--cell:32px;gap:4px 1px}.cell{height:38px;font-size:25px}.cell.label{width:46px;font-size:11px}.digit-input{height:35px;font-size:24px}.worksheet-controls{width:100%}.worksheet-controls .button{flex:1;padding:11px 10px}.controls .button{padding:10px 12px}.hint{min-height:0}.zero{font-size:23px}}
+.cell.label.operator{font-size:27px;color:#243449}.preview{width:min(960px,96vw);height:92vh;border:1px solid #cbd5e1;border-radius:16px;padding:0;background:#f1f5f9}.preview::backdrop{background:#0f172a88}.preview-bar{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px;flex-wrap:wrap}.preview-bar p{font-size:13px;margin:0}.preview iframe{display:block;width:100%;height:calc(100% - 110px);border:0;background:white}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><div><h1>直式乘法教學與練習</h1><p class="muted">對齊位值，從個位開始，一步一步算出乘積。</p></div><a class="home" href="./index.html">← 遊戲首頁</a></header>
+<section class="panel settings" aria-label="題目設定">
+    <div class="field"><label for="problem-type">選擇題型（七種類型）</label><select id="problem-type"></select></div>
+    <div><button id="apply" class="button blue">套用設定並出題</button><details><summary>使用自己的數字</summary><p class="muted">數字位數須符合所選題型。</p><div class="custom"><label for="custom-a">被乘數</label><input id="custom-a" inputmode="numeric" maxlength="4"><label for="custom-b">乘數</label><input id="custom-b" inputmode="numeric" maxlength="3"><button id="custom-start" class="button">開始</button></div></details></div>
+</section>
+<main class="panel practice">
+    <aside class="helper" aria-label="乘法表查詢"><h2>對應乘法表</h2><label for="table-number" class="muted">選格時自動切換，也可自選</label><select id="table-number"></select><div id="facts" class="facts"></div><p class="muted" id="table-note"></p></aside>
+    <section class="calculation" aria-label="直式計算"><span id="problem-label" class="badge"></span><div class="board-scroll"><div id="board" class="board"></div></div><p class="legend">每格填一個數字。灰色 0 是位值補零，已幫你填好。</p><div class="controls"><button id="check" class="button blue">檢查答案</button><button id="hint-button" class="button">這一步提示</button><button id="next" class="button green">下一題</button><button id="clear" class="button">清空重算</button></div><p id="feedback" class="feedback" role="status" aria-live="polite"></p><div id="hint" class="hint" aria-live="polite">點選虛線格，用鍵盤或右側數字鍵填答。</div></section>
+    <aside class="pad"><h2>數字鍵盤</h2><div id="pad" class="pad-grid"></div><p class="pad-note">先選格子再填數字。輸入後會依計算順序自動移到下一格；可用 ← → 換格。</p></aside>
+</main>
+<section class="panel worksheet"><div><h2>🖨️ 依題型產生學習單</h2><p class="muted">使用目前所選題型，每頁最多 6 題，保留直式計算空間。</p><label class="answer-option"><input id="include-answers" type="checkbox"> 另附參考答案頁</label><p class="muted">列印與 Word 會使用同一份題目；需要新題目時再按「重新產生」。</p></div><div class="worksheet-controls"><label for="q-count">題數</label><select id="q-count"><option value="5">5 題</option><option value="10" selected>10 題</option><option value="15">15 題</option><option value="20">20 題</option></select><button id="new-sheet" class="button">重新產生</button><button id="print" class="button red">列印 / 存為 PDF</button><button id="word" class="button purple">下載 Word</button></div><p id="worksheet-message" class="worksheet-message" role="status"></p></section>
+<footer>乘法表、互動練習與學習單均可在本機使用。</footer>
+</div>
+<dialog id="worksheet-preview" class="preview" aria-label="學習單預覽"><div class="preview-bar"><strong>直式乘法學習單預覽</strong><button id="confirm-print" class="button red">列印 / 存為 PDF</button><button id="close-preview" class="button">關閉預覽</button><p>列印設定請選 A4、縮放 100%，並關閉頁首與頁尾。可選擇「另存為 PDF」。</p></div><iframe id="worksheet-frame" title="直式乘法學習單內容"></iframe></dialog>
+<script src="./assets/multiplication.js"></script>
+<script>
+'use strict';
+const M = window.Multiplication;
+const $ = id => document.getElementById(id);
+let current, selected = null, answerInputs = [], sheetCache = null;
+M.types.forEach(type => $('problem-type').add(new Option(type.label, type.id)));
+for (let n = 0; n <= 9; n++) $('table-number').add(new Option(`${n} 的乘法表`, n));
+function table(n, activeDigit = null) {
+    $('table-number').value = n;
+    $('facts').replaceChildren();
+    for (let i = 0; i <= 9; i++) {
+        const div = document.createElement('div');
+        div.className = 'fact' + (i === activeDigit ? ' active' : '');
+        div.textContent = `${i} × ${n} = ${i * n}`;
+        $('facts').append(div);
+    }
+    $('table-note').textContent = n === 0 ? '任何數乘以 0 都是 0。' : '先查基本乘法，再把上一位的進位加進來。';
+}
+function feedback(text, kind = '') { $('feedback').textContent = text; $('feedback').className = 'feedback ' + kind; }
+function choose(input) {
+    selected = input;
+    if (input.dataset.multiplier !== undefined) table(Number(input.dataset.multiplier), Number(input.dataset.fact));
+}
+function show(p) {
+    current = p; selected = null; answerInputs = [];
+    const board = $('board'); board.replaceChildren();
+    board.style.gridTemplateColumns = `auto repeat(${p.width}, var(--cell))`;
+    $('problem-label').textContent = `${p.a} × ${p.b}`;
+    feedback(''); $('hint').textContent = '由右往左填寫；多位數乘法先算每列部分積，最後再相加。';
+    function row(label, cells, labelClass = '') {
+        const tag = document.createElement('div'); tag.className = 'cell label ' + labelClass; tag.textContent = label; board.append(tag);
+        cells.forEach(cell => board.append(cell));
+    }
+    function staticCell(value, cls = '') { const c = document.createElement('div'); c.className = 'cell ' + cls; c.textContent = value; return c; }
+    function operand(value, label) { row(label, String(value).padStart(p.width, ' ').split('').map(d => staticCell(d)), label === '×' ? 'operator' : ''); }
+    function line() { const rule = document.createElement('div'); rule.className = 'rule'; board.append(rule); }
+    row('位值', Array.from({length:p.width}, (_, i) => staticCell(M.places[p.width - 1 - i], 'place')));
+    operand(p.a, ''); operand(p.b, '×'); line();
+    function answers(value, shift, label, part) {
+        const rowInputs = [];
+        const cells = M.slots(value, shift, p.width).map(slot => {
+            const cell = staticCell('');
+            if (slot.kind === 'zero') { cell.textContent = '0'; cell.classList.add('zero'); cell.title = '依位值補零'; }
+            if (slot.kind === 'answer') {
+                const input = document.createElement('input');
+                input.className = 'digit-input'; input.type = 'text'; input.inputMode = 'numeric'; input.maxLength = 1; input.autocomplete = 'off';
+                input.dataset.expected = slot.value;
+                input.setAttribute('aria-label', `${label || '乘積'}，${M.places[slot.position]}位`);
+                if (part) {
+                    const place = slot.position - shift;
+                    input.dataset.multiplier = part.digit;
+                    input.dataset.fact = Number(String(p.a).split('').reverse()[place] || 0);
+                    input.dataset.hint = part.hints[place] || `${p.a} × 0 ＝ 0，這列寫 0。`;
+                } else input.dataset.hint = `將各列部分積依位值對齊相加：${p.partials.map(item => item.shiftedValue).join(' ＋ ')}。注意加法也可能需要進位。`;
+                input.addEventListener('focus', () => choose(input));
+                input.addEventListener('input', () => { input.value = input.value.replace(/[^0-9]/g, '').slice(-1); resetMark(input); if (input.value) advance(input); });
+                input.addEventListener('keydown', event => {
+                    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); const step = event.key === 'ArrowLeft' ? 1 : -1; const next = answerInputs[answerInputs.indexOf(input) + step]; if (next) next.focus(); }
+                    if (event.key === 'Enter') { event.preventDefault(); check(); }
+                });
+                cell.append(input); rowInputs.unshift(input);
+            }
+            return cell;
+        });
+        row(label, cells); answerInputs.push(...rowInputs);
+    }
+    if (p.partials.length > 1) {
+        p.partials.forEach(part => answers(part.value, part.shift, `×${part.digit * 10 ** part.shift}`, part));
+        line();
+    }
+    answers(p.result, 0, '乘積', p.partials.length === 1 ? p.partials[0] : null);
+    table(p.partials[0].digit);
+    selected = answerInputs[0] || null;
+}
+function resetMark(input) { input.classList.remove('correct', 'incorrect'); input.removeAttribute('aria-invalid'); feedback(''); }
+function advance(input) { const next = answerInputs[answerInputs.indexOf(input) + 1]; if (next) next.focus(); }
+function enter(value) {
+    if (!selected) return;
+    selected.value = value; resetMark(selected);
+    const input = selected; input.focus();
+    if (value !== '') advance(input);
+}
+function check() {
+    let wrong = 0, empty = 0;
+    answerInputs.forEach(input => {
+        const correct = input.value !== '' && Number(input.value) === Number(input.dataset.expected);
+        input.classList.toggle('correct', correct); input.classList.toggle('incorrect', !correct);
+        input.setAttribute('aria-invalid', String(!correct));
+        if (!correct) wrong++; if (input.value === '') empty++;
+    });
+    feedback(wrong ? (empty ? `還有 ${empty} 格未完成，請把紅色格子填好，再檢查一次。` : `還有 ${wrong} 格需要修正，請留意進位及部分積的位值。`) : '非常棒！每一列與最後的乘積都正確！', wrong ? 'error' : 'success');
+}
+for (const value of ['1','2','3','4','5','6','7','8','9','0','']) {
+    const button = document.createElement('button'); button.className = 'num' + (value === '' ? ' erase' : ''); button.textContent = value === '' ? '清除一格' : value;
+    button.addEventListener('click', () => enter(value)); $('pad').append(button);
+}
+function nextProblem() { show(M.generate($('problem-type').value)); }
+$('apply').onclick = nextProblem;
+$('next').onclick = nextProblem;
+$('problem-type').onchange = () => { sheetCache = null; $('custom-a').value = ''; $('custom-b').value = ''; nextProblem(); };
+$('table-number').onchange = () => table(Number($('table-number').value));
+$('check').onclick = check;
+$('clear').onclick = () => show(current);
+$('hint-button').onclick = () => { if (selected) $('hint').textContent = selected.dataset.hint; };
+$('custom-start').onclick = () => {
+    const type = M.types.find(t => t.id === $('problem-type').value);
+    const a = $('custom-a').value.trim(), b = $('custom-b').value.trim();
+    if (!new RegExp(`^[1-9][0-9]{${type.a - 1}}$`).test(a) || !new RegExp(`^[1-9][0-9]{${type.b - 1}}$`).test(b)) { feedback(`請輸入${type.label}的正整數，開頭不能是 0。`, 'error'); return; }
+    show(M.problem(Number(a), Number(b)));
+};
+function sheet() {
+    const count = Number($('q-count').value), type = $('problem-type').value;
+    const key = type + ':' + count;
+    if (!sheetCache || sheetCache.key !== key) sheetCache = { key, problems: Array.from({length:count}, () => M.generate(type)) };
+    return M.worksheet(sheetCache.problems, $('include-answers').checked);
+}
+$('new-sheet').onclick = () => { sheetCache = null; sheet(); $('worksheet-message').textContent = '已產生新題目，可列印或下載 Word。'; };
+$('q-count').onchange = () => { sheetCache = null; $('worksheet-message').textContent = ''; };
+$('print').onclick = () => {
+    $('confirm-print').disabled = true;
+    $('worksheet-frame').onload = () => { $('confirm-print').disabled = false; };
+    $('worksheet-frame').srcdoc = sheet();
+    $('worksheet-preview').showModal();
+};
+$('confirm-print').onclick = () => { const frame = $('worksheet-frame').contentWindow; frame.focus(); frame.print(); };
+$('close-preview').onclick = () => $('worksheet-preview').close();
+$('word').onclick = () => {
+    const content = sheet().replace('<html lang="zh-Hant">', '<html lang="zh-Hant" xmlns:w="urn:schemas-microsoft-com:office:word">');
+    const url = URL.createObjectURL(new Blob(['\ufeff', content], {type:'application/msword;charset=utf-8'}));
+    const link = document.createElement('a'); link.href = url; link.download = '直式乘法學習單.doc'; document.body.append(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    $('worksheet-message').textContent = '已開始下載 Word 相容格式（.doc），可使用 Word 開啟編輯。';
+};
+nextProblem();
+</script>
+</body>
+</html>

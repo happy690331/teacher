@@ -1,5 +1,14 @@
 特教教學使用
 
+## 直式乘法教學與學習單
+
+[數學互動式乘法與學習單產生](數學互動式乘法與學習單產生.html) 提供七種題型：一位×一位、二位×一位、二位×二位、三位×一位、三位×二位、三位×三位、四位×一位。
+支援隨機出題、自訂數字、對應乘法表、數字鍵盤、部分積與進位提示、逐格答案檢查。
+學習單可選 5／10／15／20 題，提供 A4 預覽、列印或另存 PDF，以及 Word 相容 HTML 格式的 `.doc` 下載（沿用除法工具的相容方式，並非原生 `.docx`）。可另附參考答案頁。
+此乘法工具不需要外部 CDN；保留 `assets/multiplication.js` 即可在本機使用。
+
+計算與學習單測試：`node --test tests/multiplication.test.cjs`。
+
 原始 GitHub 儲存庫：[happy690331/teacher](https://github.com/happy690331/teacher)
 
 線上網站：[AI教學遊戲天地](https://happy690331.github.io/teacher/)

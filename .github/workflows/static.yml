@@ -37,6 +37,8 @@ jobs:
           node-version: '22'
       - name: Generate local game catalog
         run: node scripts/generate-catalog.mjs
+      - name: Verify multiplication arithmetic and worksheets
+        run: node --test tests/multiplication.test.cjs
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
