@@ -9,6 +9,34 @@
 @media(max-width:950px){.practice{grid-template-columns:155px minmax(0,1fr);gap:16px}.pad{grid-column:1 / -1}.pad-grid{grid-template-columns:repeat(11,1fr)}.erase{grid-column:span 1}.pad-note{margin-bottom:0}.board{--cell:40px}.cell{height:44px}.digit-input{height:40px}}
 @media(max-width:620px){body{padding:14px 10px}header{align-items:flex-start}h1{font-size:21px}.home{font-size:13px}.panel{padding:16px;border-radius:16px}.settings{align-items:stretch;flex-direction:column}.practice{grid-template-columns:minmax(0,1fr)}.helper{grid-row:2}.helper select{max-width:240px}.facts{grid-template-columns:repeat(2,1fr)}.fact{font-size:17px}.pad{grid-row:3;grid-column:auto}.pad-grid{grid-template-columns:repeat(6,1fr)}.erase{grid-column:span 2}.board{--cell:32px;gap:4px 1px}.cell{height:38px;font-size:25px}.cell.label{width:46px;font-size:11px}.digit-input{height:35px;font-size:24px}.worksheet-controls{width:100%}.worksheet-controls .button{flex:1;padding:11px 10px}.controls .button{padding:10px 12px}.hint{min-height:0}.zero{font-size:23px}}
 .cell.label.operator{font-size:27px;color:#243449}.preview{width:min(960px,96vw);height:92vh;border:1px solid #cbd5e1;border-radius:16px;padding:0;background:#f1f5f9}.preview::backdrop{background:#0f172a88}.preview-bar{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px;flex-wrap:wrap}.preview-bar p{font-size:13px;margin:0}.preview iframe{display:block;width:100%;height:calc(100% - 110px);border:0;background:white}
+/* 只放大中央直式，維持左右乘法表與數字鍵盤的原有尺寸。 */
+.calculation .badge{font-size:20px;padding:8px 16px}
+.calculation .board{--cell:clamp(58px,calc((100vw - 588px)/6),62px);gap:7px 2px}
+.calculation .cell{height:66px;font-size:42px}
+.calculation .cell.place{height:28px;font-size:16px}
+.calculation .cell.label{width:76px;font-size:16px}
+.calculation .cell.label.operator{font-size:42px}
+.calculation .digit-input{height:60px;font-size:40px}
+.calculation .zero{font-size:38px}
+.calculation .rule{border-top-width:4px}
+@media(max-width:950px){
+    .calculation .board{--cell:44px}
+    .calculation .cell{height:54px;font-size:34px}
+    .calculation .cell.label{width:64px;font-size:14px}
+    .calculation .cell.label.operator{font-size:34px}
+    .calculation .digit-input{height:50px;font-size:32px}
+    .calculation .zero{font-size:30px}
+}
+@media(max-width:620px){
+    .calculation .badge{font-size:18px}
+    .calculation .board{--cell:clamp(32px,calc((100vw - 126px)/6),44px);gap:5px 1px}
+    .calculation .cell{height:46px;font-size:30px}
+    .calculation .cell.place{height:24px;font-size:12px}
+    .calculation .cell.label{width:46px;font-size:12px}
+    .calculation .cell.label.operator{font-size:30px}
+    .calculation .digit-input{height:42px;font-size:28px}
+    .calculation .zero{font-size:28px}
+}
 </style>
 </head>
 <body>
