@@ -241,6 +241,11 @@ window.GAME_CATALOG = [
     "imgUrl": "./%E6%95%B8%E5%AD%B8%E5%9F%BA%E7%A4%8E%E8%A8%88%E7%AE%97%E9%A8%8E%E5%A3%AB%E9%98%B2%E7%A6%A6%E6%88%B0.jpg"
   },
   {
+    "name": "數學大賽四人大亂鬥_四選一版",
+    "url": "./%E6%95%B8%E5%AD%B8%E5%A4%A7%E8%B3%BD%E5%9B%9B%E4%BA%BA%E5%A4%A7%E4%BA%82%E9%AC%A5_%E5%9B%9B%E9%81%B8%E4%B8%80%E7%89%88.html",
+    "imgUrl": "./%E6%95%B8%E5%AD%B8%E5%A4%A7%E8%B3%BD%E5%9B%9B%E4%BA%BA%E5%A4%A7%E4%BA%82%E9%AC%A5_%E5%9B%9B%E9%81%B8%E4%B8%80%E7%89%88.jpg"
+  },
+  {
     "name": "數學泡泡射擊遊戲",
     "url": "./%E6%95%B8%E5%AD%B8%E6%B3%A1%E6%B3%A1%E5%B0%84%E6%93%8A%E9%81%8A%E6%88%B2.html",
     "imgUrl": null
