@@ -645,8 +645,11 @@
             textLayerDiv.className = 'textLayer';
             pageDiv.appendChild(textLayerDiv);
             const textContent = await page.getTextContent();
+            // 保留 textDivs：renderTextLayer 會把產生的 span 依序回填進來，
+            // 這是把「文字項目」對應到「畫面上的 span」的唯一可靠途徑。
+            const textDivs = [];
             await pdfjsLib.renderTextLayer({
-                textContent, container: textLayerDiv, viewport, textDivs: []
+                textContent, container: textLayerDiv, viewport, textDivs
             }).promise;
 
             const interactionLayer = document.createElement('div');
@@ -661,6 +664,7 @@
 
             detectRedBoxesFromCanvas(canvas, interactionLayer);
             markAnswerBlanks(canvas, textLayerDiv, interactionLayer);
+            await markInvisibleText(page, textContent, textDivs, canvas);
         }
 
         function autoSetReadingDirection(textLayer, pageWidth, pageHeight) {
@@ -814,7 +818,10 @@
                 const overlapH = Math.max(0, Math.min(spanRect.bottom, boxRect.bottom) - Math.max(spanRect.top, boxRect.top));
 
                 return overlapW > 0 && overlapH > 0; // 改為大於 0，確保最敏銳的抓取
-            }).filter(span => !(skipAnswerMode && span.dataset.answerBlank === '1')); // 【新增】跳過底線上的答案
+            })
+            // 【新增】白色（看不見）的文字一律不報讀。學生看不到的字，念出來只會洩漏答案。
+            .filter(span => span.dataset.invisibleText !== '1')
+            .filter(span => !(skipAnswerMode && span.dataset.answerBlank === '1')); // 【新增】跳過底線上的答案
 
             const direction = document.getElementById('reading-direction').value;
             let sortedSpans = [];
@@ -1067,6 +1074,162 @@
                 voiceSelect.appendChild(option);
             });
         }
+
+        // ==================================================================
+        // ========= 【新增功能：不報讀白色（看不見）的文字】 =================
+        // 需求：數學學習單的「答案版」會把答案印成白色，列印出來看不見，讓學生
+        //       自己填。但 PDF 文字層照樣抓得到，報讀時就會把答案念出來。
+        //
+        // 為什麼讀「填色」而不是掃描畫面像素：
+        //   實測八格練習卷，答案「5172」確實是白字，但它正下方有填答底線，
+        //   底線的黑色像素落在該文字的範圍內，使得這塊區域量起來有 4.2% 的
+        //   墨水，像素法會因此漏掉它。直接讀 PDF 內容流的填色則是精確值。
+        //
+        // 怎麼把顏色對應到畫面上的文字：
+        //   getOperatorList() 與 getTextContent() 來自同一個內容流、順序一致，
+        //   可用字元位置對齊，再透過 textDivs 對應到實際的 span。
+        //   但兩者的標點不一定相同：getTextContent 會把某些符號展開，例如
+        //   指令流的「…」(U+2026) 在文字層變成三個「.」，導致字數對不上。
+        //   因此只拿「數字、英文字母、中日韓文字」來對齊，忽略標點 ——
+        //   答案都是數字，而會出現差異的正好都是標點。
+        //   實測 13 份考卷共 40 頁，這樣對齊全數成功。
+        //
+        // 安全設計（寧可照念，也不要誤刪題目文字）：
+        //   1. 若兩邊字串對不上就完全不標記，並在 console 留警告。
+        //   2. 整段文字都是白色才標記，半黑半白不動。
+        //   3. 白字若印在深色底上其實看得見，用墨水比例把這種情況排除。
+        // ==================================================================
+
+        // 白字判定的墨水上限。白字本身不留墨，區域內的墨水只可能來自底線或
+        // 框線（實測約 4%）。正常可見的文字會達到 20-40%，所以用 15% 當界線，
+        // 可攔下「填色讀取出錯而把看得見的字誤判成白字」的情況。
+        const INVISIBLE_MAX_INK = 0.15;
+
+        // 用來對齊的字元：半/全角數字、英文字母、中日韓文字（含相容字區）。
+        // 標點不納入，因為兩邊的標點展開方式可能不同。
+        const ALIGN_CHAR = /[0-9０-９A-Za-zＡ-Ｚａ-ｚ㐀-䶿一-鿿豈-﫿]/;
+
+        async function markInvisibleText(page, textContent, textDivs, canvas) {
+            try {
+                const OPS = pdfjsLib.OPS;
+                const opList = await page.getOperatorList();
+
+                // 1. 依序走過內容流，記下每個非空白字元是否為白色
+                let fill = [0, 0, 0];
+                const stack = [];
+                const charIsWhite = [];
+                let opText = '';
+
+                for (let i = 0; i < opList.fnArray.length; i++) {
+                    const fn = opList.fnArray[i];
+                    const args = opList.argsArray[i];
+
+                    if (fn === OPS.save) {
+                        stack.push(fill.slice());
+                    } else if (fn === OPS.restore) {
+                        // 必須處理 q/Q，否則還原後的文字會沿用錯誤的顏色
+                        if (stack.length) fill = stack.pop();
+                    } else if (fn === OPS.setFillRGBColor) {
+                        fill = [args[0], args[1], args[2]];
+                    } else if (fn === OPS.showText || fn === OPS.showSpacedText) {
+                        const isWhite = fill[0] >= 250 && fill[1] >= 250 && fill[2] >= 250;
+                        const glyphs = args[0] || [];
+                        for (let g = 0; g < glyphs.length; g++) {
+                            const glyph = glyphs[g];
+                            // 陣列中夾雜的數字是字距調整，略過
+                            if (!glyph || typeof glyph !== 'object') continue;
+                            if (glyph.unicode === undefined || glyph.unicode === null) continue;
+                            for (const ch of String(glyph.unicode)) {
+                                if (!ALIGN_CHAR.test(ch)) continue;
+                                opText += ch;
+                                charIsWhite.push(isWhite);
+                            }
+                        }
+                    }
+                }
+
+                // 2. 安全檢查：兩邊對齊用的字串必須完全一致，否則放棄
+                let tcText = '';
+                for (const item of textContent.items) {
+                    for (const ch of item.str) if (ALIGN_CHAR.test(ch)) tcText += ch;
+                }
+                if (opText !== tcText) {
+                    console.warn('白字偵測：內容流與文字層對不上，本頁不做標記（維持全部報讀）');
+                    return;
+                }
+
+                // 3. 先算出每個文字項目在對齊字串中的位置範圍
+                const ranges = [];
+                let pos = 0;
+                textContent.items.forEach((item, idx) => {
+                    let n = 0;
+                    for (const ch of item.str) if (ALIGN_CHAR.test(ch)) n++;
+                    ranges.push({ idx: idx, start: pos, len: n, hasText: item.str.trim() !== '' });
+                    pos += n;
+                });
+
+                // 4. 標記
+                let marked = 0;
+                ranges.forEach(r => {
+                    const span = textDivs[r.idx];
+                    if (!span || !r.hasText) return;
+
+                    let isWhite;
+                    if (r.len > 0) {
+                        // 整段的字都是白色才算，半黑半白不動
+                        isWhite = true;
+                        for (let i = 0; i < r.len; i++) {
+                            if (!charIsWhite[r.start + i]) { isWhite = false; break; }
+                        }
+                    } else {
+                        // 純符號的項目（例如 ÷ ＝ × －）本身不在對齊字元內，
+                        // 但如果它前後緊鄰的字都是白的，它就是同一段白色算式的一部分。
+                        // 不處理的話會留下「除等於」這類碎片被念出來。
+                        const before = r.start > 0 ? charIsWhite[r.start - 1] : undefined;
+                        const after = r.start < charIsWhite.length ? charIsWhite[r.start] : undefined;
+                        isWhite = (before === true && after === true);
+                    }
+                    if (!isWhite) return;
+                    if (inkRatioOf(span, canvas) > INVISIBLE_MAX_INK) return; // 看得見就不要跳過
+
+                    span.dataset.invisibleText = '1';
+                    marked++;
+                });
+
+                if (marked) console.log('白字偵測：本頁有 ' + marked + ' 段看不見的文字，不會報讀');
+            } catch (err) {
+                // 偵測失敗不應影響正常報讀
+                console.warn('白字偵測失敗，已略過：', err);
+            }
+        }
+
+        // 算出 span 範圍內「非亮色」像素的比例
+        function inkRatioOf(span, canvas) {
+            try {
+                const cRect = canvas.getBoundingClientRect();
+                if (!cRect.width || !cRect.height) return 0; // 取不到尺寸時不阻擋判定
+                const sx = canvas.width / cRect.width;
+                const sy = canvas.height / cRect.height;
+                const r = span.getBoundingClientRect();
+                const x = Math.max(0, Math.round((r.left - cRect.left) * sx));
+                const y = Math.max(0, Math.round((r.top - cRect.top) * sy));
+                const w = Math.min(Math.round(r.width * sx), canvas.width - x);
+                const h = Math.min(Math.round(r.height * sy), canvas.height - y);
+                if (w < 1 || h < 1) return 0;
+
+                const data = canvas.getContext('2d', { willReadFrequently: true })
+                                   .getImageData(x, y, w, h).data;
+                let ink = 0, total = 0;
+                for (let i = 0; i < data.length; i += 4) {
+                    total++;
+                    if (data[i] < 200 || data[i + 1] < 200 || data[i + 2] < 200) ink++;
+                }
+                return total ? ink / total : 0;
+            } catch (err) {
+                return 0;
+            }
+        }
+        // ========= 【不報讀白色文字】程式碼結束 ============================
 
         // ==================================================================
         // ============ 【新增功能：跳過底線答案】 ===========================
