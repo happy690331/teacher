@@ -59,16 +59,17 @@
         }
         function pages(answers) {
             let html = '';
-            for (let start = 0; start < problems.length; start += 6) {
-                const chunk = problems.slice(start, start + 6);
+            // A4 一頁排成左右兩欄、上下五列，讓 10 題可在單面完成。
+            for (let start = 0; start < problems.length; start += 10) {
+                const chunk = problems.slice(start, start + 10);
                 html += `<section class="sheet"><h1>直式乘法${answers ? '參考答案' : '學習單'}</h1><p class="identity">班級：____________　姓名：____________　日期：____________</p><p class="instructions">${answers ? '各列部分積須依位值對齊，再相加得到乘積。' : '由右往左計算。十位的部分積向左移一格，百位向左移兩格。'}</p><table class="questions">`;
                 for (let i = 0; i < chunk.length; i += 2) html += `<tr>${question(chunk[i], start + i, answers)}${chunk[i + 1] ? question(chunk[i + 1], start + i + 1, answers) : '<td class="question"></td>'}</tr>`;
-                html += `</table><footer>${answers ? '參考答案' : '練習題'} · 第 ${Math.floor(start / 6) + 1} 頁</footer></section>`;
+                html += `</table><footer>${answers ? '參考答案' : '練習題'} · 第 ${Math.floor(start / 10) + 1} 頁</footer></section>`;
             }
             return html;
         }
         return `<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><title>直式乘法學習單</title><style>
-@page{size:A4 portrait;margin:12mm}*{box-sizing:border-box}body{margin:0;color:#111;background:white;font-family:"DFKai-SB","Noto Sans TC",sans-serif}.sheet{page-break-after:always;break-after:page}.sheet:last-child{page-break-after:auto;break-after:auto}h1{font-size:23px;margin:0 0 8px}.identity{font-size:14px;border-bottom:2px solid #222;padding-bottom:10px;margin:0}.instructions{font-size:12px;margin:8px 0}.questions{width:100%;table-layout:fixed;border-collapse:collapse}.questions>tbody>tr{page-break-inside:avoid}.question{width:50%;height:69mm;vertical-align:top;padding:5mm 4mm;border:1px solid #bbb}.question p{margin:0 0 7px;font-size:14px}.vertical{border-collapse:collapse;margin:0 auto}.digit{width:8mm;height:7mm;text-align:center;font:22px monospace;padding:0}.sign{width:7mm;font-size:20px;text-align:center}.rule{border-bottom:2px solid #222}.sum{border-top:2px solid #222}.empty{display:block;border:1px dotted #aaa;width:6mm;height:6mm;margin:auto}.work{height:8mm}footer{text-align:right;font-size:11px;padding-top:8px}.toolbar{padding:12px;background:#eef2ff;font-family:sans-serif}.toolbar button{padding:8px 20px;font-size:16px}@media print{.toolbar{display:none}}@media screen{body{max-width:800px;margin:auto;padding:20px}.sheet{margin-bottom:30px}}
+@page{size:A4 portrait;margin:6mm}*{box-sizing:border-box}body{margin:0;color:#111;background:white;font-family:"DFKai-SB","Noto Sans TC",sans-serif}.sheet{page-break-after:always;break-after:page}.sheet:last-child{page-break-after:auto;break-after:auto}h1{font-size:18px;margin:0 0 3px}.identity{font-size:10px;border-bottom:1px solid #222;padding-bottom:3px;margin:0}.instructions{font-size:9px;margin:3px 0}.questions{width:100%;table-layout:fixed;border-collapse:collapse}.questions>tbody>tr{page-break-inside:avoid}.question{width:50%;height:35mm;vertical-align:top;padding:2mm 2mm 1mm;border:1px solid #bbb}.question p{margin:0 0 2px;font-size:10px;line-height:1.15}.vertical{border-collapse:collapse;margin:0 auto}.digit{width:5mm;height:4.5mm;text-align:center;font:15px monospace;padding:0}.sign{width:5mm;font-size:14px;text-align:center}.rule{border-bottom:1px solid #222}.sum{border-top:1px solid #222}.empty{display:block;border:1px dotted #aaa;width:4mm;height:4mm;margin:auto}.work{height:5mm}footer{text-align:right;font-size:8px;padding-top:2px}.toolbar{padding:10px;background:#eef2ff;font-family:sans-serif}.toolbar button{padding:7px 16px;font-size:15px}@media print{.toolbar{display:none}}@media screen{body{max-width:800px;margin:auto;padding:10px}.sheet{margin-bottom:18px}}
 </style></head><body>${pages(false)}${includeAnswers ? pages(true) : ''}</body></html>`;
     }
     const api = { types, places, generate, problem, slots, worksheet };

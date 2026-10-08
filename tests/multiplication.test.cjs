@@ -36,12 +36,12 @@ test('right-aligned partial products handle internal zero, trailing zero, and lo
     assert.match(p.partials[0].hints[3], /最後的進位 8/);
 });
 
-test('worksheet paginates 5/10/15/20 questions and uses identical questions for answer sheets', () => {
+test('worksheet paginates 5/10/15/20 questions into ten-question A4 pages', () => {
     for (const count of [5,10,15,20]) {
         const problems = Array.from({length:count}, (_,i) => M.problem(101+i,109));
         for (const answers of [false,true]) {
             const html = M.worksheet(problems,answers);
-            assert.equal((html.match(/<section class="sheet">/g)||[]).length, Math.ceil(count/6)*(answers?2:1));
+            assert.equal((html.match(/<section class="sheet">/g)||[]).length, Math.ceil(count/10)*(answers?2:1));
             assert.equal((html.match(/<table class="vertical">/g)||[]).length, count*(answers?2:1));
             for (const p of problems) assert(html.includes(`${p.a} × ${p.b} ＝ ____________`));
             if (answers) for (const p of problems) assert(html.includes(`${p.a} × ${p.b} ＝ ${p.result}`));
