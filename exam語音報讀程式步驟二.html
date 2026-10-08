@@ -95,6 +95,134 @@
             z-index: 20;
         }
 
+        /* ==================== 【新增：手動報讀框】 ==================== */
+        /* 用途：處理考卷上沒有被紅框標記到的文字，手動框選後報讀 */
+        #manual-reader-frame {
+            position: fixed;
+            display: none;
+            box-sizing: border-box;
+            z-index: 40;
+            border: 3px dashed #4f46e5;
+            background-color: rgba(79, 70, 229, 0.07);
+            border-radius: 6px;
+            pointer-events: none; /* 框內透明可穿透，仍可點擊下方原有紅框 */
+        }
+        body[data-mode="page2"].manual-mode #manual-reader-frame { display: block; }
+
+        /* 報讀中：整個框轉為綠色 */
+        #manual-reader-frame.active-read {
+            border-color: #16a34a;
+            background-color: rgba(22, 163, 74, 0.12);
+        }
+        #manual-reader-frame.active-read .mrf-handle { background: #16a34a; }
+        #manual-reader-frame.active-read .mrf-label { background: #16a34a; }
+
+        /* 框上方標籤 */
+        .mrf-label {
+            position: absolute;
+            top: -27px; left: 50%;
+            transform: translateX(-50%);
+            background: #4f46e5; color: #fff;
+            font-size: 12px; font-weight: bold;
+            padding: 3px 10px; border-radius: 4px;
+            white-space: nowrap;
+            pointer-events: none;
+            user-select: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,.25);
+        }
+
+        /* 四邊 = 拖曳移動區 */
+        .mrf-edge { position: absolute; pointer-events: auto; cursor: move; touch-action: none; }
+        .mrf-edge-top    { top: -3px;    left: -3px;  right: -3px;  height: 14px; }
+        .mrf-edge-bottom { bottom: -3px; left: -3px;  right: -3px;  height: 14px; }
+        .mrf-edge-left   { left: -3px;   top: -3px;   bottom: -3px; width: 14px; }
+        .mrf-edge-right  { right: -3px;  top: -3px;   bottom: -3px; width: 14px; }
+
+        /* 四角 = 縮放把手 */
+        .mrf-handle {
+            position: absolute;
+            width: 18px; height: 18px;
+            background: #4f46e5;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            pointer-events: auto;
+            touch-action: none;
+            box-shadow: 0 1px 4px rgba(0,0,0,.4);
+        }
+        .mrf-nw { top: -10px;    left: -10px;  cursor: nwse-resize; }
+        .mrf-ne { top: -10px;    right: -10px; cursor: nesw-resize; }
+        .mrf-sw { bottom: -10px; left: -10px;  cursor: nesw-resize; }
+        .mrf-se { bottom: -10px; right: -10px; cursor: nwse-resize; }
+
+        /* 控制面板 */
+        #manual-reader-panel {
+            position: fixed;
+            display: none;
+            right: 16px; bottom: 16px;
+            width: 310px;
+            z-index: 50;
+            background: #fff;
+            border: 2px solid #4f46e5;
+            border-radius: 10px;
+            box-shadow: 0 10px 28px rgba(0,0,0,.22);
+            overflow: hidden;
+        }
+        body[data-mode="page2"].manual-mode #manual-reader-panel { display: block; }
+
+        #mrp-head {
+            background: #4f46e5; color: #fff;
+            padding: 8px 12px;
+            font-weight: bold; font-size: 14px;
+            display: flex; align-items: center; justify-content: space-between;
+            cursor: move; user-select: none; touch-action: none;
+        }
+        #mrf-close-btn {
+            background: rgba(255,255,255,.2); color: #fff;
+            width: 24px; height: 24px; line-height: 1;
+            border-radius: 4px; font-weight: bold;
+            cursor: pointer; transition: background .2s;
+        }
+        #mrf-close-btn:hover { background: rgba(255,255,255,.4); }
+
+        #mrp-body { padding: 10px 12px 12px 12px; }
+
+        #mrf-preview {
+            height: 80px; overflow-y: auto;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 6px 8px;
+            font-size: 13px; line-height: 1.6; color: #334155;
+            white-space: pre-wrap; word-break: break-all;
+        }
+        #mrf-preview.mrf-empty { color: #94a3b8; font-style: italic; }
+
+        /* Toolbar 上的開關按鈕：開啟時變色 */
+        #manual-mode-btn.mrf-btn-on {
+            background-color: #4338ca;
+            box-shadow: 0 0 0 3px rgba(79,70,229,.35);
+        }
+
+        /* ==================== 【新增：跳過底線答案】 ==================== */
+        /* 偵測到的「填答底線上的答案」標示，只在功能開啟時顯示，
+           目的是讓老師一眼看出哪些字會被跳過，避免靜默漏字。 */
+        .answer-blank-mark {
+            position: absolute;
+            pointer-events: none;
+            background-color: rgba(251, 191, 36, 0.38);
+            border-bottom: 2px solid #f59e0b;
+            border-radius: 2px;
+            display: none;
+            z-index: 15;
+        }
+        body.skip-answer-mode .answer-blank-mark { display: block; }
+
+        /* Toolbar 開關按鈕：開啟時變色 */
+        #skip-answer-btn.skip-btn-on {
+            background-color: #b45309;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, .35);
+        }
+
         /* 自訂滾動條 */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
@@ -197,6 +325,16 @@
                 <input type="range" id="rate-slider" min="0.5" max="2.0" step="0.1" value="0.7" class="w-20">
             </div>
             
+            <!-- 跳過底線答案開關 -->
+            <button id="skip-answer-btn" class="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-md shadow transition" title="開啟後，印在填答底線上的答案不會被念出來（黃色標示處即為會跳過的文字）">
+                &#128683; 跳過答案
+            </button>
+
+            <!-- 手動報讀框開關 -->
+            <button id="manual-mode-btn" class="px-3 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-md shadow transition" title="開啟可移動、可縮放的手動報讀框，用來報讀沒有被紅框標到的文字">
+                &#9995; 手動框
+            </button>
+
             <!-- 播放控制 -->
             <button id="pause-btn" class="px-3 py-2 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-bold rounded-md shadow transition disabled:opacity-50" disabled>
                 暫停
@@ -220,6 +358,43 @@
         
         <!-- PDF 頁面注入區 -->
         <div id="pdf-pages-wrapper" class="flex flex-col items-center"></div>
+    </div>
+
+    <!-- ==================== 【新增：手動報讀框】 ==================== -->
+    <div id="manual-reader-frame">
+        <span class="mrf-label">&#10021; 手動報讀框（拖曳邊框移動 / 拖曳四角改大小）</span>
+        <div class="mrf-edge mrf-edge-top"></div>
+        <div class="mrf-edge mrf-edge-bottom"></div>
+        <div class="mrf-edge mrf-edge-left"></div>
+        <div class="mrf-edge mrf-edge-right"></div>
+        <div class="mrf-handle mrf-nw" data-dir="nw"></div>
+        <div class="mrf-handle mrf-ne" data-dir="ne"></div>
+        <div class="mrf-handle mrf-sw" data-dir="sw"></div>
+        <div class="mrf-handle mrf-se" data-dir="se"></div>
+    </div>
+
+    <!-- 手動報讀框的控制面板 -->
+    <div id="manual-reader-panel">
+        <div id="mrp-head">
+            <span>&#9995; 手動報讀框</span>
+            <button id="mrf-close-btn" title="關閉手動框">&#10005;</button>
+        </div>
+        <div id="mrp-body">
+            <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-bold text-gray-600">框內偵測到的文字</span>
+                <span id="mrf-count" class="text-xs font-bold text-indigo-600">0 字</span>
+            </div>
+            <div id="mrf-preview" class="mrf-empty">把框移到要報讀的文字上面</div>
+            <div class="flex gap-2 mt-2">
+                <button id="mrf-speak-btn" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-md text-sm shadow transition disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                    &#128266; 朗讀框內文字
+                </button>
+                <button id="mrf-reset-btn" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-md text-sm transition" title="把框移回畫面中央">置中</button>
+            </div>
+            <p class="text-[11px] text-gray-400 mt-2 leading-snug">
+                方向鍵微調位置 &middot; Shift+方向鍵改變大小 &middot; Enter 朗讀
+            </p>
+        </div>
     </div>
 
     <script>
@@ -445,6 +620,7 @@
         function switchMode(mode) {
             body.dataset.mode = mode;
             stopSpeaking(true);
+            setManualMode(false); // 離開報讀模式時一併關閉手動框
         }
 
         async function renderPage(pageNum) {
@@ -484,6 +660,7 @@
             }
 
             detectRedBoxesFromCanvas(canvas, interactionLayer);
+            markAnswerBlanks(canvas, textLayerDiv, interactionLayer);
         }
 
         function autoSetReadingDirection(textLayer, pageWidth, pageHeight) {
@@ -637,7 +814,7 @@
                 const overlapH = Math.max(0, Math.min(spanRect.bottom, boxRect.bottom) - Math.max(spanRect.top, boxRect.top));
 
                 return overlapW > 0 && overlapH > 0; // 改為大於 0，確保最敏銳的抓取
-            });
+            }).filter(span => !(skipAnswerMode && span.dataset.answerBlank === '1')); // 【新增】跳過底線上的答案
 
             const direction = document.getElementById('reading-direction').value;
             let sortedSpans = [];
@@ -721,6 +898,8 @@
 
         function clearHighlights() {
             document.querySelectorAll('.question-box').forEach(b => b.classList.remove('active-read'));
+            const mrf = document.getElementById('manual-reader-frame');
+            if (mrf) mrf.classList.remove('active-read'); // 一併清除手動框的報讀狀態
             activeBox = null;
         }
 
@@ -730,6 +909,8 @@
             stopSpeaking(false); 
 
             document.querySelectorAll('.question-box').forEach(b => b.classList.remove('active-read'));
+            const mrfPrev = document.getElementById('manual-reader-frame');
+            if (mrfPrev) mrfPrev.classList.remove('active-read'); // 一併清除手動框
             activeBox = boxElement;
             activeBox.classList.add('active-read');
             
@@ -886,6 +1067,463 @@
                 voiceSelect.appendChild(option);
             });
         }
+
+        // ==================================================================
+        // ============ 【新增功能：跳過底線答案】 ===========================
+        // 需求：數學考卷若是「已填答案版」，答案會印在填答底線上。報讀時
+        //       不應念出答案，要直接跳過念下一個字。
+        //
+        // 為什麼只能用影像判斷：
+        //   實測這些考卷，答案和題目數字在文字層裡完全一樣（例如
+        //   「5000 和 172 合起來是 5172」，前兩個是題目、第三個是答案），
+        //   單看文字內容無法分辨，只能靠「這段文字下方有沒有填答底線」。
+        //
+        // 安全設計：
+        //   影像判斷不可能 100% 準確（實測約有 1/60 的題目文字會被誤判），
+        //   所以 (1) 預設關閉，(2) 開啟時用黃色標出所有會被跳過的文字，
+        //   讓老師一眼看出有沒有誤判，而不是靜默漏字。
+        // ==================================================================
+        let skipAnswerMode = false;
+        const skipAnswerBtn = document.getElementById('skip-answer-btn');
+
+        // 只有「純數字」的文字才會被當成答案跳過。
+        // 這個條件是實測後加上的關鍵保護：有些考卷會用底線「強調」人名或
+        // 關鍵詞（例如「丹丹和 4 位同學」、「請判斷下方算式的答案」），
+        // 若只看底線就跳過，會把題意整句吞掉。實測空白數學考卷在加上這個
+        // 條件後，受影響的題目從 10/29 降到 0/29，而答案卷的偵測率不變。
+        const ANSWER_LIKE = /^[\s\d.,，、．・]+$/;
+
+        // ---------- 掃描 canvas 找出水平細線（填答底線）----------
+        // 回傳 canvas 像素座標的線段 {x1, x2, y, thick}
+        function findUnderlineSegments(canvas, minLen, maxThick) {
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const W = canvas.width, H = canvas.height;
+            const data = ctx.getImageData(0, 0, W, H).data;
+
+            // 1. 建立「深色像素」地圖
+            //    注意：紅框偵測已先把紅色像素塗白，所以這裡看到的是考卷原本的黑色內容
+            const dark = new Uint8Array(W * H);
+            for (let i = 0; i < W * H; i++) {
+                const p = i * 4;
+                if (data[p + 3] <= 30) continue;
+                if (0.299 * data[p] + 0.587 * data[p + 1] + 0.114 * data[p + 2] < 160) dark[i] = 1;
+            }
+
+            // 2. 逐列找出夠長的水平連續深色像素
+            const runs = [];
+            for (let y = 0; y < H; y++) {
+                let x = 0;
+                const base = y * W;
+                while (x < W) {
+                    if (!dark[base + x]) { x++; continue; }
+                    let x2 = x;
+                    while (x2 + 1 < W && dark[base + x2 + 1]) x2++;
+                    if (x2 - x + 1 >= minLen) runs.push({ y, x1: x, x2: x2 });
+                    x = x2 + 1;
+                }
+            }
+
+            // 3. 垂直合併成線段，並剔除過厚的（那是色塊或文字筆畫，不是細線）
+            runs.sort((a, b) => a.y - b.y || a.x1 - b.x1);
+            const used = new Uint8Array(runs.length);
+            const segs = [];
+            for (let i = 0; i < runs.length; i++) {
+                if (used[i]) continue;
+                const group = [runs[i]];
+                used[i] = 1;
+                for (let j = i + 1; j < runs.length; j++) {
+                    if (used[j]) continue;
+                    if (runs[j].y - group[group.length - 1].y > 2) break;
+                    const ov = Math.min(runs[j].x2, group[0].x2) - Math.max(runs[j].x1, group[0].x1);
+                    if (ov > (group[0].x2 - group[0].x1) * 0.6) { group.push(runs[j]); used[j] = 1; }
+                }
+                const thick = group[group.length - 1].y - group[0].y + 1;
+                if (thick <= maxThick) {
+                    let a = group[0].x1, b = group[0].x2;
+                    group.forEach(r => { if (r.x1 < a) a = r.x1; if (r.x2 > b) b = r.x2; });
+                    segs.push({ x1: a, x2: b, y: group[0].y, thick: thick });
+                }
+            }
+            return segs;
+        }
+
+        // ---------- 標記「坐在填答底線上」的文字 ----------
+        function markAnswerBlanks(canvas, textLayer, interactionLayer) {
+            try {
+                const spans = Array.from(textLayer.querySelectorAll('span')).filter(s => s.textContent.trim());
+                if (spans.length === 0) return;
+
+                const cRect = canvas.getBoundingClientRect();
+                if (!cRect.width || !cRect.height) return;
+                const sx = canvas.width / cRect.width;
+                const sy = canvas.height / cRect.height;
+
+                // 以該頁「文字高度中位數」當基準，讓門檻隨字級自動調整，
+                // 不必為不同考卷重新調參數。
+                const heights = spans.map(s => s.getBoundingClientRect().height * sy)
+                                     .filter(h => h > 0).sort((a, b) => a - b);
+                if (heights.length === 0) return;
+                const em = heights[Math.floor(heights.length / 2)];
+
+                const minLen   = Math.max(20, em * 1.1);   // 線至少要比一個字寬一點
+                const maxThick = Math.max(2, Math.round(em * 0.09)); // 必須是細線
+                const yLo      = -Math.max(2, em * 0.08);  // 線相對文字下緣的容許範圍
+                const yHi      = em * 0.45;
+                const maxRatio = 3.0;                      // 線不可遠比文字寬（排除表格框線）
+                const padAbs   = em * 1.2;
+                const minCover = 0.6;                      // 線要覆蓋文字寬度的六成以上
+
+                const segs = findUnderlineSegments(canvas, minLen, maxThick);
+                if (segs.length === 0) return;
+
+                spans.forEach(span => {
+                    // 內容不像答案（不是純數字）就直接跳過，不做底線判斷
+                    if (!ANSWER_LIKE.test(span.textContent)) return;
+
+                    const r = span.getBoundingClientRect();
+                    const x1 = (r.left - cRect.left) * sx;
+                    const x2 = (r.right - cRect.left) * sx;
+                    const bottom = (r.bottom - cRect.top) * sy;
+                    const w = x2 - x1;
+                    if (w <= 0) return;
+
+                    const hit = segs.find(L => {
+                        if (L.y < bottom + yLo || L.y > bottom + yHi) return false;
+                        const len = L.x2 - L.x1;
+                        if (len > Math.max(w * maxRatio, w + padAbs)) return false;
+                        const ov = Math.min(L.x2, x2) - Math.max(L.x1, x1);
+                        return ov > w * minCover;
+                    });
+
+                    if (hit) {
+                        span.dataset.answerBlank = '1';
+                        // 畫出黃色標示，讓老師看得到哪些字會被跳過
+                        const mark = document.createElement('div');
+                        mark.className = 'answer-blank-mark';
+                        mark.style.left   = (x1 / sx) + 'px';
+                        mark.style.top    = ((r.top - cRect.top)) + 'px';
+                        mark.style.width  = (w / sx) + 'px';
+                        mark.style.height = r.height + 'px';
+                        interactionLayer.appendChild(mark);
+                    }
+                });
+            } catch (err) {
+                // 偵測失敗時不應影響正常報讀功能
+                console.warn('底線答案偵測失敗，已略過：', err);
+            }
+        }
+
+        // ---------- 開關 ----------
+        function setSkipAnswerMode(on) {
+            skipAnswerMode = !!on;
+            document.body.classList.toggle('skip-answer-mode', skipAnswerMode);
+            if (skipAnswerBtn) skipAnswerBtn.classList.toggle('skip-btn-on', skipAnswerMode);
+            stopSpeaking(true); // 切換後先停止，避免沿用舊的文字內容
+            if (typeof schedulePreview === 'function') schedulePreview(0); // 更新手動框預覽
+        }
+
+        if (skipAnswerBtn) {
+            skipAnswerBtn.addEventListener('click', () => setSkipAnswerMode(!skipAnswerMode));
+        }
+        // ============ 【跳過底線答案】程式碼結束 ==========================
+
+        // ==================================================================
+        // ============== 【新增功能：手動報讀框】 ===========================
+        // 用途：考卷上若有「紅框沒有標記到」的文字，可開啟這個可移動、可縮放
+        //       的框，把它蓋在要報讀的文字上，再按「朗讀框內文字」。
+        // 設計重點：
+        //   1. 框體 pointer-events:none，所以不會擋住下方原有紅框的點擊。
+        //      只有「四邊（移動）」與「四角（縮放）」會接收滑鼠事件。
+        //   2. 文字擷取直接沿用原本已驗證過的 extractTextFromBoxCoords()，
+        //      用 duck typing 餵給它一個 rect 與 span 清單，確保分行/分欄
+        //      排序行為與紅框完全一致（含直書/橫書切換）。
+        // ==================================================================
+        const manualFrame   = document.getElementById('manual-reader-frame');
+        const manualPanel   = document.getElementById('manual-reader-panel');
+        const manualModeBtn = document.getElementById('manual-mode-btn');
+        const mrpHead       = document.getElementById('mrp-head');
+        const mrfPreview    = document.getElementById('mrf-preview');
+        const mrfCount      = document.getElementById('mrf-count');
+        const mrfSpeakBtn   = document.getElementById('mrf-speak-btn');
+        const mrfResetBtn   = document.getElementById('mrf-reset-btn');
+        const mrfCloseBtn   = document.getElementById('mrf-close-btn');
+        const pdfContainer  = document.getElementById('view-pdf-container');
+
+        const MRF_MIN_W = 40;      // 框最小寬
+        const MRF_MIN_H = 28;      // 框最小高
+        const MRF_TOP_LIMIT = 100; // 框不可高於此 Y（避免壓到上方 toolbar 與標籤）
+        const MRF_EMPTY_HINT = '把框移到要報讀的文字上面';
+
+        let manualModeOn = false;
+        let mrfInited = false;
+        let previewTimer = null;
+
+        // ---------- 開關手動模式 ----------
+        function setManualMode(on) {
+            if (!manualFrame) return; // 防禦：元素不存在時不做任何事
+            manualModeOn = !!on;
+            document.body.classList.toggle('manual-mode', manualModeOn);
+
+            if (manualModeOn) {
+                if (!mrfInited) { resetManualFrame(); mrfInited = true; }
+                manualModeBtn.classList.add('mrf-btn-on');
+                schedulePreview(0);
+            } else {
+                manualModeBtn.classList.remove('mrf-btn-on');
+                // 若正在用手動框報讀，關閉時一併停止
+                if (activeBox === manualFrame) stopSpeaking(true);
+            }
+        }
+
+        // ---------- 把框放回畫面中央 ----------
+        function resetManualFrame() {
+            const vw = window.innerWidth  || 1024; // 取不到尺寸時用保守預設值
+            const vh = window.innerHeight || 768;
+            const w = Math.min(640, Math.max(220, vw * 0.5));
+            manualFrame.style.width  = Math.round(w) + 'px';
+            manualFrame.style.height = '110px';
+            manualFrame.style.left   = Math.round((vw - w) / 2) + 'px';
+            manualFrame.style.top    = Math.max(MRF_TOP_LIMIT, Math.round(vh * 0.32)) + 'px';
+            clampManualFrame();
+            schedulePreview(0);
+        }
+
+        // ---------- 限制框不要跑出畫面 ----------
+        function clampManualFrame() {
+            // 視窗最小化或尚未取得尺寸時，innerWidth/innerHeight 會是 0。
+            // 此時若照常計算，框會被壓縮成最小尺寸，還原視窗後就不見了，所以直接跳過。
+            if (!window.innerWidth || !window.innerHeight) return;
+
+            let left = parseFloat(manualFrame.style.left)   || 0;
+            let top  = parseFloat(manualFrame.style.top)    || 0;
+            let w    = parseFloat(manualFrame.style.width)  || MRF_MIN_W;
+            let h    = parseFloat(manualFrame.style.height) || MRF_MIN_H;
+
+            w = Math.max(MRF_MIN_W, Math.min(w, window.innerWidth));
+            h = Math.max(MRF_MIN_H, Math.min(h, Math.max(MRF_MIN_H, window.innerHeight - MRF_TOP_LIMIT)));
+            left = Math.max(0, Math.min(left, window.innerWidth - w));
+            top  = Math.max(MRF_TOP_LIMIT, Math.min(top, window.innerHeight - h));
+
+            manualFrame.style.left   = left + 'px';
+            manualFrame.style.top    = top + 'px';
+            manualFrame.style.width  = w + 'px';
+            manualFrame.style.height = h + 'px';
+        }
+
+        // ---------- 拖曳移動 / 四角縮放 ----------
+        // mode: 'move' | 'nw' | 'ne' | 'sw' | 'se'
+        function startFrameDrag(e, mode) {
+            if (e.button !== undefined && e.button !== 0) return; // 只接受左鍵
+            e.preventDefault();
+            e.stopPropagation();
+
+            const startX = e.clientX, startY = e.clientY;
+            const r = manualFrame.getBoundingClientRect();
+            const o = { left: r.left, top: r.top, w: r.width, h: r.height };
+            const target = e.currentTarget;
+            try { target.setPointerCapture(e.pointerId); } catch (err) {}
+
+            function onMove(ev) {
+                const dx = ev.clientX - startX;
+                const dy = ev.clientY - startY;
+                let left = o.left, top = o.top, w = o.w, h = o.h;
+
+                if (mode === 'move') {
+                    left = o.left + dx;
+                    top  = o.top + dy;
+                } else {
+                    if (mode.indexOf('e') !== -1) { w = o.w + dx; }
+                    if (mode.indexOf('s') !== -1) { h = o.h + dy; }
+                    if (mode.indexOf('w') !== -1) { w = o.w - dx; left = o.left + dx; }
+                    if (mode.indexOf('n') !== -1) { h = o.h - dy; top  = o.top + dy; }
+                    // 縮到最小時，避免反向拖曳把框翻面
+                    if (w < MRF_MIN_W) {
+                        if (mode.indexOf('w') !== -1) left = o.left + (o.w - MRF_MIN_W);
+                        w = MRF_MIN_W;
+                    }
+                    if (h < MRF_MIN_H) {
+                        if (mode.indexOf('n') !== -1) top = o.top + (o.h - MRF_MIN_H);
+                        h = MRF_MIN_H;
+                    }
+                }
+
+                manualFrame.style.left   = left + 'px';
+                manualFrame.style.top    = top + 'px';
+                manualFrame.style.width  = w + 'px';
+                manualFrame.style.height = h + 'px';
+                clampManualFrame();
+                schedulePreview();
+            }
+
+            function onUp(ev) {
+                target.removeEventListener('pointermove', onMove);
+                target.removeEventListener('pointerup', onUp);
+                target.removeEventListener('pointercancel', onUp);
+                try { target.releasePointerCapture(ev.pointerId); } catch (err) {}
+                schedulePreview(0);
+            }
+
+            target.addEventListener('pointermove', onMove);
+            target.addEventListener('pointerup', onUp);
+            target.addEventListener('pointercancel', onUp);
+        }
+
+        if (manualFrame) {
+            manualFrame.querySelectorAll('.mrf-edge').forEach(el => {
+                el.addEventListener('pointerdown', (e) => startFrameDrag(e, 'move'));
+            });
+            manualFrame.querySelectorAll('.mrf-handle').forEach(el => {
+                el.addEventListener('pointerdown', (e) => startFrameDrag(e, el.dataset.dir));
+            });
+        }
+
+        // ---------- 控制面板本身也可以拖開，避免擋住考卷 ----------
+        if (mrpHead) {
+            mrpHead.addEventListener('pointerdown', (e) => {
+                if (e.target.closest('button')) return; // 按關閉鈕時不要觸發拖曳
+                e.preventDefault();
+                const startX = e.clientX, startY = e.clientY;
+                const r = manualPanel.getBoundingClientRect();
+                // 從 right/bottom 定位切換為 left/top 定位，才能自由拖曳
+                manualPanel.style.right  = 'auto';
+                manualPanel.style.bottom = 'auto';
+                manualPanel.style.left   = r.left + 'px';
+                manualPanel.style.top    = r.top + 'px';
+
+                const o = { left: r.left, top: r.top, w: r.width, h: r.height };
+                const target = e.currentTarget;
+                try { target.setPointerCapture(e.pointerId); } catch (err) {}
+
+                function onMove(ev) {
+                    let left = o.left + (ev.clientX - startX);
+                    let top  = o.top + (ev.clientY - startY);
+                    left = Math.max(0, Math.min(left, window.innerWidth - o.w));
+                    top  = Math.max(68, Math.min(top, window.innerHeight - 44));
+                    manualPanel.style.left = left + 'px';
+                    manualPanel.style.top  = top + 'px';
+                }
+                function onUp(ev) {
+                    target.removeEventListener('pointermove', onMove);
+                    target.removeEventListener('pointerup', onUp);
+                    target.removeEventListener('pointercancel', onUp);
+                    try { target.releasePointerCapture(ev.pointerId); } catch (err) {}
+                }
+                target.addEventListener('pointermove', onMove);
+                target.addEventListener('pointerup', onUp);
+                target.addEventListener('pointercancel', onUp);
+            });
+        }
+
+        // ---------- 擷取框內文字（沿用原本紅框的排序演算法）----------
+        function getManualFrameText() {
+            if (!manualFrame || !manualModeOn) return '';
+            const rect = manualFrame.getBoundingClientRect();
+            if (rect.width <= 0 || rect.height <= 0) return '';
+
+            // 收集所有與框重疊的頁面文字層 spans（框可能橫跨兩頁）
+            const spans = [];
+            document.querySelectorAll('#pdf-pages-wrapper .textLayer').forEach(layer => {
+                const lr = layer.getBoundingClientRect();
+                if (lr.right < rect.left || lr.left > rect.right ||
+                    lr.bottom < rect.top || lr.top > rect.bottom) return;
+                spans.push(...layer.querySelectorAll('span'));
+            });
+            if (spans.length === 0) return '';
+
+            // duck typing：餵給原本的函式，確保排序規則與紅框 100% 一致
+            return extractTextFromBoxCoords(
+                { getBoundingClientRect: () => rect },
+                { querySelectorAll: () => spans }
+            );
+        }
+
+        // ---------- 更新面板預覽（防彈跳，避免拖曳時卡頓）----------
+        function schedulePreview(delay) {
+            if (delay === undefined) delay = 150;
+            clearTimeout(previewTimer);
+            previewTimer = setTimeout(updateManualPreview, delay);
+        }
+
+        function updateManualPreview() {
+            if (!manualModeOn || !mrfPreview) return;
+            const text = getManualFrameText().trim();
+            if (text) {
+                mrfPreview.textContent = text;
+                mrfPreview.classList.remove('mrf-empty');
+                mrfCount.textContent = text.length + ' 字';
+                mrfSpeakBtn.disabled = false;
+            } else {
+                mrfPreview.textContent = MRF_EMPTY_HINT;
+                mrfPreview.classList.add('mrf-empty');
+                mrfCount.textContent = '0 字';
+                mrfSpeakBtn.disabled = true;
+            }
+        }
+
+        // ---------- 朗讀框內文字 ----------
+        function speakManualFrame() {
+            const text = getManualFrameText();
+            if (!text.trim()) return;
+            stopSpeaking(true);                 // 先完全停掉舊的報讀
+            speakText(text, manualFrame);       // 沿用原本的分段報讀引擎
+        }
+
+        // ---------- 事件綁定 ----------
+        if (manualModeBtn) manualModeBtn.addEventListener('click', () => setManualMode(!manualModeOn));
+        if (mrfSpeakBtn)   mrfSpeakBtn.addEventListener('click', speakManualFrame);
+        if (mrfResetBtn)   mrfResetBtn.addEventListener('click', resetManualFrame);
+        if (mrfCloseBtn)   mrfCloseBtn.addEventListener('click', () => setManualMode(false));
+
+        // 捲動考卷 / 改變視窗 / 切換直橫書 時，重新計算框內文字
+        if (pdfContainer) pdfContainer.addEventListener('scroll', () => schedulePreview(200));
+        window.addEventListener('resize', () => {
+            if (!manualModeOn) return;
+            clampManualFrame();
+            schedulePreview();
+        });
+        document.getElementById('reading-direction').addEventListener('change', () => schedulePreview(0));
+
+        // ---------- 鍵盤微調：方向鍵移動、Shift+方向鍵改大小、Enter 朗讀 ----------
+        document.addEventListener('keydown', (e) => {
+            if (!manualModeOn || body.dataset.mode !== 'page2') return;
+            const t = e.target;
+            if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA')) return;
+
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                speakManualFrame();
+                return;
+            }
+
+            const step = e.altKey ? 1 : 10; // 按住 Alt 可做 1px 精細微調
+            const r = manualFrame.getBoundingClientRect();
+            let left = r.left, top = r.top, w = r.width, h = r.height;
+            let handled = true;
+
+            if (e.shiftKey) {
+                if      (e.key === 'ArrowRight') w += step;
+                else if (e.key === 'ArrowLeft')  w -= step;
+                else if (e.key === 'ArrowDown')  h += step;
+                else if (e.key === 'ArrowUp')    h -= step;
+                else handled = false;
+            } else {
+                if      (e.key === 'ArrowRight') left += step;
+                else if (e.key === 'ArrowLeft')  left -= step;
+                else if (e.key === 'ArrowDown')  top  += step;
+                else if (e.key === 'ArrowUp')    top  -= step;
+                else handled = false;
+            }
+            if (!handled) return;
+
+            e.preventDefault();
+            manualFrame.style.left   = left + 'px';
+            manualFrame.style.top    = top + 'px';
+            manualFrame.style.width  = Math.max(MRF_MIN_W, w) + 'px';
+            manualFrame.style.height = Math.max(MRF_MIN_H, h) + 'px';
+            clampManualFrame();
+            schedulePreview(0);
+        });
+        // ================ 【手動報讀框】程式碼結束 ========================
 
         if (speechSynthesis.onvoiceschanged !== undefined) {
             speechSynthesis.onvoiceschanged = populateVoices;
