@@ -316,7 +316,8 @@ function neighbors(r, c) {
   var res = [];
   for (var i=0; i<offs.length; i++) {
     var nr = r + offs[i][0], nc = c + offs[i][1];
-    if (nr >= 0 && nr < grid.length && nc >= 0 && nc < colsInRow(nr))
+    // 包含尚未建立的新列，避免邊緣碰撞時跳到遠處備援落點。
+    if (nr >= 0 && nc >= 0 && nc < colsInRow(nr))
       res.push([nr, nc]);
   }
   return res;
