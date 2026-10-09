@@ -281,7 +281,7 @@ var ang = -Math.PI/2;
 var sc=0, qCt=0;
 var mTypes, mD;
 var isA=false, gOn=false, isPaused=false;
-var pEl=[], particles=[], raf=null, lTs=0, cQ=null, shotN=0;
+var pEl=[], particles=[], raf=null, lTs=0, cQ=null, shotN=0, autoNextTimer=null;
 
 // ── 格子工具 ──────────────────────────────────────────────
 // 每列格子數：偶數列 COLS，奇數列 COLS-1
@@ -428,33 +428,39 @@ function upd(dt) {
   }
   if (!fb || isA || isPaused) return;
 
-  fb.x += fb.vx*dt; fb.y += fb.vy*dt;
+  // 將高速泡泡拆成小步驟，避免反彈後一次跨過泡泡或縫隙而落到錯誤列。
+  var steps=Math.max(1,Math.ceil((SPD*dt)/(R*0.45))), stepDt=dt/steps;
+  for (var step=0; step<steps; step++) {
+    if (!fb || isA || isPaused) return;
+    fb.x += fb.vx*stepDt; fb.y += fb.vy*stepDt;
 
-  // 左右牆反彈
-  if (fb.x-R < 0)  { fb.x=R;   fb.vx= Math.abs(fb.vx); }
-  if (fb.x+R > W)  { fb.x=W-R; fb.vx=-Math.abs(fb.vx); }
+    // 左右牆反彈
+    if (fb.x-R < 0)  { fb.x=R;   fb.vx= Math.abs(fb.vx); }
+    if (fb.x+R > W)  { fb.x=W-R; fb.vx=-Math.abs(fb.vx); }
 
-  // 撞頂
-  if (fb.y - R <= TOP_Y) {
-    land(fb.x, TOP_Y+R, -1, -1);
-    return;
-  }
+    // 撞頂
+    if (fb.y - R <= TOP_Y) {
+      land(fb.x, TOP_Y+R, -1, -1);
+      return;
+    }
 
-  // 撞現有泡泡
-  outer:
-  for (var r=0; r<grid.length; r++) {
-    for (var c=0; c<colsInRow(r); c++) {
-      if (grid[r][c] === -1) continue;
-      var pos = cellXY(r,c);
-      if (Math.hypot(fb.x-pos.x, fb.y-pos.y) < R*1.9) {
-        land(fb.x, fb.y, r, c);
-        return;
+    // 撞現有泡泡：同一小步若同時接近多顆，取真正最近的碰撞點。
+    var hit=null, hitD=Infinity;
+    for (var r=0; r<grid.length; r++) {
+      for (var c=0; c<colsInRow(r); c++) {
+        if (grid[r][c] === -1) continue;
+        var pos = cellXY(r,c);
+        var d=Math.hypot(fb.x-pos.x, fb.y-pos.y);
+        if (d < R*1.9 && d < hitD) {
+          hit={r:r,c:c}; hitD=d;
+        }
       }
     }
-  }
+    if (hit) { land(fb.x, fb.y, hit.r, hit.c); return; }
 
-  // 超出畫面底部
-  if (fb.y > H) { fb=null; adv(); }
+    // 超出畫面底部
+    if (fb.y > H) { fb=null; adv(); return; }
+  }
 }
 
 function land(bx, by, hr, hc) {
@@ -688,6 +694,7 @@ function genQ() {
 }
 
 function showQ() {
+  if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer=null; }
   cQ=genQ();
   document.getElementById('pbadge').textContent=cQ.badge;
   document.getElementById('ptext').textContent=cQ.q;
@@ -711,6 +718,11 @@ function ansQ(val,btn) {
     var pts=pEl.length*100*(mD==='easy'?1:mD==='medium'?2:3);
     sc+=pts; qCt++;
     var r=document.getElementById('pres'); r.style.color='#4ade80'; r.innerHTML='🎉 答對了！ +'+pts+' 分';
+    document.getElementById('pnext').style.display='none';
+    var answeredQuestion=cQ;
+    autoNextTimer=setTimeout(function(){
+      if (isA && cQ===answeredQuestion) closePop();
+    },1000);
   } else {
     btn.classList.add('no');
     document.querySelectorAll('.qo').forEach(function(b){ if (+b.textContent===cQ.ans) b.classList.add('ok'); });
@@ -722,6 +734,7 @@ function ansQ(val,btn) {
 }
 
 function closePop() {
+  if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer=null; }
   document.getElementById('pop').classList.remove('show');
   // 清除消除格
   for (var i=0;i<pEl.length;i++) {
@@ -762,11 +775,13 @@ function togglePause() {
   }
 }
 function doRestart() {
+  if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer=null; }
   document.getElementById('pauseOverlay').classList.remove('show');
   document.getElementById('pop').classList.remove('show');
   initG(mTypes,mD);
 }
 function doH() {
+  if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer=null; }
   gOn=false; isPaused=false;
   if (raf){ cancelAnimationFrame(raf); raf=null; }
   document.getElementById('pauseOverlay').classList.remove('show');
@@ -777,6 +792,7 @@ function doH() {
 
 // ── 初始化 ────────────────────────────────────────────────
 function initG(types,diff) {
+  if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer=null; }
   cv=document.getElementById('gc'); cx=cv.getContext('2d');
   mTypes=types; mD=diff;
   initGrid();
