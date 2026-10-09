@@ -447,7 +447,7 @@ function upd(dt) {
       var pos = cellXY(r,c);
       if (Math.hypot(fb.x-pos.x, fb.y-pos.y) < R*1.9) {
         land(fb.x, fb.y, r, c);
-        break outer;
+        return;
       }
     }
   }
