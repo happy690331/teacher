@@ -281,11 +281,6 @@ window.GAME_CATALOG = [
     "imgUrl": "./%E7%94%9F%E5%AD%97%E5%9C%96%E5%8D%A1%E7%94%A2%E7%94%9F%E5%99%A8.png"
   },
   {
-    "name": "翰林三下數學ch3分數的加減",
-    "url": "./%E7%BF%B0%E6%9E%97%E4%B8%89%E4%B8%8B%E6%95%B8%E5%AD%B8ch3%E5%88%86%E6%95%B8%E7%9A%84%E5%8A%A0%E6%B8%9B.html",
-    "imgUrl": "./%E7%BF%B0%E6%9E%97%E4%B8%89%E4%B8%8B%E6%95%B8%E5%AD%B8ch3%E5%88%86%E6%95%B8%E7%9A%84%E5%8A%A0%E6%B8%9B.jpg"
-  },
-  {
     "name": "翰林數學三年級上除法",
     "url": "./%E7%BF%B0%E6%9E%97%E6%95%B8%E5%AD%B8%E4%B8%89%E5%B9%B4%E7%B4%9A%E4%B8%8A%E9%99%A4%E6%B3%95.html",
     "imgUrl": "./%E7%BF%B0%E6%9E%97%E6%95%B8%E5%AD%B8%E4%B8%89%E5%B9%B4%E7%B4%9A%E4%B8%8A%E9%99%A4%E6%B3%95.jpg"
