@@ -49,3 +49,13 @@ test('worksheet paginates 5/10/15/20 questions into ten-question A4 pages', () =
         }
     }
 });
+
+test('worksheet shows a continuous line below the multiplier in questions and answers', () => {
+    const html = M.worksheet([M.problem(32, 6), M.problem(999, 999)], true);
+    const verticals = [...html.matchAll(/<table class="vertical">([\s\S]*?)<\/table>/g)].map(match => match[1]);
+    assert.equal(verticals.length, 4);
+    for (const rows of verticals) {
+        assert.equal((rows.match(/class="operand-rule"/g) || []).length, 1);
+        assert.match(rows, /×<\/td>[\s\S]*?<\/tr><tr class="operand-rule"><td colspan="\d+" style="border-top:2pt solid #111/);
+    }
+});
