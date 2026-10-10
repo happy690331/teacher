@@ -13,7 +13,7 @@ window.GAME_CATALOG = [
   {
     "name": "vote",
     "url": "./vote.html",
-    "imgUrl": null
+    "imgUrl": "./vote.jpg"
   },
   {
     "name": "人臉替換程式",
@@ -178,7 +178,7 @@ window.GAME_CATALOG = [
   {
     "name": "數學基本計算街頭遊戲",
     "url": "./%E6%95%B8%E5%AD%B8%E5%9F%BA%E6%9C%AC%E8%A8%88%E7%AE%97%E8%A1%97%E9%A0%AD%E9%81%8A%E6%88%B2.html",
-    "imgUrl": null
+    "imgUrl": "./%E6%95%B8%E5%AD%B8%E5%9F%BA%E6%9C%AC%E8%A8%88%E7%AE%97%E8%A1%97%E9%A0%AD%E9%81%8A%E6%88%B2.jpg"
   },
   {
     "name": "數學基礎計算合作打怪遊戲",
@@ -248,7 +248,7 @@ window.GAME_CATALOG = [
   {
     "name": "數學泡泡射擊遊戲",
     "url": "./%E6%95%B8%E5%AD%B8%E6%B3%A1%E6%B3%A1%E5%B0%84%E6%93%8A%E9%81%8A%E6%88%B2.html",
-    "imgUrl": null
+    "imgUrl": "./%E6%95%B8%E5%AD%B8%E6%B3%A1%E6%B3%A1%E5%B0%84%E6%93%8A%E9%81%8A%E6%88%B2.jpg"
   },
   {
     "name": "數學魔法對戰遊戲",
@@ -263,12 +263,12 @@ window.GAME_CATALOG = [
   {
     "name": "新版語音報讀系統步驟一",
     "url": "./%E6%96%B0%E7%89%88%E8%AA%9E%E9%9F%B3%E5%A0%B1%E8%AE%80%E7%B3%BB%E7%B5%B1%E6%AD%A5%E9%A9%9F%E4%B8%80.html",
-    "imgUrl": null
+    "imgUrl": "./%E6%96%B0%E7%89%88%E8%AA%9E%E9%9F%B3%E5%A0%B1%E8%AE%80%E7%B3%BB%E7%B5%B1%E6%AD%A5%E9%A9%9F%E4%B8%80.jpg"
   },
   {
     "name": "新版語音報讀系統步驟二",
     "url": "./%E6%96%B0%E7%89%88%E8%AA%9E%E9%9F%B3%E5%A0%B1%E8%AE%80%E7%B3%BB%E7%B5%B1%E6%AD%A5%E9%A9%9F%E4%BA%8C.html",
-    "imgUrl": null
+    "imgUrl": "./%E6%96%B0%E7%89%88%E8%AA%9E%E9%9F%B3%E5%A0%B1%E8%AE%80%E7%B3%BB%E7%B5%B1%E6%AD%A5%E9%A9%9F%E4%BA%8C.jpg"
   },
   {
     "name": "生字圖卡學習單產生器",
@@ -308,6 +308,6 @@ window.GAME_CATALOG = [
   {
     "name": "輔導紀錄公測版",
     "url": "./%E8%BC%94%E5%B0%8E%E7%B4%80%E9%8C%84%E5%85%AC%E6%B8%AC%E7%89%88.html",
-    "imgUrl": null
+    "imgUrl": "./%E8%BC%94%E5%B0%8E%E7%B4%80%E9%8C%84%E5%85%AC%E6%B8%AC%E7%89%88.jpg"
   }
 ];
