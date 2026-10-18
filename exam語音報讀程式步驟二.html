@@ -8,6 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- PDF.js core and worker -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <!-- QR code generator for the current page URL -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body {
             font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
@@ -24,6 +26,29 @@
         body[data-mode="page2"] #view-page1 { display: none; }
         body[data-mode="page2"] #view-pdf-container { display: block; }
         body[data-mode="page2"] #toolbar-page2 { display: flex; }
+
+        #page1-qrcode-card {
+            position: relative;
+            align-self: flex-end;
+            z-index: 40;
+            width: 132px;
+            flex: 0 0 auto;
+            margin: 0 0 8px auto;
+            padding: 10px;
+            border: 1px solid #bfdbfe;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.97);
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
+            text-align: center;
+        }
+        #page1-qrcode { display: flex; justify-content: center; }
+        #page1-qrcode img, #page1-qrcode canvas { max-width: 100%; height: auto; }
+        body[data-mode="page2"] #page1-qrcode-card { display: none; }
+        @media (max-width: 640px) {
+            #page1-qrcode-card { width: 92px; padding: 6px; }
+            #page1-qrcode img, #page1-qrcode canvas { width: 76px !important; height: 76px !important; }
+            #page1-qrcode-card p { font-size: 10px; line-height: 1.25; }
+        }
 
         /* PDF 顯示區域樣式 */
         #view-pdf-container {
@@ -233,7 +258,12 @@
 <body data-mode="page1" class="text-gray-800">
 
     <!-- ==================== PAGE 1: 上傳與開始辨識 ==================== -->
-    <div id="view-page1" class="h-screen w-full flex-col items-center justify-center bg-white p-4">
+    <div id="view-page1" class="h-screen w-full flex-col items-center justify-center bg-white p-4 overflow-y-auto">
+        <aside id="page1-qrcode-card" aria-label="本網頁 QR code">
+            <p class="mb-2 text-xs font-bold text-blue-800">平板掃描開啟</p>
+            <div id="page1-qrcode" role="img" aria-label="掃描即可開啟本網頁"></div>
+            <p class="mt-2 text-[10px] text-gray-500">考卷朗讀輔助系統</p>
+        </aside>
         <!-- 調整寬度以容納三個區塊 -->
         <div class="max-w-5xl w-full text-center space-y-6">
             <div>
@@ -397,6 +427,18 @@
     </div>
 
     <script>
+        // 以目前公開頁面的完整網址產生 QR code，掃描後可直接開啟本頁。
+        if (window.QRCode) {
+            new QRCode(document.getElementById('page1-qrcode'), {
+                text: window.location.href,
+                width: 112,
+                height: 112,
+                colorDark: '#111827',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        }
+
         // PDF.js 設置
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
         const CMAP_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/cmaps/';
