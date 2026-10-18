@@ -29,12 +29,11 @@
         body[data-mode="page2"] #toolbar-page2 { display: flex; }
 
         #page1-qrcode-card {
-            position: relative;
-            align-self: flex-end;
-            z-index: 40;
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            z-index: 60;
             width: 132px;
-            flex: 0 0 auto;
-            margin: 0 0 8px auto;
             padding: 10px;
             border: 1px solid #bfdbfe;
             border-radius: 12px;
@@ -46,7 +45,7 @@
         #page1-qrcode img, #page1-qrcode canvas { max-width: 100%; height: auto; }
         body[data-mode="page2"] #page1-qrcode-card { display: none; }
         @media (max-width: 640px) {
-            #page1-qrcode-card { width: 92px; padding: 6px; }
+            #page1-qrcode-card { top: 8px; right: 8px; width: 92px; padding: 6px; }
             #page1-qrcode img, #page1-qrcode canvas { width: 76px !important; height: 76px !important; }
             #page1-qrcode-card p { font-size: 10px; line-height: 1.25; }
         }
@@ -151,13 +150,14 @@
 </head>
 <body data-mode="page1" class="text-gray-800">
 
+    <aside id="page1-qrcode-card" aria-label="本網頁 QR code">
+        <p class="mb-2 text-xs font-bold text-blue-800">平板掃描開啟</p>
+        <div id="page1-qrcode" role="img" aria-label="掃描即可開啟本網頁"></div>
+        <p class="mt-2 text-[10px] text-gray-500">考卷題型標記系統</p>
+    </aside>
+
     <!-- ==================== PAGE 1 ==================== -->
-    <div id="view-page1" class="min-h-screen w-full flex-col items-center justify-center bg-white p-4 overflow-y-auto">
-        <aside id="page1-qrcode-card" aria-label="本網頁 QR code">
-            <p class="mb-2 text-xs font-bold text-blue-800">平板掃描開啟</p>
-            <div id="page1-qrcode" role="img" aria-label="掃描即可開啟本網頁"></div>
-            <p class="mt-2 text-[10px] text-gray-500">考卷題型標記系統</p>
-        </aside>
+    <div id="view-page1" class="h-screen w-full flex-col items-center justify-start bg-white p-4 overflow-y-auto">
         <div class="max-w-3xl w-full text-center py-4">
             <div class="mb-5">
                 <h1 class="text-2xl md:text-3xl font-bold text-blue-700 mb-2">PDF 考卷題型標記系統</h1>
