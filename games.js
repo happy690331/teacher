@@ -273,7 +273,7 @@ window.GAME_CATALOG = [
   {
     "name": "注音符號聽力挑戰",
     "url": "./%E6%B3%A8%E9%9F%B3%E7%AC%A6%E8%99%9F%E8%81%BD%E5%8A%9B%E6%8C%91%E6%88%B0.html",
-    "imgUrl": null
+    "imgUrl": "./%E6%B3%A8%E9%9F%B3%E7%AC%A6%E8%99%9F%E8%81%BD%E5%8A%9B%E6%8C%91%E6%88%B0.svg"
   },
   {
     "name": "生字圖卡學習單產生器",

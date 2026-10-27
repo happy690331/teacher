@@ -10,7 +10,7 @@ const catalog = [...files]
   .sort()
   .map(file => {
     const name = file.slice(0, -5);
-    const preview = ['.jpg', '.png', '.jpeg', '.webp'].map(ext => name + ext).find(image => files.has(image));
+    const preview = ['.jpg', '.png', '.jpeg', '.webp', '.svg'].map(ext => name + ext).find(image => files.has(image));
     return {
       name,
       url: './' + encodeURIComponent(file),
