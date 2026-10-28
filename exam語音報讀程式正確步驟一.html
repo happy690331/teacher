@@ -169,7 +169,14 @@
                     <span class="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">1</span>
                     選擇考卷樣式
                 </h2>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="exam-format" value="vertical-single" class="peer hidden">
+                        <div class="border-2 border-gray-200 rounded-lg p-2 md:p-3 peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:bg-gray-100 transition text-center h-full flex flex-col justify-center">
+                            <div class="font-bold text-gray-700 text-sm md:text-base mb-0.5">直式單欄</div>
+                            <div class="text-[10px] md:text-xs text-gray-500 hidden sm:block">(由上至下)</div>
+                        </div>
+                    </label>
                     <label class="cursor-pointer">
                         <input type="radio" name="exam-format" value="vertical-double" class="peer hidden">
                         <div class="border-2 border-gray-200 rounded-lg p-2 md:p-3 peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:bg-gray-100 transition text-center h-full flex flex-col justify-center">
@@ -492,7 +499,7 @@
             const midX = pageWidth / 2;
             const midY = pageHeight / 2;
             
-            let leftSpans = [], rightSpans = [];
+            let leftSpans = [], rightSpans = [], allSpans = [];
             let rightTopSpans = [], rightBottomSpans = [], leftTopSpans = [], leftBottomSpans = [];
 
             spans.forEach(span => {
@@ -502,6 +509,13 @@
                 const height = span.offsetHeight;
                 const centerX = left + width / 2; 
                 const centerY = top + height / 2;
+
+                if (format === 'vertical-single') {
+                    // 單欄：只濾除第一頁頂端標題，整頁文字皆屬同一區
+                    if (pageNum === 1 && top < pageHeight * 0.1) return;
+                    allSpans.push(span);
+                    return;
+                }
 
                 if (pageNum === 1) {
                     // 放寬標題過濾，只濾除確實橫跨兩側或極端上方的標題
@@ -527,7 +541,9 @@
                 }
             });
 
-            if (format === 'vertical-double') {
+            if (format === 'vertical-single') {
+                processRegion(allSpans, interactionLayer, { type: 'full' });
+            } else if (format === 'vertical-double') {
                 processRegion(leftSpans, interactionLayer, { type: 'left', midX: midX });
                 processRegion(rightSpans, interactionLayer, { type: 'right', midX: midX });
             } else if (format === 'horizontal-updown-double') {
