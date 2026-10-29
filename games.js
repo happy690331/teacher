@@ -6,11 +6,6 @@ window.GAME_CATALOG = [
     "imgUrl": "./exam%E8%AA%9E%E9%9F%B3%E5%A0%B1%E8%AE%80%E7%A8%8B%E5%BC%8F%E6%AD%A3%E7%A2%BA%E6%AD%A5%E9%A9%9F%E4%B8%80.jpg"
   },
   {
-    "name": "exam語音報讀程式步驟二",
-    "url": "./exam%E8%AA%9E%E9%9F%B3%E5%A0%B1%E8%AE%80%E7%A8%8B%E5%BC%8F%E6%AD%A5%E9%A9%9F%E4%BA%8C.html",
-    "imgUrl": "./exam%E8%AA%9E%E9%9F%B3%E5%A0%B1%E8%AE%80%E7%A8%8B%E5%BC%8F%E6%AD%A5%E9%A9%9F%E4%BA%8C.jpg"
-  },
-  {
     "name": "vote",
     "url": "./vote.html",
     "imgUrl": "./vote.jpg"
@@ -24,6 +19,11 @@ window.GAME_CATALOG = [
     "name": "人臉辨識替換程式",
     "url": "./%E4%BA%BA%E8%87%89%E8%BE%A8%E8%AD%98%E6%9B%BF%E6%8F%9B%E7%A8%8B%E5%BC%8F.html",
     "imgUrl": "./%E4%BA%BA%E8%87%89%E8%BE%A8%E8%AD%98%E6%9B%BF%E6%8F%9B%E7%A8%8B%E5%BC%8F.jpg"
+  },
+  {
+    "name": "北新國小語音報讀程式步驟二",
+    "url": "./%E5%8C%97%E6%96%B0%E5%9C%8B%E5%B0%8F%E8%AA%9E%E9%9F%B3%E5%A0%B1%E8%AE%80%E7%A8%8B%E5%BC%8F%E6%AD%A5%E9%A9%9F%E4%BA%8C.html",
+    "imgUrl": "./%E5%8C%97%E6%96%B0%E5%9C%8B%E5%B0%8F%E8%AA%9E%E9%9F%B3%E5%A0%B1%E8%AE%80%E7%A8%8B%E5%BC%8F%E6%AD%A5%E9%A9%9F%E4%BA%8C.jpg"
   },
   {
     "name": "國語大家來找碴遊戲",
