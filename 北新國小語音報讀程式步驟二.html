@@ -920,6 +920,57 @@
             activeBox = null;
         }
 
+        // 數字轉中文念法：20 → 二十、67 → 六十七、205 → 兩百零五、3.5 → 三點五
+        function numberToChinese(numStr) {
+            const digits = '零一二三四五六七八九';
+            const [intPart, decPart] = numStr.split('.');
+            if (intPart.length > 16) return numStr.split('').map(d => digits[d] || '點').join('');
+
+            const units = ['', '十', '百', '千'];
+            const bigUnits = ['', '萬', '億', '兆'];
+            let result = '';
+            let skippedZero = false;
+            const sections = [];
+            for (let end = intPart.length; end > 0; end -= 4) sections.unshift(intPart.slice(Math.max(0, end - 4), end));
+            sections.forEach((section, si) => {
+                const bigUnit = bigUnits[sections.length - 1 - si];
+                const value = parseInt(section, 10);
+                if (value === 0) { skippedZero = result !== ''; return; }
+                // 例：10005 → 一萬零五、100000005 → 一億零五
+                if (result !== '' && (skippedZero || value < 1000)) result += '零';
+                skippedZero = false;
+                let sectionText = '';
+                let zeroPending = false;
+                section.padStart(4, '0').split('').forEach((d, i) => {
+                    const pos = 3 - i;
+                    if (d === '0') { zeroPending = sectionText !== ''; return; }
+                    if (zeroPending) { sectionText += '零'; zeroPending = false; }
+                    // 百、千位與單獨的萬、億念「兩」；十位念「二」
+                    let digitText = (d === '2' && (pos >= 2 || (pos === 0 && value === 2 && bigUnit))) ? '兩' : digits[d];
+                    // 開頭的 10～19 念「十幾」而不是「一十幾」
+                    if (d === '1' && pos === 1 && result === '' && sectionText === '') digitText = '';
+                    sectionText += digitText + units[pos];
+                });
+                result += sectionText + bigUnit;
+            });
+            if (result === '') result = '零';
+            if (decPart) result += '點' + decPart.split('').map(d => digits[d]).join('');
+            return result;
+        }
+
+        // 加減乘除算式改成中文念法：20+60 → 二十加六十、67-12=55 → 六十七減十二等於五十五
+        function readMathExpressions(text) {
+            const toHalf = s => s.replace(/[０-９．]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+            const num = '[0-9０-９]+(?:[.．][0-9０-９]+)?';
+            const op = '[+＋\\-−－–×xX*＊÷]';
+            const expr = new RegExp(`(?<![0-9０-９.．第])${num}(?:\\s*${op}\\s*${num})+(?:\\s*[=＝](?:\\s*${num}(?![0-9０-９]))?)?`, 'g');
+            const opWords = { '+': '加', '＋': '加', '-': '減', '−': '減', '－': '減', '–': '減',
+                '×': '乘', 'x': '乘', 'X': '乘', '*': '乘', '＊': '乘', '÷': '除以', '=': '等於', '＝': '等於' };
+            return text.replace(expr, match => match
+                .replace(new RegExp(num, 'g'), n => numberToChinese(toHalf(n)))
+                .replace(/\s*([+＋\-−－–×xX*＊÷=＝])\s*/g, (_, o) => opWords[o]));
+        }
+
         function speakText(text, boxElement) {
             if (activeBox === boxElement && isReading && !isPaused) return;
 
@@ -931,7 +982,7 @@
             activeBox = boxElement;
             activeBox.classList.add('active-read');
             
-            const cleanText = text
+            const cleanText = readMathExpressions(text)
                 .replace(/(\d)([.,:])(?=\d)/g, "$1{{$2}}")
                 .replace(/ˇ|\b[Vv]\b/g, "打勾")
                 .replace(/[(（]([a-zA-Z\uFF21-\uFF3A\uFF41-\uFF5A])[)）]/g, "選項$1@@500@@")
