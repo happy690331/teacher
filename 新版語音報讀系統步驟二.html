@@ -119,6 +119,54 @@
             z-index: 20;
         }
 
+        /* 自訂框選模式：互動層可接收拖曳，原有紅框暫時不吃點擊 */
+        body.draw-mode .interaction-layer {
+            pointer-events: auto;
+            cursor: crosshair;
+            touch-action: none;
+        }
+        body.draw-mode .question-box { pointer-events: none; }
+        body.draw-mode .custom-box-delete { pointer-events: auto; }
+        body.draw-mode .pdf-page { outline: 3px dashed #6366f1; outline-offset: 4px; }
+
+        /* 拖曳中的預覽框 */
+        .draw-preview {
+            position: absolute;
+            border: 3px dashed #6366f1;
+            background-color: rgba(99, 102, 241, 0.12);
+            border-radius: 4px;
+            pointer-events: none;
+            z-index: 30;
+        }
+
+        /* 自訂框：保持淡藍虛線可見，方便再次點擊報讀 */
+        .question-box.custom-box {
+            border: 2px dashed rgba(99, 102, 241, 0.7);
+            background-color: rgba(99, 102, 241, 0.05);
+        }
+        .custom-box-delete {
+            position: absolute;
+            top: -12px;
+            right: -12px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: none;
+            background: #6366f1;
+            color: white;
+            font-size: 14px;
+            line-height: 24px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+        }
+        .custom-box-delete:hover { background: #ef4444; }
+
+        #draw-mode-btn.draw-on {
+            background-color: #4338ca;
+            box-shadow: 0 0 0 3px #c7d2fe;
+        }
+
         /* 自訂滾動條 */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
@@ -197,8 +245,11 @@
             <button id="back-to-p1-btn" class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md font-medium transition">
                 🔙 回到主選單
             </button>
+            <button id="draw-mode-btn" class="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-md shadow transition" title="在考卷上拖曳畫出框，報讀沒有被紅框標到的文字">
+                ✏️ 自訂框選
+            </button>
             <span class="font-bold text-lg text-blue-800 hidden md:block">語音報讀模式</span>
-            <span class="text-sm text-gray-500">點擊畫面上的紅框範圍即可朗讀</span>
+            <span id="toolbar-hint" class="text-sm text-gray-500">點擊畫面上的紅框範圍即可朗讀</span>
         </div>
         <div class="flex items-center gap-2 md:gap-4">
             <!-- 語音切換 -->
@@ -451,6 +502,7 @@
         function switchMode(mode) {
             body.dataset.mode = mode;
             stopSpeaking(true);
+            if (mode !== 'page2') setDrawMode(false);
         }
 
         // 渲染單頁 PDF
@@ -938,6 +990,107 @@
                 voiceSelect.appendChild(option);
             });
         }
+
+        // ==================== 自訂框選 ====================
+        // 用途：考卷上沒有被紅框標到的文字或特殊狀況，可自行拖曳畫框後報讀
+        const drawModeBtn = document.getElementById('draw-mode-btn');
+        const toolbarHint = document.getElementById('toolbar-hint');
+        const defaultHint = toolbarHint.textContent;
+        let drawModeOn = false;
+        let drawState = null;
+
+        function setDrawMode(on) {
+            drawModeOn = !!on;
+            body.classList.toggle('draw-mode', drawModeOn);
+            drawModeBtn.classList.toggle('draw-on', drawModeOn);
+            drawModeBtn.textContent = drawModeOn ? '✅ 完成框選' : '✏️ 自訂框選';
+            toolbarHint.textContent = drawModeOn
+                ? '在考卷上按住拖曳畫出要報讀的範圍（按 Esc 或「完成框選」結束）'
+                : defaultHint;
+            if (!drawModeOn) cancelDrawing();
+        }
+
+        function cancelDrawing() {
+            if (drawState && drawState.preview) drawState.preview.remove();
+            drawState = null;
+        }
+
+        function pointInLayer(layer, e) {
+            const rect = layer.getBoundingClientRect();
+            return {
+                x: Math.max(0, Math.min(rect.width, e.clientX - rect.left)),
+                y: Math.max(0, Math.min(rect.height, e.clientY - rect.top))
+            };
+        }
+
+        function createCustomBox(layer, left, top, width, height) {
+            const box = createBoxElement(layer, left, top, width, height);
+            box.classList.add('custom-box');
+            const del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'custom-box-delete';
+            del.title = '刪除這個自訂框';
+            del.textContent = '×';
+            del.addEventListener('pointerdown', e => e.stopPropagation());
+            del.addEventListener('click', e => {
+                e.stopPropagation();
+                if (activeBox === box) stopSpeaking(true);
+                box.remove();
+            });
+            box.appendChild(del);
+            return box;
+        }
+
+        drawModeBtn.addEventListener('click', () => setDrawMode(!drawModeOn));
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && drawModeOn) setDrawMode(false);
+        });
+
+        pdfPagesWrapper.addEventListener('pointerdown', e => {
+            if (!drawModeOn || e.button !== 0) return;
+            const layer = e.target.closest('.interaction-layer');
+            if (!layer) return;
+            e.preventDefault();
+            const start = pointInLayer(layer, e);
+            const preview = document.createElement('div');
+            preview.className = 'draw-preview';
+            layer.appendChild(preview);
+            drawState = { layer, start, preview, pointerId: e.pointerId };
+            layer.setPointerCapture(e.pointerId);
+        });
+
+        pdfPagesWrapper.addEventListener('pointermove', e => {
+            if (!drawState || e.pointerId !== drawState.pointerId) return;
+            const p = pointInLayer(drawState.layer, e);
+            const s = drawState.start;
+            Object.assign(drawState.preview.style, {
+                left: Math.min(s.x, p.x) + 'px',
+                top: Math.min(s.y, p.y) + 'px',
+                width: Math.abs(p.x - s.x) + 'px',
+                height: Math.abs(p.y - s.y) + 'px'
+            });
+        });
+
+        function finishDrawing(e) {
+            if (!drawState || e.pointerId !== drawState.pointerId) return;
+            const { layer, start } = drawState;
+            const p = pointInLayer(layer, e);
+            cancelDrawing();
+            const left = Math.min(start.x, p.x);
+            const top = Math.min(start.y, p.y);
+            const width = Math.abs(p.x - start.x);
+            const height = Math.abs(p.y - start.y);
+            // 太小的框視為誤觸
+            if (width < 10 || height < 10) return;
+            const box = createCustomBox(layer, left, top, width, height);
+            box.click(); // 畫完立即報讀
+        }
+
+        pdfPagesWrapper.addEventListener('pointerup', finishDrawing);
+        pdfPagesWrapper.addEventListener('pointercancel', e => {
+            if (drawState && e.pointerId === drawState.pointerId) cancelDrawing();
+        });
 
         if (speechSynthesis.onvoiceschanged !== undefined) {
             speechSynthesis.onvoiceschanged = populateVoices;
