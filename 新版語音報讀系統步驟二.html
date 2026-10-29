@@ -604,9 +604,80 @@
                        spanCenterY >= boxRect.top && spanCenterY <= boxRect.bottom;
             });
 
-            insideSpans.sort((a, b) => {
-                const rectA = a.getBoundingClientRect();
-                const rectB = b.getBoundingClientRect();
+            const items = insideSpans.map(span => ({
+                text: span.textContent,
+                rect: span.getBoundingClientRect()
+            }));
+
+            // PDF.js 有時會把帶分數的整數、分子、分母拆成三個文字區塊。
+            // 依版面位置重組成「2 1/3」，後續才能轉成「二又三分之一」。
+            const used = new Set();
+            const reconstructed = [];
+            for (let i = 0; i < items.length; i++) {
+                if (used.has(i) || !/^\d+$/.test(items[i].text.trim())) continue;
+                const numerator = items[i];
+                const numeratorRect = numerator.rect;
+                const numeratorCenterX = numeratorRect.left + numeratorRect.width / 2;
+                const numeratorCenterY = numeratorRect.top + numeratorRect.height / 2;
+                let best = null;
+
+                for (let j = 0; j < items.length; j++) {
+                    if (j === i || used.has(j) || !/^\d+$/.test(items[j].text.trim())) continue;
+                    const denominator = items[j];
+                    const denominatorRect = denominator.rect;
+                    const denominatorCenterX = denominatorRect.left + denominatorRect.width / 2;
+                    const denominatorCenterY = denominatorRect.top + denominatorRect.height / 2;
+                    const averageHeight = (numeratorRect.height + denominatorRect.height) / 2;
+                    const verticalDistance = denominatorCenterY - numeratorCenterY;
+                    const horizontalDistance = Math.abs(denominatorCenterX - numeratorCenterX);
+
+                    if (verticalDistance < averageHeight * 0.55 || verticalDistance > averageHeight * 2.1) continue;
+                    if (horizontalDistance > Math.max(4, averageHeight * 0.55)) continue;
+
+                    const midpointY = (numeratorCenterY + denominatorCenterY) / 2;
+                    const wholeCandidates = items
+                        .map((item, index) => ({ item, index }))
+                        .filter(({ item, index }) => {
+                            if (index === i || index === j || used.has(index) || !/^\d+$/.test(item.text.trim())) return false;
+                            const rect = item.rect;
+                            const centerY = rect.top + rect.height / 2;
+                            const gap = numeratorRect.left - rect.right;
+                            return Math.abs(centerY - midpointY) <= averageHeight * 0.45 &&
+                                   gap >= -averageHeight * 0.2 && gap <= averageHeight * 1.4;
+                        })
+                        .sort((a, b) => (numeratorRect.left - a.item.rect.right) - (numeratorRect.left - b.item.rect.right));
+
+                    // 帶分數必須同時找到左側整數，避免把上下排列的題號誤認成分數。
+                    if (!wholeCandidates.length) continue;
+                    const score = horizontalDistance + Math.abs(verticalDistance - averageHeight * 1.2);
+                    if (!best || score < best.score) {
+                        best = { denominator, denominatorIndex: j, whole: wholeCandidates[0].item, wholeIndex: wholeCandidates[0].index, score };
+                    }
+                }
+
+                if (best) {
+                    const rect = {
+                        left: best.whole.rect.left,
+                        right: best.denominator.rect.right,
+                        top: Math.min(numeratorRect.top, best.whole.rect.top),
+                        bottom: Math.max(best.denominator.rect.bottom, best.whole.rect.bottom),
+                        get width() { return this.right - this.left; },
+                        get height() { return this.bottom - this.top; }
+                    };
+                    reconstructed.push({
+                        text: `${best.whole.text.trim()} ${numerator.text.trim()}/${best.denominator.text.trim()}`,
+                        rect
+                    });
+                    used.add(i);
+                    used.add(best.denominatorIndex);
+                    used.add(best.wholeIndex);
+                }
+            }
+
+            const orderedItems = items.filter((_, index) => !used.has(index)).concat(reconstructed);
+            orderedItems.sort((a, b) => {
+                const rectA = a.rect;
+                const rectB = b.rect;
                 
                 if (Math.abs(rectA.top - rectB.top) > Math.min(rectA.height, rectB.height) / 2) {
                     return rectA.top - rectB.top;
@@ -614,7 +685,82 @@
                 return rectA.left - rectB.left;
             });
 
-            return insideSpans.map(s => s.textContent).join('');
+            return orderedItems.map(item => item.text).join('');
+        }
+
+        function integerToChinese(value) {
+            const digits = '零一二三四五六七八九';
+            const source = String(value).replace(/^0+(?=\d)/, '');
+            if (!source || /^0+$/.test(source)) return '零';
+            if (source.length > 16) return source.split('').map(digit => digits[Number(digit)]).join('');
+
+            const sectionUnits = ['', '十', '百', '千'];
+            const largeUnits = ['', '萬', '億', '兆'];
+            const sections = [];
+            for (let end = source.length; end > 0; end -= 4) {
+                sections.push(source.slice(Math.max(0, end - 4), end));
+            }
+
+            const convertSection = (section, omitLeadingOne) => {
+                let result = '';
+                let pendingZero = false;
+                const padded = section.padStart(4, '0');
+                for (let index = 0; index < 4; index++) {
+                    const digit = Number(padded[index]);
+                    if (digit === 0) {
+                        if (result && /[1-9]/.test(padded.slice(index + 1))) pendingZero = true;
+                        continue;
+                    }
+                    if (pendingZero) result += '零';
+                    pendingZero = false;
+                    if (index === 2 && digit === 1 && !result && omitLeadingOne) result += '十';
+                    else result += digits[digit] + sectionUnits[3 - index];
+                }
+                return result;
+            };
+
+            let result = '';
+            let needsZero = false;
+            for (let index = sections.length - 1; index >= 0; index--) {
+                const section = Number(sections[index]);
+                if (section === 0) {
+                    if (result) needsZero = true;
+                    continue;
+                }
+                if (result && (needsZero || section < 1000) && !result.endsWith('零')) result += '零';
+                result += convertSection(String(section), !result) + largeUnits[index];
+                needsZero = false;
+            }
+            return result;
+        }
+
+        function normalizeMathForSpeech(text) {
+            const fractionParts = {
+                '½': [1, 2], '⅓': [1, 3], '⅔': [2, 3], '¼': [1, 4], '¾': [3, 4],
+                '⅕': [1, 5], '⅖': [2, 5], '⅗': [3, 5], '⅘': [4, 5], '⅙': [1, 6],
+                '⅚': [5, 6], '⅛': [1, 8], '⅜': [3, 8], '⅝': [5, 8], '⅞': [7, 8]
+            };
+            const spokenFraction = (numerator, denominator) => `${integerToChinese(denominator)}分之${integerToChinese(numerator)}`;
+
+            let result = text
+                // Unicode 分數，例如 2⅓、½。
+                .replace(/(\d+)\s*([½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞])/g, (_, whole, fraction) => {
+                    const [numerator, denominator] = fractionParts[fraction];
+                    return `${integerToChinese(whole)}又${spokenFraction(numerator, denominator)}`;
+                })
+                .replace(/([½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞])/g, fraction => {
+                    const [numerator, denominator] = fractionParts[fraction];
+                    return spokenFraction(numerator, denominator);
+                })
+                // 帶分數先於一般分數處理，例如 2 1/3。
+                .replace(/(\d+)\s*(?:又|\s+)(\d+)\s*[\/⁄]\s*(\d+)/g, (_, whole, numerator, denominator) =>
+                    `${integerToChinese(whole)}又${spokenFraction(numerator, denominator.trim())}`)
+                .replace(/(\d+)\s*[\/⁄](\s*\d+)/g, (_, numerator, denominator) =>
+                    spokenFraction(numerator, denominator.trim()))
+                // 小數點改成「點」，小數位逐字念，例如 3.14 -> 三點一四。
+                .replace(/(\d+)\.(\d+)/g, (_, whole, decimal) =>
+                    `${integerToChinese(whole)}點${decimal.split('').map(digit => '零一二三四五六七八九'[Number(digit)]).join('')}`);
+            return result;
         }
 
         rateSlider.addEventListener('input', function() {
@@ -647,7 +793,7 @@
             activeBox.classList.add('active-read');
             
             // 【核心修正】：改用不含符號的 @@ 作為標記，保護英文字母與括號轉換
-            const cleanText = text
+            const cleanText = normalizeMathForSpeech(text)
                 // 獨立的 v 或 V 唸打勾
                 .replace(/ˇ|\b[Vv]\b/g, "打勾")
                 // 【新增】：遇到 (A)、（B）等括號包住的英文字母，轉為「選項A」並停頓
