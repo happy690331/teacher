@@ -528,8 +528,11 @@
             textLayerDiv.className = 'textLayer';
             pageDiv.appendChild(textLayerDiv);
             const textContent = await page.getTextContent();
+            // 保留 textDivs：renderTextLayer 會把產生的 span 依序回填進來，
+            // 這是把「文字項目」對應到「畫面上的 span」的唯一可靠途徑。
+            const textDivs = [];
             await pdfjsLib.renderTextLayer({
-                textContent, container: textLayerDiv, viewport, textDivs: []
+                textContent, container: textLayerDiv, viewport, textDivs
             }).promise;
 
             const interactionLayer = document.createElement('div');
@@ -539,6 +542,7 @@
             pdfPagesWrapper.appendChild(pageDiv);
 
             detectRedBoxesFromCanvas(canvas, interactionLayer);
+            await markInvisibleText(page, textContent, textDivs, canvas);
         }
 
         function detectRedBoxesFromCanvas(canvas, interactionLayer) {
@@ -642,9 +646,302 @@
             return box;
         }
 
+        // ==================================================================
+        // ========= 【新增功能：不報讀白色（看不見）的文字】 =================
+        // 需求：數學學習單的「答案版」會把答案印成白色，列印出來看不見，讓學生
+        //       自己填。但 PDF 文字層照樣抓得到，報讀時就會把答案念出來。
+        //
+        // 為什麼讀「填色」而不是掃描畫面像素：
+        //   實測八格練習卷，答案「5172」確實是白字，但它正下方有填答底線，
+        //   底線的黑色像素落在該文字的範圍內，使得這塊區域量起來有 4.2% 的
+        //   墨水，像素法會因此漏掉它。直接讀 PDF 內容流的填色則是精確值。
+        //
+        // 怎麼把顏色對應到畫面上的文字：
+        //   getOperatorList() 與 getTextContent() 來自同一個內容流、順序一致，
+        //   可用字元位置對齊，再透過 textDivs 對應到實際的 span。
+        //   但兩者的標點不一定相同：getTextContent 會把某些符號展開，例如
+        //   指令流的「…」(U+2026) 在文字層變成三個「.」，導致字數對不上。
+        //   因此只拿「數字、英文字母、中日韓文字」來對齊，忽略標點 ——
+        //   答案都是數字，而會出現差異的正好都是標點。
+        //
+        // 安全設計（寧可照念，也不要誤刪題目文字）：
+        //   1. 若兩邊字串對不上就完全不標記，並在 console 留警告。
+        //   2. 整段文字都是白色才標記，半黑半白不動。
+        //   3. 白字若印在深色底上其實看得見，用墨水比例把這種情況排除。
+        // ==================================================================
+
+        // 白字判定的墨水上限。白字本身不留墨，區域內的墨水只可能來自底線或
+        // 框線（實測約 4%）。正常可見的文字會達到 17-40%，所以用 15% 當界線，
+        // 可攔下「填色讀取出錯而把看得見的字誤判成白字」的情況。
+        const INVISIBLE_MAX_INK = 0.15;
+
+        // 用來對齊的字元：半/全角數字、英文字母、中日韓文字（含相容字區）。
+        // 標點不納入，因為兩邊的標點展開方式可能不同。
+        const ALIGN_CHAR = /[0-9\uFF10-\uFF19A-Za-z\uFF21-\uFF3A\uFF41-\uFF5A\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]/;
+
+        async function markInvisibleText(page, textContent, textDivs, canvas) {
+            try {
+                const OPS = pdfjsLib.OPS;
+                const opList = await page.getOperatorList();
+
+                // 1. 依序走過內容流，記下每個對齊字元是否為白色
+                let fill = [0, 0, 0];
+                const stack = [];
+                const charIsWhite = [];
+                let opText = '';
+
+                for (let i = 0; i < opList.fnArray.length; i++) {
+                    const fn = opList.fnArray[i];
+                    const args = opList.argsArray[i];
+
+                    if (fn === OPS.save) {
+                        stack.push(fill.slice());
+                    } else if (fn === OPS.restore) {
+                        // 必須處理 q/Q，否則還原後的文字會沿用錯誤的顏色
+                        if (stack.length) fill = stack.pop();
+                    } else if (fn === OPS.setFillRGBColor) {
+                        fill = [args[0], args[1], args[2]];
+                    } else if (fn === OPS.showText || fn === OPS.showSpacedText) {
+                        const isWhite = fill[0] >= 250 && fill[1] >= 250 && fill[2] >= 250;
+                        const glyphs = args[0] || [];
+                        for (let g = 0; g < glyphs.length; g++) {
+                            const glyph = glyphs[g];
+                            // 陣列中夾雜的數字是字距調整，略過
+                            if (!glyph || typeof glyph !== 'object') continue;
+                            if (glyph.unicode === undefined || glyph.unicode === null) continue;
+                            for (const ch of String(glyph.unicode)) {
+                                if (!ALIGN_CHAR.test(ch)) continue;
+                                opText += ch;
+                                charIsWhite.push(isWhite);
+                            }
+                        }
+                    }
+                }
+
+                // 2. 安全檢查：兩邊對齊用的字串必須完全一致，否則放棄
+                let tcText = '';
+                for (const item of textContent.items) {
+                    for (const ch of item.str) if (ALIGN_CHAR.test(ch)) tcText += ch;
+                }
+                if (opText !== tcText) {
+                    console.warn('白字偵測：內容流與文字層對不上，本頁不做標記（維持全部報讀）');
+                    return;
+                }
+
+                // 3. 先算出每個文字項目在對齊字串中的位置範圍
+                const ranges = [];
+                let pos = 0;
+                textContent.items.forEach((item, idx) => {
+                    let n = 0;
+                    for (const ch of item.str) if (ALIGN_CHAR.test(ch)) n++;
+                    ranges.push({ idx: idx, start: pos, len: n, hasText: item.str.trim() !== '' });
+                    pos += n;
+                });
+
+                // 4. 標記
+                let marked = 0;
+                ranges.forEach(r => {
+                    const span = textDivs[r.idx];
+                    if (!span || !r.hasText) return;
+
+                    let isWhite;
+                    if (r.len > 0) {
+                        // 整段的字都是白色才算，半黑半白不動
+                        isWhite = true;
+                        for (let i = 0; i < r.len; i++) {
+                            if (!charIsWhite[r.start + i]) { isWhite = false; break; }
+                        }
+                    } else {
+                        // 純符號的項目（例如 ÷ ＝ × －）本身不在對齊字元內，
+                        // 但如果它前後緊鄰的字都是白的，它就是同一段白色算式的一部分。
+                        // 不處理的話會留下「除等於」這類碎片被念出來。
+                        const before = r.start > 0 ? charIsWhite[r.start - 1] : undefined;
+                        const after = r.start < charIsWhite.length ? charIsWhite[r.start] : undefined;
+                        isWhite = (before === true && after === true);
+                    }
+                    if (!isWhite) return;
+                    if (inkRatioOf(span, canvas) > INVISIBLE_MAX_INK) return; // 看得見就不要跳過
+
+                    span.dataset.invisibleText = '1';
+                    marked++;
+                });
+
+                if (marked) console.log('白字偵測：本頁有 ' + marked + ' 段看不見的文字，不會報讀');
+            } catch (err) {
+                // 偵測失敗不應影響正常報讀
+                console.warn('白字偵測失敗，已略過：', err);
+            }
+        }
+
+        // 算出 span 範圍內「非亮色」像素的比例
+        function inkRatioOf(span, canvas) {
+            try {
+                const cRect = canvas.getBoundingClientRect();
+                if (!cRect.width || !cRect.height) return 0; // 取不到尺寸時不阻擋判定
+                const sx = canvas.width / cRect.width;
+                const sy = canvas.height / cRect.height;
+                const r = span.getBoundingClientRect();
+                const x = Math.max(0, Math.round((r.left - cRect.left) * sx));
+                const y = Math.max(0, Math.round((r.top - cRect.top) * sy));
+                const w = Math.min(Math.round(r.width * sx), canvas.width - x);
+                const h = Math.min(Math.round(r.height * sy), canvas.height - y);
+                if (w < 1 || h < 1) return 0;
+
+                const data = canvas.getContext('2d', { willReadFrequently: true })
+                                   .getImageData(x, y, w, h).data;
+                let ink = 0, total = 0;
+                for (let i = 0; i < data.length; i += 4) {
+                    total++;
+                    if (data[i] < 200 || data[i + 1] < 200 || data[i + 2] < 200) ink++;
+                }
+                return total ? ink / total : 0;
+            } catch (err) {
+                return 0;
+            }
+        }
+        // ========= 【不報讀白色文字】程式碼結束 ============================
+
+        // ==================================================================
+        // ======== 【新增功能：自動判斷直書／橫書的報讀順序】 ================
+        // 需求：中文書寫的直式（直書）考卷，報讀要由上往下念，不能照橫書順序
+        //       橫跨欄位亂念。而且要自動判斷，不需老師手動切換。
+        //
+        // 判斷方式（逐框判斷，不是整頁），分兩種證據並以字數加權：
+        //
+        //   1. 多字項目用自身長寬比。PDF.js 在橫書時會把一整句併成一個寬長條
+        //      （例如「將下面分數約為最簡分數」），這種項目本身就是橫書的強
+        //      證據，權重取其字數。直書的多字項目則是細長的直條。
+        //
+        //   2. 單字項目用相鄰關係。某個字的正下方有另一個字算一票「直書」，
+        //      正右方有另一個字算一票「橫書」。
+        //
+        //   為什麼需要第 1 項：只用相鄰關係會誤判。實測橫書數學考卷有 7/34 個
+        //   框被判成直書 —— 因為整句被併成一個長條、產生不了左右相鄰的票，而
+        //   題目中的分數（27 在 45 上方）本身是上下堆疊，貢獻了大量直書票。
+        //
+        //   為什麼要逐框：實測國語考卷常是「標頭橫書、內文直書」的混合版面，
+        //   整頁統計會接近 1:1，兩種都會判錯。逐框判斷才能各自正確。
+        //
+        //   為什麼不用「分欄數／分行數」：那需要分群，而單鏈結分群在文字密集時
+        //   會把整頁串成一群（實測得到「只有 1 欄」這種不可能的結果）。
+        //
+        // 實測基準：六年級國語期中考 25/25 框判為直書且文句通順；
+        //           六年級數學期中考判為橫書且輸出與原本完全相同。
+        // ==================================================================
+
+        // 兩兩比較的取樣上限，避免超大框造成 O(n^2) 卡頓
+        const DIRECTION_SAMPLE_LIMIT = 300;
+
+        // 判定直書所需的最低證據量。
+        // 實測：真正的直書框最低得分 14（多數在 20~289），而橫書考卷中少數
+        // 誤判的「純分數算式」框只有 3 分，兩者分界清楚。
+        // 這個門檻不會漏掉短的直書內容：只有「一欄」的文字用橫書排序也會
+        // 得到正確順序（橫書排序先比 top，每個字各自成一行），交錯亂念只會
+        // 發生在多欄的情況，而多欄必然累積到足夠分數。
+        const MIN_VERTICAL_EVIDENCE = 8;
+
+        function isVerticalBlock(items) {
+            const cells = items
+                .filter(it => it.text && it.text.trim() && it.rect.width > 0 && it.rect.height > 0)
+                .slice(0, DIRECTION_SAMPLE_LIMIT)
+                .map(it => ({
+                    n: it.text.trim().length,
+                    w: it.rect.width,
+                    h: it.rect.height,
+                    cx: it.rect.left + it.rect.width / 2,
+                    cy: it.rect.top + it.rect.height / 2
+                }));
+
+            if (cells.length < 3) return false; // 字太少無從判斷，維持橫書
+
+            let verticalScore = 0;
+            let horizontalScore = 0;
+            const singles = [];
+
+            // 證據 1：多字項目用自身長寬比，權重為字數
+            cells.forEach(c => {
+                if (c.n >= 2) {
+                    if (c.w > c.h * 1.3) { horizontalScore += c.n; return; }
+                    if (c.h > c.w * 1.3) { verticalScore += c.n; return; }
+                }
+                singles.push(c); // 單字、或方正到看不出方向的項目
+            });
+
+            // 證據 2：單字項目用相鄰關係投票
+            for (let a = 0; a < singles.length; a++) {
+                for (let b = 0; b < singles.length; b++) {
+                    if (a === b) continue;
+                    const A = singles[a];
+                    const B = singles[b];
+                    const dx = B.cx - A.cx;
+                    const dy = B.cy - A.cy;
+                    const w = Math.min(A.w, B.w);
+                    const h = Math.min(A.h, B.h);
+                    if (Math.abs(dx) < w * 0.5 && dy > 0 && dy < h * 1.8) {
+                        verticalScore++;    // B 就在 A 的正下方
+                    } else if (Math.abs(dy) < h * 0.5 && dx > 0 && dx < w * 1.8) {
+                        horizontalScore++;  // B 就在 A 的正右方
+                    }
+                }
+            }
+            return verticalScore > horizontalScore && verticalScore >= MIN_VERTICAL_EVIDENCE;
+        }
+
+        // 橫書：由上至下分行，同一行由左至右（維持原本的行為）
+        function sortHorizontalItems(items) {
+            const sorted = items.slice();
+            sorted.sort((a, b) => {
+                const rectA = a.rect;
+                const rectB = b.rect;
+                if (Math.abs(rectA.top - rectB.top) > Math.min(rectA.height, rectB.height) / 2) {
+                    return rectA.top - rectB.top;
+                }
+                return rectA.left - rectB.left;
+            });
+            return sorted;
+        }
+
+        // 直書：由右至左分欄，同一欄由上而下
+        function sortVerticalItems(items) {
+            const columns = [];
+            items.forEach(it => {
+                const centerX = it.rect.left + it.rect.width / 2;
+                const centerY = it.rect.top + it.rect.height / 2;
+                let placed = false;
+                for (const column of columns) {
+                    const tolerance = Math.max(6, Math.min(it.rect.width, column.width) * 0.6);
+                    if (Math.abs(column.centerX - centerX) <= tolerance) {
+                        column.entries.push({ item: it, centerY: centerY });
+                        if (it.rect.width < column.width) column.width = it.rect.width;
+                        placed = true;
+                        break;
+                    }
+                }
+                if (!placed) {
+                    columns.push({
+                        centerX: centerX,
+                        width: it.rect.width,
+                        entries: [{ item: it, centerY: centerY }]
+                    });
+                }
+            });
+
+            columns.sort((a, b) => b.centerX - a.centerX); // 由右至左
+            const out = [];
+            columns.forEach(column => {
+                column.entries.sort((a, b) => a.centerY - b.centerY); // 由上而下
+                column.entries.forEach(e => out.push(e.item));
+            });
+            return out;
+        }
+        // ======== 【自動判斷直書／橫書】程式碼結束 =========================
+
         function extractTextFromBoxCoords(box, textLayer) {
             const boxRect = box.getBoundingClientRect();
-            const spans = Array.from(textLayer.querySelectorAll('span'));
+            // 【新增】白色（看不見）的文字一律不報讀。
+            // 這裡過濾即可同時涵蓋自動紅框與自訂框選，兩者都走這個函式。
+            const spans = Array.from(textLayer.querySelectorAll('span'))
+                               .filter(span => span.dataset.invisibleText !== '1');
             
             const insideSpans = spans.filter(span => {
                 const spanRect = span.getBoundingClientRect();
@@ -727,17 +1024,15 @@
             }
 
             const orderedItems = items.filter((_, index) => !used.has(index)).concat(reconstructed);
-            orderedItems.sort((a, b) => {
-                const rectA = a.rect;
-                const rectB = b.rect;
-                
-                if (Math.abs(rectA.top - rectB.top) > Math.min(rectA.height, rectB.height) / 2) {
-                    return rectA.top - rectB.top;
-                }
-                return rectA.left - rectB.left;
-            });
 
-            return orderedItems.map(item => item.text).join('');
+            // 【新增】自動判斷這個框裡是直書還是橫書，再決定報讀順序。
+            // 逐框判斷而非整頁判斷：國語考卷常見「標頭橫書、內文直書」混合，
+            // 整頁判斷會兩邊都錯。
+            const finalItems = isVerticalBlock(orderedItems)
+                ? sortVerticalItems(orderedItems)
+                : sortHorizontalItems(orderedItems);
+
+            return finalItems.map(item => item.text).join('');
         }
 
         function integerToChinese(value) {
