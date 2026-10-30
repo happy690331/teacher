@@ -1023,6 +1023,56 @@
                 }
             }
 
+            // 一般分數（上下排列的分子、分母，例如 3 在上、4 在下）重組成「3/4」，後續念成「四分之三」。
+            // 為避免把上下兩行的題號或數字誤認成分數，分子與分母同一列不可緊鄰其他文字。
+            const centerOf = rect => ({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+            const hasRowNeighbor = (index, ignoreIndex) => {
+                const rect = items[index].rect;
+                const center = centerOf(rect);
+                return items.some((item, k) => {
+                    if (k === index || k === ignoreIndex || /^\d+$/.test(item.text.trim()) || !item.text.trim()) return false;
+                    const other = item.rect;
+                    const gap = Math.max(other.left - rect.right, rect.left - other.right);
+                    return Math.abs(centerOf(other).y - center.y) <= rect.height * 0.35 && gap <= rect.height * 3;
+                });
+            };
+            for (let i = 0; i < items.length; i++) {
+                if (used.has(i) || !/^\d+$/.test(items[i].text.trim())) continue;
+                const numeratorRect = items[i].rect;
+                const numeratorCenter = centerOf(numeratorRect);
+                let best = null;
+
+                for (let j = 0; j < items.length; j++) {
+                    if (j === i || used.has(j) || !/^\d+$/.test(items[j].text.trim())) continue;
+                    const denominatorRect = items[j].rect;
+                    const denominatorCenter = centerOf(denominatorRect);
+                    const averageHeight = (numeratorRect.height + denominatorRect.height) / 2;
+                    const verticalDistance = denominatorCenter.y - numeratorCenter.y;
+                    const horizontalDistance = Math.abs(denominatorCenter.x - numeratorCenter.x);
+
+                    if (verticalDistance < averageHeight * 0.55 || verticalDistance > averageHeight * 1.9) continue;
+                    if (horizontalDistance > Math.max(4, averageHeight * 0.5)) continue;
+                    const score = horizontalDistance + Math.abs(verticalDistance - averageHeight * 1.2);
+                    if (!best || score < best.score) best = { j, score, averageHeight, denominatorCenter };
+                }
+
+                if (!best || hasRowNeighbor(i, best.j) || hasRowNeighbor(best.j, i)) continue;
+                const denominator = items[best.j];
+                const midpointY = (numeratorCenter.y + best.denominatorCenter.y) / 2;
+                // 以分數線高度當作排序位置，讓分數與同一行的文字依左右順序串接。
+                const rect = {
+                    left: Math.min(numeratorRect.left, denominator.rect.left),
+                    right: Math.max(numeratorRect.right, denominator.rect.right),
+                    top: midpointY - best.averageHeight / 2,
+                    bottom: midpointY + best.averageHeight / 2,
+                    get width() { return this.right - this.left; },
+                    get height() { return this.bottom - this.top; }
+                };
+                reconstructed.push({ text: `${items[i].text.trim()}/${denominator.text.trim()}`, rect });
+                used.add(i);
+                used.add(best.j);
+            }
+
             const orderedItems = items.filter((_, index) => !used.has(index)).concat(reconstructed);
 
             // 【新增】自動判斷這個框裡是直書還是橫書，再決定報讀順序。
