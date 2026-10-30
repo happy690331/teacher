@@ -866,34 +866,104 @@
 
             } else {
                 // 【橫式排版】：由上至下分行，同行由左至右
+                // 【新增】先把上下排列的分數（分子在上、分母在下）合併成「3/4」或「2又1/3」
+                const items = mergeStackedFractions(insideSpans.map(span => ({ text: span.textContent, rect: span.getBoundingClientRect() })));
                 let lines = [];
-                insideSpans.forEach(span => {
-                    const rect = span.getBoundingClientRect();
+                items.forEach(item => {
+                    const rect = item.rect;
                     const centerX = rect.left + (rect.width / 2);
                     const centerY = rect.top + (rect.height / 2);
-                    
+
                     let added = false;
                     for (let line of lines) {
                         const threshold = Math.max(10, Math.min(rect.height, line.height) * 0.6);
                         if (Math.abs(line.centerY - centerY) <= threshold) {
-                            line.spans.push({span, rect, centerX, centerY});
+                            line.spans.push({item, rect, centerX, centerY});
                             added = true;
                             break;
                         }
                     }
                     if (!added) {
-                        lines.push({ centerY, height: rect.height, spans: [{span, rect, centerX, centerY}] });
+                        lines.push({ centerY, height: rect.height, spans: [{item, rect, centerX, centerY}] });
                     }
                 });
 
                 lines.sort((a, b) => a.centerY - b.centerY);
                 lines.forEach(line => {
                     line.spans.sort((a, b) => a.centerX - b.centerX);
-                    sortedSpans.push(...line.spans.map(s => s.span));
+                    sortedSpans.push(...line.spans.map(s => ({ textContent: s.item.text })));
                 });
             }
 
             return sortedSpans.map(s => s.textContent).join('');
+        }
+
+        // 上下排列的分數：PDF 會把分子、分母（和帶分數的整數）拆成不同文字區塊，依位置重組。
+        // 3 在上、4 在下 → 「3/4」；左邊有整數 2 → 「2又1/3」。後續由 readMathExpressions 念成「四分之三」「二又三分之一」。
+        function mergeStackedFractions(items) {
+            const isNum = item => /^[0-9０-９]+$/.test(item.text.trim());
+            const centerOf = rect => ({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+            // 同一列緊鄰其他文字（非數字）時，代表是上下兩行的題號或數字，不是分數
+            const hasRowNeighbor = (index, ignoreIndex) => {
+                const rect = items[index].rect;
+                const cy = centerOf(rect).y;
+                return items.some((item, k) => {
+                    if (k === index || k === ignoreIndex || isNum(item) || !item.text.trim()) return false;
+                    const gap = Math.max(item.rect.left - rect.right, rect.left - item.rect.right);
+                    return Math.abs(centerOf(item.rect).y - cy) <= rect.height * 0.35 && gap <= rect.height * 3;
+                });
+            };
+
+            const used = new Set();
+            const merged = [];
+            for (let i = 0; i < items.length; i++) {
+                if (used.has(i) || !isNum(items[i])) continue;
+                const top = items[i].rect;
+                const topCenter = centerOf(top);
+                let best = null;
+                for (let j = 0; j < items.length; j++) {
+                    if (j === i || used.has(j) || !isNum(items[j])) continue;
+                    const bottomCenter = centerOf(items[j].rect);
+                    const h = (top.height + items[j].rect.height) / 2;
+                    const dy = bottomCenter.y - topCenter.y;
+                    const dx = Math.abs(bottomCenter.x - topCenter.x);
+                    if (dy < h * 0.55 || dy > h * 1.9 || dx > Math.max(4, h * 0.5)) continue;
+                    const score = dx + Math.abs(dy - h * 1.2);
+                    if (!best || score < best.score) best = { j, score, h, midY: (topCenter.y + bottomCenter.y) / 2 };
+                }
+                if (!best) continue;
+
+                const bottom = items[best.j].rect;
+                // 帶分數：分數左側、分數線高度上緊鄰一個整數
+                let wholeIndex = -1;
+                let wholeGap = Infinity;
+                items.forEach((item, k) => {
+                    if (k === i || k === best.j || used.has(k) || !isNum(item)) return;
+                    const gap = Math.min(top.left, bottom.left) - item.rect.right;
+                    if (Math.abs(centerOf(item.rect).y - best.midY) <= best.h * 0.45 &&
+                        gap >= -best.h * 0.2 && gap <= best.h * 1.4 && gap < wholeGap) {
+                        wholeIndex = k;
+                        wholeGap = gap;
+                    }
+                });
+                if (wholeIndex < 0 && (hasRowNeighbor(i, best.j) || hasRowNeighbor(best.j, i))) continue;
+
+                const left = wholeIndex >= 0 ? items[wholeIndex].rect.left : Math.min(top.left, bottom.left);
+                const rect = {
+                    left,
+                    right: Math.max(top.right, bottom.right),
+                    top: best.midY - best.h / 2,
+                    bottom: best.midY + best.h / 2,
+                    get width() { return this.right - this.left; },
+                    get height() { return this.bottom - this.top; }
+                };
+                const fraction = `${items[i].text.trim()}/${items[best.j].text.trim()}`;
+                merged.push({ text: wholeIndex >= 0 ? `${items[wholeIndex].text.trim()}又${fraction}` : fraction, rect });
+                used.add(i);
+                used.add(best.j);
+                if (wholeIndex >= 0) used.add(wholeIndex);
+            }
+            return items.filter((_, index) => !used.has(index)).concat(merged);
         }
 
         rateSlider.addEventListener('input', function() {
@@ -958,17 +1028,29 @@
             return result;
         }
 
+        // 分數改成中文念法：3/4 → 四分之三、2又1/3 → 二又三分之一
+        function readFraction(fractionText) {
+            const [, whole, numerator, denominator] = fractionText.match(/^(?:(\d+)\s*又\s*)?(\d+)\s*[\/⁄]\s*(\d+)$/);
+            const spoken = `${numberToChinese(denominator)}分之${numberToChinese(numerator)}`;
+            return whole ? `${numberToChinese(whole)}又${spoken}` : spoken;
+        }
+
         // 加減乘除算式改成中文念法：20+60 → 二十加六十、67-12=55 → 六十七減十二等於五十五
         function readMathExpressions(text) {
-            const toHalf = s => s.replace(/[０-９．]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
-            const num = '[0-9０-９]+(?:[.．][0-9０-９]+)?';
+            const toHalf = s => s.replace(/[０-９．／]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+            // 先念分數（含帶分數），再念一般算式，例如 3/4+1/4 → 四分之三加四分之一
+            const fraction = '(?:[0-9０-９]+(?:\\s*又\\s*|\\s+))?[0-9０-９]+\\s*[\\/⁄／]\\s*[0-9０-９]+';
+            text = text.replace(new RegExp(`(?<![0-9０-９.．])${fraction}(?![0-9０-９])`, 'g'), f => `〔${readFraction(toHalf(f)
+                .replace(/\s*又\s*|\s+(?=\d+\s*[\/⁄])/, '又').replace(/\s+/g, ''))}〕`);
+            const num = '(?:〔[^〕]+〕|[0-9０-９]+(?:[.．][0-9０-９]+)?)';
             const op = '[+＋\\-−－–×xX*＊÷]';
             const expr = new RegExp(`(?<![0-9０-９.．第])${num}(?:\\s*${op}\\s*${num})+(?:\\s*[=＝](?:\\s*${num}(?![0-9０-９]))?)?`, 'g');
             const opWords = { '+': '加', '＋': '加', '-': '減', '−': '減', '－': '減', '–': '減',
                 '×': '乘', 'x': '乘', 'X': '乘', '*': '乘', '＊': '乘', '÷': '除以', '=': '等於', '＝': '等於' };
             return text.replace(expr, match => match
-                .replace(new RegExp(num, 'g'), n => numberToChinese(toHalf(n)))
-                .replace(/\s*([+＋\-−－–×xX*＊÷=＝])\s*/g, (_, o) => opWords[o]));
+                .replace(new RegExp(num, 'g'), n => n.startsWith('〔') ? n : numberToChinese(toHalf(n)))
+                .replace(/\s*([+＋\-−－–×xX*＊÷=＝])\s*/g, (_, o) => opWords[o]))
+                .replace(/[〔〕]/g, '');
         }
 
         function speakText(text, boxElement) {
