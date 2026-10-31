@@ -953,15 +953,19 @@
                        spanCenterY >= boxRect.top && spanCenterY <= boxRect.bottom;
             });
 
-            const items = insideSpans.map(span => ({
+            const items = mergeBlankParentheses(splitDigitGroups(insideSpans.map(span => ({
                 text: span.textContent,
                 rect: span.getBoundingClientRect()
-            }));
+            }))));
 
             // PDF.js 有時會把帶分數的整數、分子、分母拆成三個文字區塊。
             // 依版面位置重組成「2 1/3」，後續才能轉成「二又三分之一」。
             const used = new Set();
             const reconstructed = [];
+            // 圓圈選項的數字（例如「○2」）不是帶分數的整數
+            const inCircle = item => items.some(other => /[○〇◯⭕]/.test(other.text) &&
+                other.rect.left <= item.rect.left + item.rect.width / 2 && other.rect.right >= item.rect.left + item.rect.width / 2 &&
+                other.rect.top <= item.rect.top + item.rect.height / 2 && other.rect.bottom >= item.rect.top + item.rect.height / 2);
             for (let i = 0; i < items.length; i++) {
                 if (used.has(i) || !/^\d+$/.test(items[i].text.trim())) continue;
                 const numerator = items[i];
@@ -980,14 +984,14 @@
                     const verticalDistance = denominatorCenterY - numeratorCenterY;
                     const horizontalDistance = Math.abs(denominatorCenterX - numeratorCenterX);
 
-                    if (verticalDistance < averageHeight * 0.55 || verticalDistance > averageHeight * 2.1) continue;
+                    if (verticalDistance < averageHeight * 0.45 || verticalDistance > averageHeight * 2.1) continue;
                     if (horizontalDistance > Math.max(4, averageHeight * 0.55)) continue;
 
                     const midpointY = (numeratorCenterY + denominatorCenterY) / 2;
                     const wholeCandidates = items
                         .map((item, index) => ({ item, index }))
                         .filter(({ item, index }) => {
-                            if (index === i || index === j || used.has(index) || !/^\d+$/.test(item.text.trim())) return false;
+                            if (index === i || index === j || used.has(index) || !/^\d+$/.test(item.text.trim()) || inCircle(item)) return false;
                             const rect = item.rect;
                             const centerY = rect.top + rect.height / 2;
                             const gap = numeratorRect.left - rect.right;
@@ -1005,17 +1009,20 @@
                 }
 
                 if (best) {
+                    // 高度沿用整數那一列，讓帶分數與同一行的文字依左右順序串接
                     const rect = {
                         left: best.whole.rect.left,
-                        right: best.denominator.rect.right,
-                        top: Math.min(numeratorRect.top, best.whole.rect.top),
-                        bottom: Math.max(best.denominator.rect.bottom, best.whole.rect.bottom),
+                        right: Math.max(numeratorRect.right, best.denominator.rect.right),
+                        top: best.whole.rect.top,
+                        bottom: best.whole.rect.bottom,
                         get width() { return this.right - this.left; },
                         get height() { return this.bottom - this.top; }
                     };
+                    // 直接轉成念法，避免連續好幾個分數黏在一起時被誤拆（例如 1/12 15/6）
                     reconstructed.push({
-                        text: `${best.whole.text.trim()} ${numerator.text.trim()}/${best.denominator.text.trim()}`,
-                        rect
+                        text: `${integerToChinese(best.whole.text.trim())}又${integerToChinese(best.denominator.text.trim())}分之${integerToChinese(numerator.text.trim())}`,
+                        rect,
+                        isFraction: true
                     });
                     used.add(i);
                     used.add(best.denominatorIndex);
@@ -1036,8 +1043,10 @@
                     return Math.abs(centerOf(other).y - center.y) <= rect.height * 0.35 && gap <= rect.height * 3;
                 });
             };
+            // 分子可以是數字，也可以是讓學生填答的空白括號，例如「（　）在上、2 在下」
+            const isBlankNumerator = text => /^[(（]\s*[)）]$/.test(text.trim());
             for (let i = 0; i < items.length; i++) {
-                if (used.has(i) || !/^\d+$/.test(items[i].text.trim())) continue;
+                if (used.has(i) || !(/^\d+$/.test(items[i].text.trim()) || isBlankNumerator(items[i].text))) continue;
                 const numeratorRect = items[i].rect;
                 const numeratorCenter = centerOf(numeratorRect);
                 let best = null;
@@ -1050,7 +1059,7 @@
                     const verticalDistance = denominatorCenter.y - numeratorCenter.y;
                     const horizontalDistance = Math.abs(denominatorCenter.x - numeratorCenter.x);
 
-                    if (verticalDistance < averageHeight * 0.55 || verticalDistance > averageHeight * 1.9) continue;
+                    if (verticalDistance < averageHeight * 0.45 || verticalDistance > averageHeight * 1.9) continue;
                     if (horizontalDistance > Math.max(4, averageHeight * 0.5)) continue;
                     const score = horizontalDistance + Math.abs(verticalDistance - averageHeight * 1.2);
                     if (!best || score < best.score) best = { j, score, averageHeight, denominatorCenter };
@@ -1068,7 +1077,8 @@
                     get width() { return this.right - this.left; },
                     get height() { return this.bottom - this.top; }
                 };
-                reconstructed.push({ text: `${items[i].text.trim()}/${denominator.text.trim()}`, rect });
+                const numeratorText = isBlankNumerator(items[i].text) ? '（　）' : integerToChinese(items[i].text.trim());
+                reconstructed.push({ text: `${integerToChinese(denominator.text.trim())}分之${numeratorText}`, rect, isFraction: true });
                 used.add(i);
                 used.add(best.j);
             }
@@ -1078,11 +1088,71 @@
             // 【新增】自動判斷這個框裡是直書還是橫書，再決定報讀順序。
             // 逐框判斷而非整頁判斷：國語考卷常見「標頭橫書、內文直書」混合，
             // 整頁判斷會兩邊都錯。
-            const finalItems = isVerticalBlock(orderedItems)
+            // 重組後的分數本身是「上下排列」，不能拿來當直書的證據，否則含分數的題目會被誤判成直書而倒著念。
+            const finalItems = isVerticalBlock(orderedItems.filter(item => !item.isFraction))
                 ? sortVerticalItems(orderedItems)
                 : sortHorizontalItems(orderedItems);
 
-            return finalItems.map(item => item.text).join('');
+            // 相鄰的兩個分數之間加逗號停頓，例如一排「1/12　15/6　5又4/11」
+            let previous = null;
+            return finalItems.map(item => {
+                const text = previous && previous.isFraction && item.isFraction ? `，${item.text}` : item.text;
+                if (item.text.trim()) previous = item; // 中間只隔空白時仍視為相鄰
+                return text;
+            }).join('');
+        }
+
+        // 讓學生填答的空白括號在 PDF.js 常被拆成「（」「 」「）」三塊，合併成一塊「（　）」，
+        // 才能當作分子和下方的分母配對，例如 4½ ＝ （　）/2。
+        function mergeBlankParentheses(items) {
+            const used = new Set();
+            const merged = [];
+            items.forEach((open, i) => {
+                if (used.has(i) || !/^[(（]$/.test(open.text.trim())) return;
+                const openCenterY = open.rect.top + open.rect.height / 2;
+                const sameRow = item => Math.abs(item.rect.top + item.rect.height / 2 - openCenterY) <= open.rect.height * 0.3;
+                const closeIndex = items.findIndex((item, k) => !used.has(k) && /^[)）]$/.test(item.text.trim()) &&
+                    sameRow(item) && item.rect.left > open.rect.left && item.rect.left - open.rect.right <= open.rect.height * 15);
+                if (closeIndex < 0) return;
+                const close = items[closeIndex];
+                const centerX = rect => rect.left + rect.width / 2;
+                const between = items
+                    .map((item, k) => ({ item, k }))
+                    .filter(({ item, k }) => k !== i && k !== closeIndex && sameRow(item) &&
+                        centerX(item.rect) > centerX(open.rect) && centerX(item.rect) < centerX(close.rect));
+                if (between.some(({ item }) => item.text.trim())) return; // 括號裡有字就不是空白括號
+                const left = open.rect.left;
+                const right = close.rect.right;
+                merged.push({
+                    text: '（　）',
+                    rect: { left, right, top: open.rect.top, bottom: open.rect.bottom, width: right - left, height: open.rect.height }
+                });
+                [i, closeIndex, ...between.map(({ k }) => k)].forEach(k => used.add(k));
+            });
+            return items.filter((_, k) => !used.has(k)).concat(merged);
+        }
+
+        // PDF.js 有時會把同一列、以空白分隔的幾個數字放在同一個文字區塊（例如帶分數的整數與分子「3 3」），
+        // 依字元位置拆成各自的數字，分數重組時才能分別配對。
+        function splitDigitGroups(items) {
+            const result = [];
+            items.forEach(item => {
+                const text = item.text;
+                if (!/^\s*\d+(?:\s+\d+)+\s*$/.test(text)) {
+                    result.push(item);
+                    return;
+                }
+                const charWidth = item.rect.width / text.length;
+                for (const match of text.matchAll(/\d+/g)) {
+                    const left = item.rect.left + match.index * charWidth;
+                    const right = left + match[0].length * charWidth;
+                    result.push({
+                        text: match[0],
+                        rect: { left, right, top: item.rect.top, bottom: item.rect.bottom, width: right - left, height: item.rect.height }
+                    });
+                }
+            });
+            return result;
         }
 
         function integerToChinese(value) {
@@ -1206,6 +1276,9 @@
                     };
                     return map[match] + "@@500@@";
                 })
+                // 圓圈加數字（含全形數字，例如「○１」）也念成「選項一」
+                .replace(/(?:○|〇|◯|⭕)\s*([1-4１-４])/g, (_, digit) =>
+                    `選項${'一二三四'['1234１２３４'.indexOf(digit) % 4]}@@500@@`)
                 // 將所有中英文標點符號一律消除不念，替換為安全停頓標記 @@500@@
                 .replace(/[.,:;?!()[\]{}"'<>~^\-/_=\\|，。、：；？！（）「」『』《》〈〉【】〔〕－——…]+/g, "@@500@@")
                 // 確保所有英文字母 (含全形) 保留，並在後面加上停頓

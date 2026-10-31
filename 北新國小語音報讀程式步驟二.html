@@ -867,8 +867,10 @@
             } else {
                 // 【橫式排版】：由上至下分行，同行由左至右
                 // 【新增】先把上下排列的分數（分子在上、分母在下）合併成「3/4」或「2又1/3」
-                const items = mergeStackedFractions(insideSpans.map(span => ({ text: span.textContent, rect: span.getBoundingClientRect() })));
+                const items = mergeStackedFractions(mergeBlankParentheses(splitDigitGroups(insideSpans.map(span => ({ text: span.textContent, rect: span.getBoundingClientRect() })))));
                 let lines = [];
+                // 先排有字的區塊、最後才排空白區塊，避免空白區塊的位置決定了一行的高度，造成同一行被拆成兩行
+                items.sort((a, b) => (!a.text.trim()) - (!b.text.trim()));
                 items.forEach(item => {
                     const rect = item.rect;
                     const centerX = rect.left + (rect.width / 2);
@@ -891,17 +893,84 @@
                 lines.sort((a, b) => a.centerY - b.centerY);
                 lines.forEach(line => {
                     line.spans.sort((a, b) => a.centerX - b.centerX);
-                    sortedSpans.push(...line.spans.map(s => ({ textContent: s.item.text })));
+                    sortedSpans.push(...line.spans.map(s => ({ textContent: s.item.text, isFraction: s.item.isFraction })));
                 });
             }
 
-            return sortedSpans.map(s => s.textContent).join('');
+            // 相鄰的兩個分數之間加逗號停頓，例如一排「1/12　15/6　5又4/11」（中間只隔空白也算相鄰）
+            let previous = null;
+            return sortedSpans.map(s => {
+                const text = previous && previous.isFraction && s.isFraction ? `，${s.textContent}` : s.textContent;
+                if (s.textContent.trim()) previous = s;
+                return text;
+            }).join('');
+        }
+
+        // PDF.js 有時會把同一列、以空白分隔的幾個數字放在同一個文字區塊（例如帶分數的整數與分子「3 3」），
+        // 依字元位置拆成各自的數字，分數重組時才能分別配對。
+        function splitDigitGroups(items) {
+            const result = [];
+            items.forEach(item => {
+                const text = item.text;
+                if (!/^\s*[0-9０-９]+(?:\s+[0-9０-９]+)+\s*$/.test(text)) {
+                    result.push(item);
+                    return;
+                }
+                const charWidth = item.rect.width / text.length;
+                for (const match of text.matchAll(/[0-9０-９]+/g)) {
+                    const left = item.rect.left + match.index * charWidth;
+                    const right = left + match[0].length * charWidth;
+                    result.push({
+                        text: match[0],
+                        rect: { left, right, top: item.rect.top, bottom: item.rect.bottom, width: right - left, height: item.rect.height }
+                    });
+                }
+            });
+            return result;
+        }
+
+        // 讓學生填答的空白括號在 PDF.js 常被拆成「（」「 」「）」三塊，合併成一塊「（　）」，
+        // 才能當作分子和下方的分母配對，例如 4½ ＝ （　）/2。
+        function mergeBlankParentheses(items) {
+            const used = new Set();
+            const merged = [];
+            items.forEach((open, i) => {
+                if (used.has(i) || !/^[(（]$/.test(open.text.trim())) return;
+                const openCenterY = open.rect.top + open.rect.height / 2;
+                const sameRow = item => Math.abs(item.rect.top + item.rect.height / 2 - openCenterY) <= open.rect.height * 0.3;
+                const closeIndex = items.findIndex((item, k) => !used.has(k) && /^[)）]$/.test(item.text.trim()) &&
+                    sameRow(item) && item.rect.left > open.rect.left && item.rect.left - open.rect.right <= open.rect.height * 15);
+                if (closeIndex < 0) return;
+                const close = items[closeIndex];
+                const centerX = rect => rect.left + rect.width / 2;
+                const between = items
+                    .map((item, k) => ({ item, k }))
+                    .filter(({ item, k }) => k !== i && k !== closeIndex && sameRow(item) &&
+                        centerX(item.rect) > centerX(open.rect) && centerX(item.rect) < centerX(close.rect));
+                if (between.some(({ item }) => item.text.trim())) return; // 括號裡有字就不是空白括號
+                const left = open.rect.left;
+                const right = close.rect.right;
+                merged.push({
+                    text: '（　）',
+                    rect: { left, right, top: open.rect.top, bottom: open.rect.bottom, width: right - left, height: open.rect.height }
+                });
+                [i, closeIndex, ...between.map(({ k }) => k)].forEach(k => used.add(k));
+            });
+            return items.filter((_, k) => !used.has(k)).concat(merged);
         }
 
         // 上下排列的分數：PDF 會把分子、分母（和帶分數的整數）拆成不同文字區塊，依位置重組。
-        // 3 在上、4 在下 → 「3/4」；左邊有整數 2 → 「2又1/3」。後續由 readMathExpressions 念成「四分之三」「二又三分之一」。
+        // 3 在上、4 在下 → 「〔四分之三〕」；左邊有整數 2 → 「〔二又三分之一〕」。直接轉成念法，避免連續好幾個分數黏在一起時被誤拆；
+        // 〔〕讓 readMathExpressions 把它當成一個數字，3/4+1/4 才會念成「四分之三加四分之一」。
         function mergeStackedFractions(items) {
             const isNum = item => /^[0-9０-９]+$/.test(item.text.trim());
+            // 分子也可以是讓學生填答的空白括號，例如「（　）在上、2 在下」
+            const isBlank = item => item.text === '（　）';
+            // 圓圈選項的數字（例如「○２」）不是帶分數的整數
+            const inCircle = item => items.some(other => /[○〇◯⭕]/.test(other.text) &&
+                other.rect.left <= item.rect.left + item.rect.width / 2 && other.rect.right >= item.rect.left + item.rect.width / 2 &&
+                other.rect.top <= item.rect.top + item.rect.height / 2 && other.rect.bottom >= item.rect.top + item.rect.height / 2);
+            const zh = text => numberToChinese(text.trim().replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)));
             const centerOf = rect => ({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
             // 同一列緊鄰其他文字（非數字）時，代表是上下兩行的題號或數字，不是分數
             const hasRowNeighbor = (index, ignoreIndex) => {
@@ -917,7 +986,7 @@
             const used = new Set();
             const merged = [];
             for (let i = 0; i < items.length; i++) {
-                if (used.has(i) || !isNum(items[i])) continue;
+                if (used.has(i) || !(isNum(items[i]) || isBlank(items[i]))) continue;
                 const top = items[i].rect;
                 const topCenter = centerOf(top);
                 let best = null;
@@ -927,7 +996,7 @@
                     const h = (top.height + items[j].rect.height) / 2;
                     const dy = bottomCenter.y - topCenter.y;
                     const dx = Math.abs(bottomCenter.x - topCenter.x);
-                    if (dy < h * 0.55 || dy > h * 1.9 || dx > Math.max(4, h * 0.5)) continue;
+                    if (dy < h * 0.45 || dy > h * 1.9 || dx > Math.max(4, h * 0.5)) continue;
                     const score = dx + Math.abs(dy - h * 1.2);
                     if (!best || score < best.score) best = { j, score, h, midY: (topCenter.y + bottomCenter.y) / 2 };
                 }
@@ -938,7 +1007,7 @@
                 let wholeIndex = -1;
                 let wholeGap = Infinity;
                 items.forEach((item, k) => {
-                    if (k === i || k === best.j || used.has(k) || !isNum(item)) return;
+                    if (isBlank(items[i]) || k === i || k === best.j || used.has(k) || !isNum(item) || inCircle(item)) return;
                     const gap = Math.min(top.left, bottom.left) - item.rect.right;
                     if (Math.abs(centerOf(item.rect).y - best.midY) <= best.h * 0.45 &&
                         gap >= -best.h * 0.2 && gap <= best.h * 1.4 && gap < wholeGap) {
@@ -957,8 +1026,8 @@
                     get width() { return this.right - this.left; },
                     get height() { return this.bottom - this.top; }
                 };
-                const fraction = `${items[i].text.trim()}/${items[best.j].text.trim()}`;
-                merged.push({ text: wholeIndex >= 0 ? `${items[wholeIndex].text.trim()}又${fraction}` : fraction, rect });
+                const fraction = `${zh(items[best.j].text)}分之${isBlank(items[i]) ? '（　）' : zh(items[i].text)}`;
+                merged.push({ text: `〔${wholeIndex >= 0 ? `${zh(items[wholeIndex].text)}又${fraction}` : fraction}〕`, rect, isFraction: true });
                 used.add(i);
                 used.add(best.j);
                 if (wholeIndex >= 0) used.add(wholeIndex);
