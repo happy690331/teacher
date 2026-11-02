@@ -316,6 +316,7 @@
         let availableVoices = []; 
         let isReading = false;
         let isPaused = false;
+        let currentUtterance = null; // 目前正在念的那一段，用來忽略已被暫停／取消的語音事件
         let activeBox = null;
         let textChunks = [];    
         let chunkIndex = 0;     
@@ -1235,6 +1236,7 @@
         });
 
         function stopSpeaking(clearHighlight = true) {
+            currentUtterance = null;
             synth.cancel();
             clearTimeout(chunkTimeout); 
             isReading = false;
@@ -1338,38 +1340,45 @@
                 if (twVoice) utterance.voice = twVoice;
             }
 
-            utterance.onstart = () => { isReading = true; isPaused = false; updateBtnStates(); };
+            utterance.onstart = () => {
+                if (utterance !== currentUtterance) return;
+                isReading = true; isPaused = false; updateBtnStates();
+            };
             
             utterance.onend = () => { 
-                if (!isReading) return;
+                if (utterance !== currentUtterance || !isReading || isPaused) return;
                 chunkIndex++;
                 playNextChunk();
             }; 
             
             utterance.onerror = () => { 
-                if (!isReading) return;
+                if (utterance !== currentUtterance || !isReading || isPaused) return;
                 chunkIndex++;
                 playNextChunk();
             }; 
 
+            currentUtterance = utterance;
             synth.speak(utterance);
         }
 
+        // 【修正】瀏覽器的 synth.pause()/resume() 很不穩定（常要按好幾次才會繼續），
+        // 改成：暫停時直接停掉目前這一小段，按繼續時從這一小段開頭重新念，按一次就會繼續。
         pauseBtn.addEventListener('click', () => {
             if (isReading) {
                 if (isPaused) {
                     isPaused = false;
-                    if (!synth.speaking && !synth.pending) {
-                        playNextChunk();
-                    } else {
-                        synth.resume();
-                    }
+                    updateBtnStates();
+                    synth.cancel();
+                    // 稍等 50 毫秒讓 cancel() 清乾淨再念，否則有些瀏覽器會吞掉緊接著的語音
+                    clearTimeout(chunkTimeout);
+                    chunkTimeout = setTimeout(() => { if (isReading && !isPaused) playNextChunk(); }, 50);
                 } else {
                     isPaused = true;
-                    synth.pause();
-                    clearTimeout(chunkTimeout); 
+                    clearTimeout(chunkTimeout);
+                    currentUtterance = null; // 讓被停掉的這段的 onend/onerror 失效，不會跳到下一段
+                    synth.cancel();
+                    updateBtnStates();
                 }
-                updateBtnStates();
             }
         });
 
