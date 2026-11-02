@@ -681,9 +681,34 @@
             const spans = Array.from(textLayer.querySelectorAll('span'));
             if (spans.length === 0) return;
 
-            let isVertical = false;
+            // 先看字是怎麼排的：直書的字一個疊一個往下排，橫書的字並排往右。
+            // 只比較大小相近的中文字，注音、標點等小字不算。
+            const cjk = /^[㐀-鿿豈-﫿]$/;
+            const chars = spans
+                .filter(span => cjk.test(span.textContent.trim()))
+                .map(span => span.getBoundingClientRect())
+                .filter(rect => rect.width > 4 && rect.height > 4);
+            let verticalPairs = 0;
+            let horizontalPairs = 0;
+            chars.forEach(a => {
+                const size = Math.max(a.width, a.height);
+                chars.forEach(b => {
+                    if (a === b || Math.abs(Math.max(b.width, b.height) - size) > size * 0.2) return;
+                    const dx = (b.left + b.width / 2) - (a.left + a.width / 2);
+                    const dy = (b.top + b.height / 2) - (a.top + a.height / 2);
+                    if (Math.abs(dx) < size * 0.3 && dy > 0 && dy < size * 1.6) verticalPairs++;
+                    if (Math.abs(dy) < size * 0.3 && dx > 0 && dx < size * 1.6) horizontalPairs++;
+                });
+            });
+            // 橫書的 PDF 通常一整串字放在同一個區塊，也算橫書的證據
+            spans.forEach(span => {
+                const text = span.textContent.replace(/\s/g, '');
+                if (text.length > 1 && /[㐀-鿿]/.test(text)) horizontalPairs += text.length - 1;
+            });
 
-            if (pageWidth > pageHeight) {
+            let isVertical = verticalPairs > 20 && verticalPairs > horizontalPairs * 1.5;
+
+            if (!isVertical && pageWidth > pageHeight) {
                 let maxFontSize = 0;
                 let titleCenterX = 0;
 
@@ -707,7 +732,7 @@
             const directionSelect = document.getElementById('reading-direction');
             if (isVertical) {
                 directionSelect.value = 'vertical';
-                console.log("自動偵測：橫式考卷且大標題在右方，已切換為 直排(右至左)");
+                console.log(`自動偵測：直書（上下相鄰 ${verticalPairs}、左右相鄰 ${horizontalPairs}），已切換為 直排(右至左)`);
             } else {
                 directionSelect.value = 'horizontal';
                 console.log("自動偵測：維持預設 橫排(左至右)");
@@ -776,7 +801,7 @@
                     }
                     
                     if ((right - left) > 15 && (bottom - top) > 15) {
-                        boxes.push({left, right, top, bottom});
+                        boxes.push(...splitTouchingBoxes({left, right, top, bottom}, redPixels, width));
                     }
                 }
             }
@@ -786,6 +811,42 @@
                     createBoxElement(interactionLayer, b.left, b.top, b.right - b.left, b.bottom - b.top);
                 });
             }
+        }
+
+        // 相鄰的兩個紅框（例如橫式考卷的上下兩欄）邊線相連時，填色會把它們連成一個大框。
+        // 框內若有一條貫穿整個寬度（或高度）的紅線，就是兩框共用的邊線，從那裡切開。
+        function splitTouchingBoxes(box, redPixels, width) {
+            const margin = 15;
+            const isRed = (x, y) => redPixels[y * width + x] === 2;
+            const findLine = (from, to, span, countAt) => {
+                for (let p = from; p <= to; p++) {
+                    if (countAt(p) < span * 0.9) continue;
+                    let end = p;
+                    while (end + 1 <= to && countAt(end + 1) >= span * 0.9) end++;
+                    return [p, end];
+                }
+                return null;
+            };
+            const boxW = box.right - box.left + 1;
+            const boxH = box.bottom - box.top + 1;
+            const rowCount = y => { let n = 0; for (let x = box.left; x <= box.right; x++) if (isRed(x, y)) n++; return n; };
+            const colCount = x => { let n = 0; for (let y = box.top; y <= box.bottom; y++) if (isRed(x, y)) n++; return n; };
+
+            const row = findLine(box.top + margin, box.bottom - margin, boxW, rowCount);
+            if (row) {
+                return [
+                    ...splitTouchingBoxes({ ...box, bottom: row[0] - 1 }, redPixels, width),
+                    ...splitTouchingBoxes({ ...box, top: row[1] + 1 }, redPixels, width)
+                ];
+            }
+            const col = findLine(box.left + margin, box.right - margin, boxH, colCount);
+            if (col) {
+                return [
+                    ...splitTouchingBoxes({ ...box, right: col[0] - 1 }, redPixels, width),
+                    ...splitTouchingBoxes({ ...box, left: col[1] + 1 }, redPixels, width)
+                ];
+            }
+            return [box];
         }
 
         function createBoxElement(layer, left, top, width, height) {
@@ -839,11 +900,11 @@
             if (direction === 'vertical') {
                 // 【直式排版】：由右至左分欄，同欄由上而下
                 let columns = [];
-                insideSpans.forEach(span => {
+                const addToColumn = span => {
                     const rect = span.getBoundingClientRect();
                     const centerX = rect.left + (rect.width / 2);
                     const centerY = rect.top + (rect.height / 2);
-                    
+
                     let added = false;
                     for (let col of columns) {
                         const threshold = Math.max(10, Math.min(rect.width, col.width) * 0.6);
@@ -856,6 +917,30 @@
                     if (!added) {
                         columns.push({ centerX, width: rect.width, spans: [{span, rect, centerX, centerY}] });
                     }
+                };
+
+                // 國語「看注音寫國字」的格子字比一般字大很多，而且偏在句子那一行的旁邊，
+                // 中心點對不上。先用一般大小的字排出各行，再把大字放進範圍內最近的那一行，
+                // 才會念在句子中的正確位置（例如「河＿邊」），而不是自成一行先念。
+                const heights = insideSpans.map(s => s.getBoundingClientRect().height).filter(h => h > 0).sort((a, b) => a - b);
+                const typicalHeight = heights.length ? heights[Math.floor(heights.length / 2)] : 0;
+                const isOversized = span => typicalHeight > 0 && span.getBoundingClientRect().height > typicalHeight * 1.6;
+                insideSpans.filter(span => !isOversized(span)).forEach(addToColumn);
+                const bigSpans = insideSpans.filter(isOversized).map(span => {
+                    const rect = span.getBoundingClientRect();
+                    return { span, rect, centerX: rect.left + rect.width / 2, centerY: rect.top + rect.height / 2 };
+                });
+                // 大字緊緊上下相連（例如大標題）就是自己一行，不併入旁邊的句子
+                const isStackedBig = big => bigSpans.some(other => other !== big &&
+                    Math.abs(other.centerX - big.centerX) <= big.rect.width * 0.3 &&
+                    Math.abs(other.centerY - big.centerY) <= big.rect.height * 1.3);
+                bigSpans.forEach(big => {
+                    const { span, rect, centerX } = big;
+                    const candidates = isStackedBig(big) ? [] :
+                        columns.filter(col => col.centerX >= rect.left - rect.width / 2 && col.centerX <= rect.right);
+                    if (!candidates.length) { addToColumn(span); return; }
+                    candidates.sort((a, b) => Math.abs(a.centerX - centerX) - Math.abs(b.centerX - centerX));
+                    candidates[0].spans.push(big);
                 });
 
                 columns.sort((a, b) => b.centerX - a.centerX);
