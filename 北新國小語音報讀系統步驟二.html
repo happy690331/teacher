@@ -340,7 +340,7 @@
             <!-- 語音切換 -->
             <div class="flex items-center gap-1 md:gap-2 mr-1">
                 <span class="text-sm font-bold text-gray-700 hidden lg:block">人聲:</span>
-                <select id="voice-select" class="w-28 p-1 border border-gray-300 rounded text-sm text-gray-700 outline-none cursor-pointer">
+                <select id="voice-select" class="w-36 md:w-48 p-1 border border-gray-300 rounded text-sm text-gray-700 outline-none cursor-pointer">
                     <option value="">載入語音中...</option>
                 </select>
             </div>
@@ -1292,7 +1292,8 @@
             if (selectedVoice) {
                 utterance.voice = selectedVoice;
             } else {
-                const twVoice = synth.getVoices().find(v => v.lang.toLowerCase().includes('zh'));
+                // 後備語音也要排除粵語，否則 zh-HK 會被挑中
+                const twVoice = synth.getVoices().find(isMandarinVoice);
                 if (twVoice) utterance.voice = twVoice;
             }
 
@@ -1354,18 +1355,91 @@
             }
         }
 
+        // ==================================================================
+        // ===== 【語音選單：只提供中文（國語），排除粵語與其他語言】 =========
+        // 需求：學生用平板報讀，中文語音要多一點選擇，不要粵語和其他語言。
+        //
+        // 原本的問題：
+        //   1. 篩選條件是 lang 含 "zh"，而粵語的 lang 正是 zh-HK，所以粵語
+        //      會混進選單。
+        //   2. 找不到中文時會退回「全部語音」，於是英文、日文等也進了選單。
+        //   3. 平板（特別是 iPad）取得語音清單比較慢，第一次可能拿到空陣列，
+        //      之後 onvoiceschanged 再觸發時會重建選單，把老師已選的語音重設掉。
+        // ==================================================================
+
+        // 判斷是否為中文「國語／普通話」語音（排除粵語）
+        function isMandarinVoice(voice) {
+            if (!voice) return false;
+            const lang = String(voice.lang || '').toLowerCase().replace(/_/g, '-');
+            const name = String(voice.name || '').toLowerCase();
+
+            // 先排除粵語：lang 可能是 yue-Hant-HK 或 zh-HK，名稱也可能直接寫明
+            if (lang.indexOf('yue') !== -1) return false;
+            if (lang.indexOf('-hk') !== -1) return false;
+            if (name.indexOf('cantonese') !== -1) return false;
+            if (name.indexOf('粵') !== -1 || name.indexOf('廣東') !== -1) return false;
+
+            // 只收中文：zh 系列，以及部分平板用的 cmn（Mandarin）系列
+            return lang.indexOf('zh') === 0 || lang.indexOf('cmn') === 0;
+        }
+
+        // 排序：臺灣國語優先，其次新加坡、大陸，最後其他
+        function mandarinVoiceRank(voice) {
+            const lang = String(voice.lang || '').toLowerCase();
+            if (lang.indexOf('tw') !== -1 || lang.indexOf('hant') !== -1) return 0;
+            if (lang.indexOf('sg') !== -1) return 1;
+            if (lang.indexOf('cn') !== -1 || lang.indexOf('hans') !== -1) return 2;
+            return 3;
+        }
+
+        // 選單文字：去掉廠商前綴，必要時補上地區，讓老師在平板上好分辨
+        function mandarinVoiceLabel(voice) {
+            let name = String(voice.name || '')
+                .replace(/^Microsoft\s+/i, '')
+                .replace(/^Google\s+/i, '')
+                .replace(/Online\s*\(Natural\)\s*-\s*/i, '')
+                .replace(/\s*-\s*Chinese.*$/i, '')
+                .trim();
+            if (!name) name = String(voice.lang || '語音');
+
+            const lang = String(voice.lang || '').toLowerCase();
+            let region = '';
+            if (lang.indexOf('tw') !== -1 || lang.indexOf('hant') !== -1) region = '臺灣';
+            else if (lang.indexOf('sg') !== -1) region = '新加坡';
+            else if (lang.indexOf('cn') !== -1 || lang.indexOf('hans') !== -1) region = '大陸';
+
+            if (region && name.indexOf(region) === -1) name = name + '（' + region + '）';
+            return name;
+        }
+
+        let voiceLoadAttempts = 0;
+
         function populateVoices() {
-            let voices = synth.getVoices();
-            availableVoices = voices.filter(v => v.lang.toLowerCase().includes('zh'));
-            
-            if (availableVoices.length === 0) {
-                availableVoices = voices;
+            const voices = synth.getVoices();
+
+            // 平板常常第一次拿到空陣列，稍等再試（最多約 6 秒）
+            if (voices.length === 0 && voiceLoadAttempts < 20) {
+                voiceLoadAttempts++;
+                setTimeout(populateVoices, 300);
+                return;
             }
 
+            // 記住目前選的語音，重建選單後盡量還原，避免平板上選好又被重設
+            const previous = voiceSelect.value;
+
+            availableVoices = voices.filter(isMandarinVoice);
+            availableVoices.sort((a, b) => {
+                const diff = mandarinVoiceRank(a) - mandarinVoiceRank(b);
+                return diff !== 0 ? diff : String(a.name).localeCompare(String(b.name));
+            });
+
             voiceSelect.innerHTML = '';
+
             if (availableVoices.length === 0) {
+                // 沒有可列舉的中文語音時，不要改用其他語言，交給系統預設中文處理
                 const option = document.createElement('option');
-                option.textContent = '無可用語音';
+                option.value = '';
+                option.textContent = '系統預設中文語音';
                 voiceSelect.appendChild(option);
                 return;
             }
@@ -1373,9 +1447,13 @@
             availableVoices.forEach(voice => {
                 const option = document.createElement('option');
                 option.value = voice.name;
-                option.textContent = voice.name.replace('Microsoft ', '').replace('Google ', '').replace('Online (Natural) - ', '');
+                option.textContent = mandarinVoiceLabel(voice);
                 voiceSelect.appendChild(option);
             });
+
+            if (previous && availableVoices.some(v => v.name === previous)) {
+                voiceSelect.value = previous;
+            }
         }
 
         // ==================================================================
