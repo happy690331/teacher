@@ -368,7 +368,7 @@
             const container = document.getElementById('category-list');
             container.innerHTML = '';
 
-            categoryList.forEach(cat => {
+            categoryList.filter(cat => cat !== '全部').forEach(cat => {
                 const li = document.createElement('li');
                 const btn = document.createElement('button');
                 const label = document.createElement('span');
