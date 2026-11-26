@@ -210,6 +210,13 @@
        <div id="question-count-options" class="grid grid-cols-2 md:grid-cols-5 gap-3"><!-- Options will be generated dynamically -->
        </div>
       </div>
+      <div>
+       <h3 class="text-xl font-bold text-orange-800 mb-4 flex items-center"><span class="mr-2">🔊</span>選擇語音</h3>
+       <select id="voice-select" class="w-full rounded-2xl border-2 border-orange-200 bg-white px-4 py-3 text-lg text-gray-700 outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100">
+        <option value="auto">自動選擇台灣中文語音</option>
+       </select>
+       <p class="text-sm text-orange-700/70 mt-2">優先使用台灣中文語音；不同瀏覽器可提供的語音選項會不同。</p>
+      </div>
       <div class="flex gap-4">
        <button id="back-to-page1" class="flex-1 py-4 px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 text-lg font-bold rounded-2xl transition-all duration-300"> <span class="mr-2">←</span> 返回 </button> <button id="start-game" class="flex-1 py-4 px-6 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-lg font-bold rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" disabled> 開始遊戲 <span class="ml-2">🎮</span> </button>
       </div>
@@ -320,8 +327,11 @@
     const feedbackIcon = document.getElementById('feedback-icon');
     const availableCount = document.getElementById('available-count');
     const mainTitle = document.getElementById('main-title');
+    const voiceSelect = document.getElementById('voice-select');
     
-    let currentSpeed = 0.7;
+    let currentSpeed = 0.85;
+    let availableVoices = [];
+    let selectedVoiceName = 'auto';
     let successAudioContext = null;
     let gameStartTime = null;
     let gameTimer = null;
@@ -610,10 +620,18 @@
         utterance.rate = currentSpeed;
         utterance.pitch = 1;
         
-        const voices = window.speechSynthesis.getVoices();
-        const chineseVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('cmn'));
+        const voices = availableVoices.length ? availableVoices : window.speechSynthesis.getVoices();
+        const preferredNames = /hsiao|yating|hanhan|zhiwei|台灣|臺灣|taiwan|國語|mandarin/i;
+        const chineseVoice = selectedVoiceName !== 'auto'
+          ? voices.find(v => v.name === selectedVoiceName)
+          : voices.slice().sort((a, b) => {
+              const aScore = (a.lang.toLowerCase().startsWith('zh-tw') ? 20 : 0) + (preferredNames.test(a.name) ? 10 : 0);
+              const bScore = (b.lang.toLowerCase().startsWith('zh-tw') ? 20 : 0) + (preferredNames.test(b.name) ? 10 : 0);
+              return bScore - aScore;
+            }).find(v => v.lang.includes('zh') || v.lang.includes('cmn'));
         if (chineseVoice) {
           utterance.voice = chineseVoice;
+          utterance.lang = chineseVoice.lang;
         }
         
         window.speechSynthesis.speak(utterance);
@@ -864,12 +882,32 @@
       }, 100);
     }
     
+    // Load and let players choose a natural Taiwan Chinese voice when available
+    function populateVoiceOptions() {
+      if (!('speechSynthesis' in window) || !voiceSelect) return;
+      const voices = window.speechSynthesis.getVoices();
+      availableVoices = voices.filter(v => /zh|cmn|nan|hak/i.test(v.lang) || /台灣|臺灣|taiwan|mandarin|國語|hsiao|yating|hanhan|zhiwei/i.test(v.name));
+      availableVoices.sort((a, b) => {
+        const aScore = a.lang.toLowerCase().startsWith('zh-tw') ? 0 : 1;
+        const bScore = b.lang.toLowerCase().startsWith('zh-tw') ? 0 : 1;
+        return aScore - bScore || a.name.localeCompare(b.name);
+      });
+      const previous = selectedVoiceName;
+      voiceSelect.innerHTML = '<option value="auto">自動選擇台灣中文語音</option>' + availableVoices.map(v => `<option value="${v.name.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}">${v.name}（${v.lang}）</option>`).join('');
+      if (availableVoices.some(v => v.name === previous)) voiceSelect.value = previous;
+      else voiceSelect.value = 'auto';
+    }
+
+    voiceSelect.addEventListener('change', () => {
+      selectedVoiceName = voiceSelect.value || 'auto';
+      localStorage.setItem('guoyuVoiceName', selectedVoiceName);
+    });
+    selectedVoiceName = localStorage.getItem('guoyuVoiceName') || 'auto';
+
     // Load voices
     if ('speechSynthesis' in window) {
-      window.speechSynthesis.getVoices();
-      window.speechSynthesis.onvoiceschanged = () => {
-        window.speechSynthesis.getVoices();
-      };
+      populateVoiceOptions();
+      window.speechSynthesis.onvoiceschanged = populateVoiceOptions;
     }
     
     // Initialize chapter buttons
