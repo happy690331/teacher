@@ -21,9 +21,9 @@ window.GAME_CATALOG = [
     "imgUrl": "./%E4%BA%BA%E8%87%89%E8%BE%A8%E8%AD%98%E6%9B%BF%E6%8F%9B%E7%A8%8B%E5%BC%8F.jpg"
   },
   {
-    "name": "北新國小語音報讀程式步驟二",
-    "url": "./%E5%8C%97%E6%96%B0%E5%9C%8B%E5%B0%8F%E8%AA%9E%E9%9F%B3%E5%A0%B1%E8%AE%80%E7%A8%8B%E5%BC%8F%E6%AD%A5%E9%A9%9F%E4%BA%8C.html",
-    "imgUrl": "./%E5%8C%97%E6%96%B0%E5%9C%8B%E5%B0%8F%E8%AA%9E%E9%9F%B3%E5%A0%B1%E8%AE%80%E7%A8%8B%E5%BC%8F%E6%AD%A5%E9%A9%9F%E4%BA%8C.jpg"
+    "name": "北新國小語音報讀系統步驟二",
+    "url": "./%E5%8C%97%E6%96%B0%E5%9C%8B%E5%B0%8F%E8%AA%9E%E9%9F%B3%E5%A0%B1%E8%AE%80%E7%B3%BB%E7%B5%B1%E6%AD%A5%E9%A9%9F%E4%BA%8C.html",
+    "imgUrl": null
   },
   {
     "name": "國語大家來找碴遊戲",
@@ -46,9 +46,9 @@ window.GAME_CATALOG = [
     "imgUrl": "./%E5%AE%A2%E8%A3%BD%E5%8C%96%E8%AA%9E%E8%A9%9E%E8%88%87%E8%A7%A3%E9%87%8B%20(5x5%20%E8%B3%93%E6%9E%9C).jpg"
   },
   {
-    "name": "康軒三下國語聽語詞找卡片",
-    "url": "./%E5%BA%B7%E8%BB%92%E4%B8%89%E4%B8%8B%E5%9C%8B%E8%AA%9E%E8%81%BD%E8%AA%9E%E8%A9%9E%E6%89%BE%E5%8D%A1%E7%89%87.html",
-    "imgUrl": "./%E5%BA%B7%E8%BB%92%E4%B8%89%E4%B8%8B%E5%9C%8B%E8%AA%9E%E8%81%BD%E8%AA%9E%E8%A9%9E%E6%89%BE%E5%8D%A1%E7%89%87.jpg"
+    "name": "康軒三上國語聽語詞找卡片",
+    "url": "./%E5%BA%B7%E8%BB%92%E4%B8%89%E4%B8%8A%E5%9C%8B%E8%AA%9E%E8%81%BD%E8%AA%9E%E8%A9%9E%E6%89%BE%E5%8D%A1%E7%89%87.html",
+    "imgUrl": "./%E5%BA%B7%E8%BB%92%E4%B8%89%E4%B8%8A%E5%9C%8B%E8%AA%9E%E8%81%BD%E8%AA%9E%E8%A9%9E%E6%89%BE%E5%8D%A1%E7%89%87.jpg"
   },
   {
     "name": "康軒六下1-9課生字多寶遊戲",
